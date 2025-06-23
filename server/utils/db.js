@@ -41,14 +41,46 @@ const supabaseConfig = {
 };
 
 let pool;
+let isPostgreSQL = false;
 
 if (useSupabase) {
   console.log('Using SUPABASE PostgreSQL database');
   pool = new Pool(supabaseConfig);
+  isPostgreSQL = true;
 } else {
   const config = useOnlineDB ? mysqlConfigs.online : mysqlConfigs.local;
   console.log(`Using ${useOnlineDB ? 'ONLINE' : 'LOCAL'} MySQL database`);
   pool = mysql.createPool(config);
+  isPostgreSQL = false;
 }
 
-export default pool; 
+// Create a unified database interface
+const db = {
+  async query(sql, params = []) {
+    try {
+      if (isPostgreSQL) {
+        // PostgreSQL query
+        const client = await pool.connect();
+        try {
+          const result = await client.query(sql, params);
+          return [result.rows, result.fields];
+        } finally {
+          client.release();
+        }
+      } else {
+        // MySQL query
+        const [rows, fields] = await pool.execute(sql, params);
+        return [rows, fields];
+      }
+    } catch (error) {
+      console.error('Database query error:', error);
+      throw error;
+    }
+  },
+
+  async execute(sql, params = []) {
+    return this.query(sql, params);
+  }
+};
+
+export default db;
