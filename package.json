@@ -10,11 +10,13 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
     "bcryptjs": "^3.0.2",
     "lottie-web": "^5.13.0",
     "midtrans-client": "^1.4.3",
     "mysql2": "^3.14.1",
     "nuxt": "^3.17.4",
+    "pg": "^8.16.2",
     "vue": "^3.5.14",
     "vue-router": "^4.5.1"
   },
@@ -24,6 +26,7 @@
     "@types/mysql": "^2.15.27",
     "@types/node": "^18.19.103",
     "h3": "^1.15.3",
+    "supabase": "^2.26.9",
     "typescript": "^5.8.3"
   }
 }

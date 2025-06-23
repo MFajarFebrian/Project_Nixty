@@ -1,32 +1,54 @@
 import mysql from 'mysql2/promise';
-import { useOnlineDB } from './config.js';
+import pkg from 'pg';
+const { Pool } = pkg;
+import { useOnlineDB, useSupabase } from './config.js';
 
-
-const dbConfigs = {
+// MySQL configurations (for local development)
+const mysqlConfigs = {
   local: {
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'nixty',
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'nixty',
+    port: process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
   },
   online: {
-    host: 'sql12.freesqldatabase.com',
-    user: 'sql12782583',
-    password: 'vR3ku4pQn2',
-    database: 'sql12782583',
-    port: 3306,
+    host: process.env.ONLINE_DB_HOST || 'sql12.freesqldatabase.com',
+    user: process.env.ONLINE_DB_USER || 'sql12782583',
+    password: process.env.ONLINE_DB_PASSWORD || 'vR3ku4pQn2',
+    database: process.env.ONLINE_DB_NAME || 'sql12782583',
+    port: process.env.ONLINE_DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
   }
 };
 
-const config = useOnlineDB ? dbConfigs.online : dbConfigs.local;
-console.log(`Using ${useOnlineDB ? 'ONLINE' : 'LOCAL'} database`);
+// Supabase PostgreSQL configuration
+const supabaseConfig = {
+  host: process.env.SUPABASE_DB_HOST,
+  user: process.env.SUPABASE_DB_USER || 'postgres',
+  password: process.env.SUPABASE_DB_PASSWORD,
+  database: process.env.SUPABASE_DB_NAME || 'postgres',
+  port: process.env.SUPABASE_DB_PORT || 5432,
+  ssl: { rejectUnauthorized: false },
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+};
 
-const pool = mysql.createPool(config);
+let pool;
+
+if (useSupabase) {
+  console.log('Using SUPABASE PostgreSQL database');
+  pool = new Pool(supabaseConfig);
+} else {
+  const config = useOnlineDB ? mysqlConfigs.online : mysqlConfigs.local;
+  console.log(`Using ${useOnlineDB ? 'ONLINE' : 'LOCAL'} MySQL database`);
+  pool = mysql.createPool(config);
+}
 
 export default pool; 
