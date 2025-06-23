@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Email Icon -->
+  <rect x="5" y="10" width="30" height="20" rx="2" fill="#0078D4" />
+  <path d="M5 12L20 22L35 12" stroke="white" stroke-width="2" fill="none" />
+  <path d="M5 28L15 18M35 28L25 18" stroke="white" stroke-width="1" />
+</svg> 

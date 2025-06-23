@@ -1,0 +1,62 @@
+/* Import Galaxy Variables */
+@import '../global/variables.css';
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--galaxy-space-sm);
+  background: linear-gradient(135deg, var(--galaxy-plasma-orange), var(--galaxy-pulsar-pink));
+  color: var(--galaxy-starlight);
+  border: none;
+  border-radius: var(--galaxy-radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--galaxy-transition-normal);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.logout-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: var(--galaxy-transition-slow);
+}
+
+.logout-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+}
+
+.logout-button:hover::before {
+  left: 100%;
+}
+
+.logout-button .logout-icon {
+  display: flex;
+  align-items: center;
+  font-size: 1.1em;
+}
+
+/* Button size variations */
+.logout-button.btn-small {
+  padding: var(--galaxy-space-xs) var(--galaxy-space-sm);
+  font-size: 12px;
+}
+
+.logout-button.btn-medium {
+  padding: var(--galaxy-space-sm) var(--galaxy-space-md);
+  font-size: 14px;
+}
+
+.logout-button.btn-large {
+  padding: var(--galaxy-space-md) var(--galaxy-space-lg);
+  font-size: 16px;
+}

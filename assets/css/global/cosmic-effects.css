@@ -1,0 +1,264 @@
+/* Cosmic Effects and Animations */
+@import './variables.css';
+
+/* Floating particles animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  33% {
+    transform: translateY(-10px);
+  }
+  66% {
+    transform: translateY(5px);
+  }
+}
+
+/* Cosmic glow pulse */
+@keyframes cosmicPulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(78, 205, 196, 0.3),
+      0 0 40px rgba(78, 205, 196, 0.2),
+      0 0 60px rgba(78, 205, 196, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(78, 205, 196, 0.5),
+      0 0 60px rgba(78, 205, 196, 0.3),
+      0 0 90px rgba(78, 205, 196, 0.2);
+  }
+}
+
+/* Stellar shimmer effect */
+@keyframes stellarShimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Nebula drift animation */
+@keyframes nebulaDrift {
+  0% {
+    transform: translateX(-100px) translateY(-50px);
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateX(100px) translateY(50px);
+    opacity: 0.1;
+  }
+}
+
+/* Aurora wave effect */
+@keyframes auroraWave {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0px) scaleY(1);
+  }
+  25% {
+    transform: translateX(-50%) translateY(-5px) scaleY(1.1);
+  }
+  50% {
+    transform: translateX(-50%) translateY(0px) scaleY(0.9);
+  }
+  75% {
+    transform: translateX(-50%) translateY(5px) scaleY(1.1);
+  }
+}
+
+/* Cosmic utility classes */
+.cosmic-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.cosmic-pulse {
+  animation: cosmicPulse 3s ease-in-out infinite;
+}
+
+.stellar-shimmer {
+  background: linear-gradient(
+    45deg,
+    var(--galaxy-aurora-cyan),
+    var(--galaxy-comet-green),
+    var(--galaxy-nova-gold),
+    var(--galaxy-aurora-cyan)
+  );
+  background-size: 300% 300%;
+  animation: stellarShimmer 4s ease-in-out infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Cosmic background overlays */
+.cosmic-overlay {
+  position: relative;
+  overflow: hidden;
+}
+
+.cosmic-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(78, 205, 196, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(255, 107, 157, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cosmic-overlay > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Nebula background effect */
+.nebula-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.nebula-bg::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: 
+    radial-gradient(circle, rgba(78, 205, 196, 0.1) 0%, transparent 30%),
+    radial-gradient(circle, rgba(255, 215, 0, 0.05) 20%, transparent 50%),
+    radial-gradient(circle, rgba(255, 107, 157, 0.08) 40%, transparent 70%);
+  animation: nebulaDrift 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Aurora effect for headers */
+.aurora-header {
+  position: relative;
+  overflow: hidden;
+}
+
+.aurora-header::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 120%;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--galaxy-aurora-cyan),
+    var(--galaxy-comet-green),
+    var(--galaxy-nova-gold),
+    var(--galaxy-aurora-cyan),
+    transparent
+  );
+  animation: auroraWave 4s ease-in-out infinite;
+  filter: blur(1px);
+}
+
+/* Stardust trail effect */
+.stardust-trail {
+  position: relative;
+}
+
+.stardust-trail::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: var(--galaxy-transition-normal);
+}
+
+.stardust-trail:hover::after {
+  opacity: 1;
+  animation: stellarShimmer 2s ease-in-out;
+}
+
+/* Cosmic button effects */
+.cosmic-button {
+  position: relative;
+  overflow: hidden;
+  background: var(--galaxy-primary-gradient);
+  border: none;
+  color: var(--galaxy-starlight);
+  transition: var(--galaxy-transition-normal);
+}
+
+.cosmic-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: var(--galaxy-transition-normal);
+}
+
+.cosmic-button:hover::before {
+  left: 100%;
+  transition: left 0.6s ease-in-out;
+}
+
+.cosmic-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--galaxy-shadow-large), var(--galaxy-glow-blue);
+}
+
+/* Responsive cosmic effects */
+@media (max-width: 768px) {
+  .cosmic-float {
+    animation-duration: 4s;
+  }
+  
+  .cosmic-pulse {
+    animation-duration: 2s;
+  }
+  
+  .stellar-shimmer {
+    animation-duration: 3s;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .cosmic-float,
+  .cosmic-pulse,
+  .stellar-shimmer,
+  .nebula-bg::after,
+  .aurora-header::before {
+    animation: none;
+  }
+  
+  .cosmic-button::before {
+    display: none;
+  }
+}

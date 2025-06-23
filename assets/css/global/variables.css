@@ -1,0 +1,136 @@
+/* Galaxy Theme Color Variables */
+:root {
+  /* Primary Galaxy Colors */
+  --galaxy-deep-space: #0a0a0f;
+  --galaxy-dark-matter: #1a1a2e;
+  --galaxy-nebula-purple: #16213e;
+  --galaxy-cosmic-blue: #1976d2;
+  --galaxy-stellar-blue: #42a5f5;
+  --galaxy-aurora-cyan: #4dd0e1;
+  --galaxy-starlight: #e8f4f8;
+  --galaxy-moonbeam: #ffffff;
+
+  /* Accent Colors */
+  --galaxy-nova-gold: #ffd700;
+  --galaxy-plasma-orange: #ff6b35;
+  --galaxy-comet-green: #64ffda;
+  --galaxy-pulsar-pink: #ff6b9d;
+  --galaxy-solar-yellow: #ffeb3b;
+  
+  /* Neutral Colors */
+  --galaxy-asteroid-gray: #2c2c54;
+  --galaxy-meteor-gray: #40407a;
+  --galaxy-satellite-gray: #706fd3;
+  --galaxy-cloud-gray: #b8b8d4;
+  --galaxy-light-gray: #e2e2f0;
+  
+  /* Gradients */
+  --galaxy-primary-gradient: linear-gradient(135deg, var(--galaxy-cosmic-blue), var(--galaxy-stellar-blue));
+  --galaxy-secondary-gradient: linear-gradient(135deg, var(--galaxy-nebula-purple), var(--galaxy-cosmic-blue));
+  --galaxy-accent-gradient: linear-gradient(135deg, var(--galaxy-aurora-cyan), var(--galaxy-comet-green));
+  --galaxy-hero-gradient: linear-gradient(135deg, var(--galaxy-deep-space), var(--galaxy-dark-matter), var(--galaxy-nebula-purple));
+  --galaxy-card-gradient: linear-gradient(145deg, rgba(22, 33, 62, 0.8), rgba(15, 52, 96, 0.6));
+  
+  /* Shadows */
+  --galaxy-shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --galaxy-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --galaxy-shadow-large: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --galaxy-glow-blue: 0 0 20px rgba(30, 95, 139, 0.3);
+  --galaxy-glow-cyan: 0 0 20px rgba(45, 138, 166, 0.3);
+  --galaxy-glow-gold: 0 0 20px rgba(255, 215, 0, 0.3);
+  
+  /* Typography */
+  --galaxy-font-primary: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --galaxy-font-secondary: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  
+  /* Spacing */
+  --galaxy-space-xs: 0.25rem;
+  --galaxy-space-sm: 0.5rem;
+  --galaxy-space-md: 1rem;
+  --galaxy-space-lg: 1.5rem;
+  --galaxy-space-xl: 2rem;
+  --galaxy-space-2xl: 3rem;
+  --galaxy-space-3xl: 4rem;
+  
+  /* Border Radius */
+  --galaxy-radius-sm: 4px;
+  --galaxy-radius-md: 8px;
+  --galaxy-radius-lg: 12px;
+  --galaxy-radius-xl: 16px;
+  --galaxy-radius-full: 50%;
+  
+  /* Transitions */
+  --galaxy-transition-fast: 0.15s ease-in-out;
+  --galaxy-transition-normal: 0.3s ease-in-out;
+  --galaxy-transition-slow: 0.5s ease-in-out;
+  
+  /* Z-index */
+  --galaxy-z-dropdown: 1000;
+  --galaxy-z-modal: 1050;
+  --galaxy-z-tooltip: 1100;
+  
+  /* Breakpoints (for reference) */
+  --galaxy-breakpoint-sm: 576px;
+  --galaxy-breakpoint-md: 768px;
+  --galaxy-breakpoint-lg: 992px;
+  --galaxy-breakpoint-xl: 1200px;
+}
+
+/* Dark theme variations for better contrast */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --galaxy-starlight: #f8fafc;
+    --galaxy-moonbeam: #ffffff;
+  }
+}
+
+/* Utility classes for common galaxy effects */
+.galaxy-glow-blue {
+  box-shadow: var(--galaxy-glow-blue);
+}
+
+.galaxy-glow-cyan {
+  box-shadow: var(--galaxy-glow-cyan);
+}
+
+.galaxy-glow-gold {
+  box-shadow: var(--galaxy-glow-gold);
+}
+
+.galaxy-gradient-text {
+  background: var(--galaxy-accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.galaxy-card {
+  background: var(--galaxy-card-gradient);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.galaxy-button-primary {
+  background: var(--galaxy-primary-gradient);
+  color: var(--galaxy-starlight);
+  border: none;
+  transition: var(--galaxy-transition-normal);
+}
+
+.galaxy-button-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--galaxy-glow-blue);
+}
+
+.galaxy-button-secondary {
+  background: transparent;
+  color: var(--galaxy-aurora-cyan);
+  border: 2px solid var(--galaxy-aurora-cyan);
+  transition: var(--galaxy-transition-normal);
+}
+
+.galaxy-button-secondary:hover {
+  background: var(--galaxy-aurora-cyan);
+  color: var(--galaxy-deep-space);
+  box-shadow: var(--galaxy-glow-cyan);
+}

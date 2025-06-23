@@ -1,0 +1,376 @@
+/* Import Galaxy Variables */
+@import '../global/variables.css';
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--galaxy-space-lg) var(--galaxy-space-2xl);
+  background: var(--galaxy-card-gradient);
+  backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--galaxy-shadow-medium);
+  position: sticky;
+  top: 0;
+  z-index: var(--galaxy-z-dropdown);
+}
+
+.logo a {
+  font-size: 1.8rem;
+  font-weight: bold;
+  background: var(--galaxy-accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-decoration: none;
+  transition: var(--galaxy-transition-normal);
+}
+
+.logo a:hover {
+  filter: drop-shadow(0 0 8px rgba(78, 205, 196, 0.5));
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-xl);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Navigation slide animation when search expands */
+.nav-links.nav-slide {
+  transform: translateX(-100px);
+  opacity: 0.7;
+}
+
+/* Header Actions Container */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-lg);
+  flex: 1;
+  justify-content: flex-end;
+  max-width: 600px;
+}
+
+.nav-links a {
+  color: var(--galaxy-light-gray);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 16px;
+  transition: var(--galaxy-transition-normal);
+  position: relative;
+  padding: var(--galaxy-space-sm) var(--galaxy-space-md);
+  border-radius: var(--galaxy-radius-md);
+}
+
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--galaxy-accent-gradient);
+  transition: var(--galaxy-transition-normal);
+}
+
+.nav-links a:hover {
+  color: var(--galaxy-aurora-cyan);
+  text-shadow: var(--galaxy-glow-cyan);
+  background: rgba(78, 205, 196, 0.1);
+}
+
+.nav-links a:hover::after {
+  width: 100%;
+}
+
+/* Active state styling */
+.nav-links a.active {
+  color: var(--galaxy-comet-green);
+  background: var(--galaxy-primary-gradient);
+  font-weight: 600;
+  text-shadow: 0 0 15px rgba(100, 255, 218, 0.6);
+  box-shadow: var(--galaxy-glow-cyan);
+}
+
+.nav-links a.active:hover {
+  background: var(--galaxy-accent-gradient);
+  transform: translateY(-1px);
+}
+
+.nav-links a.active::after {
+  width: 100%;
+  background: var(--galaxy-comet-green);
+  box-shadow: 0 0 8px rgba(100, 255, 218, 0.8);
+}
+
+/* Dropdown styles */
+.user-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-button {
+  background: var(--galaxy-card-gradient);
+  backdrop-filter: blur(10px);
+  color: var(--galaxy-starlight);
+  padding: var(--galaxy-space-sm) var(--galaxy-space-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--galaxy-radius-md);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-sm);
+  transition: var(--galaxy-transition-normal);
+  box-shadow: var(--galaxy-shadow-small);
+}
+
+.dropdown-button:hover {
+  border-color: var(--galaxy-aurora-cyan);
+  box-shadow: var(--galaxy-shadow-medium), var(--galaxy-glow-cyan);
+}
+
+.profile-picture {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--galaxy-radius-full);
+  object-fit: cover;
+  border: 2px solid var(--galaxy-aurora-cyan);
+}
+
+.profile-initial {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--galaxy-radius-full);
+  background: var(--galaxy-primary-gradient);
+  color: var(--galaxy-starlight);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: var(--galaxy-glow-blue);
+}
+
+.user-name {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--galaxy-light-gray);
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  color: var(--galaxy-aurora-cyan);
+  transition: var(--galaxy-transition-normal);
+}
+
+.user-dropdown:hover .dropdown-arrow {
+  /* Rotation removed */
+}
+
+/* Account Icon Button */
+.account-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--galaxy-radius-full);
+  background: var(--galaxy-card-gradient);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--galaxy-aurora-cyan);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: var(--galaxy-transition-normal);
+  box-shadow: var(--galaxy-shadow-small);
+}
+
+.account-icon-btn:hover {
+  border-color: var(--galaxy-aurora-cyan);
+  box-shadow: var(--galaxy-shadow-medium), var(--galaxy-glow-cyan);
+  transform: translateY(-1px);
+}
+
+/* User Account Dropdown */
+.user-account-dropdown,
+.guest-account-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* Auth Actions */
+.auth-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Account Dropdown Content */
+.account-dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% - 2px);
+  background: var(--galaxy-card-gradient);
+  backdrop-filter: blur(15px);
+  min-width: 180px;
+  box-shadow: var(--galaxy-shadow-large);
+  z-index: var(--galaxy-z-dropdown);
+  border-radius: var(--galaxy-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease-out;
+  pointer-events: none;
+}
+
+.account-dropdown-content.show {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.dropdown-item {
+  color: var(--galaxy-light-gray);
+  padding: var(--galaxy-space-md) var(--galaxy-space-lg);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-sm);
+  text-align: left;
+  transition: var(--galaxy-transition-normal);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: rgba(78, 205, 196, 0.1);
+  color: var(--galaxy-aurora-cyan);
+  text-shadow: var(--galaxy-glow-cyan);
+}
+
+.dropdown-item i {
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: var(--galaxy-space-xs) 0;
+}
+
+.logout-item:hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #ff6b6b;
+}
+
+/* Admin-specific dropdown items */
+.dropdown-item.admin-item {
+  background: rgba(255, 215, 0, 0.05);
+  border-left: 3px solid var(--galaxy-nova-gold);
+}
+
+.dropdown-item.admin-item:hover {
+  background: rgba(255, 215, 0, 0.15);
+  color: var(--galaxy-nova-gold);
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+/* Admin navigation link styling */
+.nav-links a[href="/admin"] {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 152, 0, 0.1));
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  color: var(--galaxy-nova-gold);
+}
+
+.nav-links a[href="/admin"]:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 152, 0, 0.2));
+  border-color: var(--galaxy-nova-gold);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.nav-links a[href="/admin"].active {
+  background: var(--galaxy-nova-gold);
+  color: var(--galaxy-deep-space);
+  font-weight: 700;
+  text-shadow: none;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.nav-links a[href="/admin"].active::after {
+  background: var(--galaxy-deep-space);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Remove hover-based dropdown activation - now using click */
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .header-actions {
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: var(--galaxy-space-md) var(--galaxy-space-lg);
+  }
+
+  .nav-links {
+    gap: var(--galaxy-space-md);
+  }
+
+  .nav-links a {
+    font-size: 15px;
+    padding: var(--galaxy-space-xs) var(--galaxy-space-sm);
+  }
+
+  .header-actions {
+    gap: var(--galaxy-space-md);
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    flex-wrap: wrap;
+    gap: var(--galaxy-space-sm);
+  }
+
+  .nav-links {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--galaxy-space-sm);
+  }
+
+  .header-actions {
+    order: 2;
+    max-width: 250px;
+  }
+}

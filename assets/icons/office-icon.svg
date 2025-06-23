@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Office Icon -->
+  <rect x="5" y="5" width="30" height="30" rx="2" fill="#EB3C00" />
+  <path d="M25 10L15 12V28L25 30V10Z" fill="white" />
+  <path d="M13 15H8V25H13V15Z" fill="white" />
+  <path d="M27 15H32V25H27V15Z" fill="white" />
+</svg> 

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Key Icon -->
+  <circle cx="15" cy="15" r="7" fill="#FFB900" />
+  <path d="M18 18L32 32M25 25H32V32" stroke="#FFB900" stroke-width="3" stroke-linecap="round" />
+  <circle cx="15" cy="15" r="3" fill="white" />
+</svg> 

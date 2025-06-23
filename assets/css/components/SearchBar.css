@@ -1,0 +1,343 @@
+/* Import Galaxy Variables */
+@import '../global/variables.css';
+
+/* Animated Search Container */
+.animated-search-container {
+  position: relative;
+  height: 42px;
+  margin: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* Align icon to right */
+  width: 42px; /* Start with icon width only */
+  overflow: visible; /* Allow content to be visible during animation */
+  transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smooth width transition */
+}
+
+/* When expanded, container grows to accommodate content */
+.animated-search-container.expanded {
+  width: 450px; /* Full width: 408px content + 42px icon */
+}
+
+/* Search Icon Container - Fixed at right */
+.search-icon-container {
+  width: 42px;
+  height: 42px;
+  background: #4ecdc4;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              border 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 10px rgba(78, 205, 196, 0.3);
+  border: 2px solid #4ecdc4;
+  position: absolute; /* Make icon position absolute to keep it stationary */
+  right: 0; /* Always stick to the right edge */
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+/* When expanded, make icon seamless with content */
+.animated-search-container.expanded .search-icon-container {
+  border-radius: 0 6px 6px 0; /* Round right corners only */
+  border-left: none; /* Remove left border for seamless connection */
+  box-shadow: 0 4px 20px rgba(78, 205, 196, 0.2); /* Match content shadow */
+}
+
+.search-icon-container:hover {
+  background: #3bb3a6;
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(78, 205, 196, 0.4);
+}
+
+/* Disable hover effects when expanded */
+.animated-search-container.expanded .search-icon-container:hover {
+  background: #4ecdc4;
+  transform: none;
+  box-shadow: 0 4px 20px rgba(78, 205, 196, 0.2);
+}
+
+.search-icon-container i {
+  color: #1a1a2e;
+  font-size: 16px;
+}
+
+/* Search Bar Content */
+.search-bar-content {
+  display: flex;
+  background: #2a2a3e;
+  border: 2px solid #4ecdc4;
+  border-radius: 8px 0 0 8px; /* Round left corners only */
+  height: 42px;
+  width: 0; /* Start with 0 width */
+  position: absolute;
+  right: 42px; /* Position to the left of the icon */
+  top: 0;
+  box-shadow: 0 4px 20px rgba(78, 205, 196, 0.2);
+  z-index: 5; /* Below icon but above other content */
+  overflow: visible; /* Allow suggestions to be visible */
+  opacity: 0;
+
+  /* No transition by default - will be added via animation */
+  will-change: width, opacity;
+}
+
+/* Animation for expanding */
+.search-bar-content.visible {
+  animation: expandSearchBar 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* Animation for collapsing */
+.search-bar-content.collapsing {
+  animation: collapseSearchBar 0.4s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+}
+
+/* Keyframe animation for smooth expansion */
+@keyframes expandSearchBar {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+  30% {
+    opacity: 0;
+  }
+  60% {
+    opacity: 0.5;
+  }
+  100% {
+    width: 408px;
+    opacity: 1;
+  }
+}
+
+/* Keyframe animation for smooth collapse */
+@keyframes collapseSearchBar {
+  0% {
+    width: 408px;
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.5;
+  }
+  70% {
+    opacity: 0;
+  }
+  100% {
+    width: 0;
+    opacity: 0;
+  }
+}
+
+/* Filter Dropdown Wrapper */
+.filter-dropdown-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Filter Dropdown */
+.filter-dropdown {
+  position: relative;
+}
+
+.filter-btn {
+  background: #4ecdc4;
+  color: #1a1a2e;
+  border: none;
+  padding: 0 16px;
+  height: 100%;
+  min-width: 120px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  transition: background-color 0.3s ease;
+  border-radius: 6px 0 0 6px; /* Round left corners only */
+}
+
+.filter-btn:hover {
+  background: #3bb3a6;
+}
+
+/* Chevron rotation */
+.rotate-180 {
+  transform: rotate(180deg);
+  transition: transform 0.3s ease;
+}
+
+.filter-dropdown-content {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #1a1a2e;
+  border: 2px solid #4ecdc4;
+  border-radius: 8px;
+  min-width: 160px;
+  z-index: 99999; /* Increased z-index to ensure it's above everything */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: fadeInDown 0.3s ease;
+  display: block; /* Ensure it's displayed when visible */
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dropdown item hover effects */
+.dropdown-item {
+  color: white;
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 0.3s ease;
+}
+
+.dropdown-item:hover {
+  background-color: #4ecdc4 !important;
+}
+
+.dropdown-item:hover i,
+.dropdown-item:hover span {
+  color: #1a1a2e !important;
+}
+
+/* Search Input Container */
+.search-input-container {
+  position: relative;
+  flex: 1;
+  margin-left: 0; /* No extra margin needed */
+}
+
+.search-input {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  padding: 0 16px;
+  color: white;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Search Suggestions */
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #1a1a2e;
+  border: 2px solid #4ecdc4;
+  border-radius: 8px;
+  z-index: 99999;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  max-height: 200px;
+  overflow-y: auto;
+  animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.suggestion-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 0.3s ease;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.suggestion-item.result {
+  color: white;
+}
+
+.suggestion-item.info {
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.suggestion-item.loading {
+  color: white;
+}
+
+.suggestion-item.error {
+  color: #ff6b6b;
+  font-style: italic;
+}
+
+.suggestion-item.no-results {
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.suggestion-item:hover {
+  background-color: #4ecdc4 !important;
+  color: #1a1a2e !important;
+}
+
+
+
+
+
+/* Removed duplicate CSS rules that were conflicting with the animation */
+
+/* Animations */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .search-container {
+    max-width: 300px;
+  }
+  
+  .filter-btn {
+    min-width: 100px;
+    font-size: 12px;
+  }
+  
+  .filter-btn span {
+    display: none;
+  }
+  
+  .search-input {
+    font-size: 12px;
+  }
+}
