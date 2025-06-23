@@ -59,10 +59,15 @@ const db = {
   async query(sql, params = []) {
     try {
       if (isPostgreSQL) {
+        // Convert MySQL placeholders (?) to PostgreSQL placeholders ($1, $2, etc.)
+        let pgSql = sql;
+        let paramIndex = 1;
+        pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
+
         // PostgreSQL query
         const client = await pool.connect();
         try {
-          const result = await client.query(sql, params);
+          const result = await client.query(pgSql, params);
           return [result.rows, result.fields];
         } finally {
           client.release();
