@@ -60,12 +60,15 @@ export const useAppHeader = (emit) => {
 
   // Close dropdown when clicking outside
   const handleClickOutside = (event) => {
-    if (userDropdownRef.value && !userDropdownRef.value.contains(event.target)) {
-      isUserDropdownOpen.value = false;
-    }
-    if (guestDropdownRef.value && !guestDropdownRef.value.contains(event.target)) {
-      isGuestDropdownOpen.value = false;
-    }
+    // Add a small delay to ensure the click event has been processed
+    setTimeout(() => {
+      if (userDropdownRef.value && !userDropdownRef.value.contains(event.target)) {
+        isUserDropdownOpen.value = false;
+      }
+      if (guestDropdownRef.value && !guestDropdownRef.value.contains(event.target)) {
+        isGuestDropdownOpen.value = false;
+      }
+    }, 10);
   };
 
   // Override navigation methods to close dropdown

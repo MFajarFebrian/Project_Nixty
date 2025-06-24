@@ -215,12 +215,12 @@
   display: none;
   position: absolute;
   right: 0;
-  top: calc(100% - 2px);
+  top: calc(100% + 2px);
   background: var(--galaxy-card-gradient);
   backdrop-filter: blur(15px);
   min-width: 180px;
   box-shadow: var(--galaxy-shadow-large);
-  z-index: var(--galaxy-z-dropdown);
+  z-index: 100000; /* Higher than SearchBar to ensure visibility */
   border-radius: var(--galaxy-radius-md);
   border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
