@@ -1,5 +1,5 @@
 import { ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter } from '#app';
 import { useAuth } from '../../composables/useAuth';
 
 export const useAuthModal = (props, emit) => {
@@ -62,7 +62,7 @@ export const useAuthModal = (props, emit) => {
         
         setTimeout(() => {
           closeModal();
-          router.push('/dashboard');
+          router.push('/home');
         }, 1000);
       } else {
         errorMessage.value = response.message || 'Login failed';
@@ -125,7 +125,7 @@ export const useAuthModal = (props, emit) => {
   const handleGoogleAuthSuccess = (user) => {
     setUser(user);
     closeModal();
-    router.push('/dashboard');
+    router.push('/home');
   };
 
   const handleGoogleAuthError = (error) => {

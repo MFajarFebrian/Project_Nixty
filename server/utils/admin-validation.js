@@ -38,16 +38,20 @@ export const TABLE_VALIDATION_RULES = {
       name: 2
     },
     maxLength: {
-      name: 255,
+      name: 50,
       version: 50,
-      short_description: 500,
-      currency: 10,
-      period: 50
+      short_description: 50,
+      currency: 5,
+      period: 50,
+      slug: 100,
+      description: 1000
     },
-    numeric: ['price', 'discount_percentage', 'sold_count', 'view_count'],
+    slug: ['slug'],
+    numeric: ['price', 'discount_percentage', 'sold_count', 'view_count', 'category_id', 'min_stock_threshold'],
     positiveNumber: ['price'],
     enum: {
-      status: ['active', 'inactive', 'out_of_stock']
+      status: ['active', 'inactive', 'out_of_stock'],
+      license_type_default: ['product_key', 'email_password', 'access_code', 'download_link']
     }
   },
   categories: {
@@ -124,7 +128,7 @@ export const TABLE_VALIDATION_RULES = {
     email: ['email']
   },
   product_licenses: {
-    required: ['product_id', 'license_type', 'product_name'],
+    required: ['product_id', 'license_type'],
     minLength: {
       product_key: 5,
       email: 5,
@@ -209,6 +213,31 @@ export function validateSlug(slug) {
 }
 
 /**
+ * Generates a valid product slug from name and version
+ * @param {string} name - Product name
+ * @param {string} version - Product version
+ * @returns {string} - Generated slug
+ */
+export function generateProductSlug(name) {
+  // Convert to lowercase and replace spaces/special chars with hyphens
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Validates a product slug
+ * @param {string} slug - The slug to validate
+ * @returns {boolean} - Whether the slug is valid
+ */
+export function validateProductSlug(slug) {
+  // Slug should be lowercase, contain only letters, numbers, and hyphens
+  const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  return slugRegex.test(slug);
+}
+
+/**
  * Validate record data for a specific table
  */
 export function validateRecordData(tableName, data, isUpdate = false) {
@@ -268,7 +297,9 @@ export function validateRecordData(tableName, data, isUpdate = false) {
     // Slug validation
     if (rules.slug && rules.slug.includes(field)) {
       if (!validateSlug(sanitizedData[field])) {
-        errors.push(`Field '${field}' must be a valid slug (lowercase, alphanumeric, hyphens only)`);
+        const errorMessage = `Field '${field}' must be a valid slug (lowercase, alphanumeric, hyphens only). Value: '${sanitizedData[field]}'`;
+        console.error('Slug validation error:', errorMessage);
+        errors.push(errorMessage);
       }
     }
     

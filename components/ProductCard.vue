@@ -1,0 +1,207 @@
+<template>
+  <div class="product-card" @click="goToCheckout">
+    <!-- Product Image Section -->
+    <div class="product-image-wrapper">
+       <img 
+        :src="imageUrl" 
+        :alt="product.name" 
+        class="product-image" 
+        loading="lazy"
+        @error="onImageError"
+      />
+      
+      <!-- Overlays and Badges -->
+      <div class="product-badges">
+        <span v-if="product.is_new" class="badge new-badge">NEW</span>
+        <span v-if="product.discount_percentage" class="badge discount-badge">
+          {{ product.discount_percentage }}% OFF
+        </span>
+      </div>
+    </div>
+
+    <!-- Product Info Section -->
+    <div class="product-info">
+      <h3 class="product-title" :title="fullProductName">{{ fullProductName }}</h3>
+      
+      <div class="product-meta">
+        <span v-if="product.category" class="product-category">{{ product.category }}</span>
+        <span v-if="product.version" class="product-version">v{{ product.version }}</span>
+      </div>
+      
+      <!-- Price Section -->
+      <div class="product-pricing">
+        <div class="price-container">
+          <span v-if="product.discount_percentage" 
+                class="original-price">{{ formatCurrency(product.original_price) }}</span>
+          <span class="current-price">{{ formatCurrency(product.price) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+const props = defineProps({
+  product: {
+    type: Object,
+    required: true,
+    default: () => ({
+      name: '',
+      price: 0,
+      image_url: ''
+    })
+  }
+});
+
+const imageUrl = ref(props.product.image_url || '/placeholder-grey.svg');
+const router = useRouter();
+
+const onImageError = () => {
+  imageUrl.value = '/placeholder-grey.svg';
+};
+
+const fullProductName = computed(() => {
+  return props.product.name + (props.product.version ? ` ${props.product.version}` : '');
+});
+
+const goToCheckout = () => {
+  if (props.product.slug && props.product.id) {
+    router.push(`/checkout?slug=${props.product.slug}&productId=${props.product.id}`);
+  }
+};
+
+// Format currency
+const formatCurrency = (value) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(value);
+};
+
+</script>
+
+<style scoped>
+.product-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--galaxy-radius-lg, 12px);
+  overflow: hidden;
+  background: var(--galaxy-card-gradient, linear-gradient(145deg, #16213e, #1a1a2e));
+  border: 1px solid var(--galaxy-asteroid-gray, #2c2c54);
+  box-shadow: var(--galaxy-shadow-medium, 0 4px 16px rgba(0,0,0,0.4));
+  transition: all var(--galaxy-transition-normal, 0.3s ease);
+  height: 100%;
+  cursor: pointer;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25), var(--galaxy-glow-cyan, 0 0 20px rgba(77,208,225,0.3));
+  border-color: var(--galaxy-aurora-cyan, #4dd0e1);
+}
+
+.product-image-wrapper {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  background-color: var(--galaxy-dark-matter, #1a1a2e);
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--galaxy-transition-slow, 0.5s ease);
+}
+
+.product-card:hover .product-image {
+  transform: scale(1.05);
+}
+
+.product-badges {
+  position: absolute;
+  top: var(--galaxy-space-md, 1rem);
+  left: var(--galaxy-space-md, 1rem);
+  z-index: 2;
+  display: flex;
+  gap: var(--galaxy-space-sm, 0.5rem);
+}
+
+.badge {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  border-radius: var(--galaxy-radius-full, 50px);
+  color: var(--galaxy-starlight, #e8f4f8);
+}
+
+.new-badge {
+  background: var(--galaxy-primary-gradient, linear-gradient(135deg, #1976d2, #42a5f5));
+}
+
+.discount-badge {
+  background: var(--galaxy-pulsar-pink, #ff6b9d);
+}
+
+.product-info {
+  padding: var(--galaxy-space-md, 1rem);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.product-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--galaxy-starlight, #e8f4f8);
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: var(--galaxy-space-sm, 0.5rem);
+  line-height: 1.3;
+  height: 2.6em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.product-meta {
+  display: flex;
+  gap: var(--galaxy-space-sm, 0.5rem);
+  margin-bottom: var(--galaxy-space-md, 1rem);
+}
+
+.product-category, .product-version {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: var(--galaxy-radius-full, 50px);
+  background: var(--galaxy-asteroid-gray, #2c2c54);
+  color: var(--galaxy-cloud-gray, #b8b8d4);
+}
+
+.product-pricing {
+  margin-top: auto;
+  padding-top: var(--galaxy-space-sm, 0.5rem);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.original-price {
+  font-size: 0.8rem;
+  text-decoration: line-through;
+  color: var(--galaxy-cloud-gray, #b8b8d4);
+  opacity: 0.7;
+}
+
+.current-price {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--galaxy-aurora-cyan, #4dd0e1);
+}
+</style>

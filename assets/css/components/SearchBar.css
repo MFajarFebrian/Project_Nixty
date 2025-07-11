@@ -8,81 +8,72 @@
   margin: 0 10px;
   display: flex;
   align-items: center;
-  justify-content: flex-end; /* Align icon to right */
-  width: 42px; /* Start with icon width only */
-  overflow: visible; /* Allow content to be visible during animation */
-  transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smooth width transition */
+  justify-content: flex-end;
+  width: 42px;
+  overflow: visible;
+  transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: 50;
 }
 
-/* When expanded, container grows to accommodate content */
 .animated-search-container.expanded {
-  width: 450px; /* Full width: 408px content + 42px icon */
+  width: 450px;
 }
 
-/* Search Icon Container - Fixed at right */
+/* Search Icon Container */
 .search-icon-container {
   width: 42px;
   height: 42px;
-  background: #4ecdc4;
+  background: var(--galaxy-accent-gradient);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              border 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 10px rgba(78, 205, 196, 0.3);
-  border: 2px solid #4ecdc4;
-  position: absolute; /* Make icon position absolute to keep it stationary */
-  right: 0; /* Always stick to the right edge */
+  transition: all 0.3s ease;
+  border: none;
+  position: absolute;
+  right: 0;
   top: 0;
-  z-index: 10;
+  z-index: 51;
   flex-shrink: 0;
+  box-shadow: var(--galaxy-shadow-small);
 }
 
-/* When expanded, make icon seamless with content */
 .animated-search-container.expanded .search-icon-container {
-  border-radius: 0 6px 6px 0; /* Round right corners only */
-  border-left: none; /* Remove left border for seamless connection */
-  box-shadow: 0 4px 20px rgba(78, 205, 196, 0.2); /* Match content shadow */
+  border-radius: 0 8px 8px 0;
+  box-shadow: var(--galaxy-glow-cyan);
 }
 
 .search-icon-container:hover {
-  background: #3bb3a6;
   transform: scale(1.05);
-  box-shadow: 0 4px 20px rgba(78, 205, 196, 0.4);
+  box-shadow: var(--galaxy-glow-cyan);
 }
 
-/* Disable hover effects when expanded */
 .animated-search-container.expanded .search-icon-container:hover {
-  background: #4ecdc4;
   transform: none;
-  box-shadow: 0 4px 20px rgba(78, 205, 196, 0.2);
 }
 
 .search-icon-container i {
-  color: #1a1a2e;
+  color: var(--galaxy-deep-space);
   font-size: 16px;
 }
 
 /* Search Bar Content */
 .search-bar-content {
   display: flex;
-  background: #2a2a3e;
-  border: 2px solid #4ecdc4;
-  border-radius: 8px 0 0 8px; /* Round left corners only */
+  background: var(--galaxy-card-gradient);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--galaxy-asteroid-gray);
+  border-radius: 8px 0 0 8px;
   height: 42px;
-  width: 0; /* Start with 0 width */
+  width: 0;
   position: absolute;
-  right: 42px; /* Position to the left of the icon */
+  right: 42px;
   top: 0;
-  box-shadow: 0 4px 20px rgba(78, 205, 196, 0.2);
-  z-index: 5; /* Below icon but above other content */
-  overflow: visible; /* Allow suggestions to be visible */
+  box-shadow: var(--galaxy-shadow-medium);
+  z-index: 49;
+  overflow: visible;
   opacity: 0;
-
-  /* No transition by default - will be added via animation */
   will-change: width, opacity;
 }
 
@@ -303,10 +294,6 @@
   background-color: #4ecdc4 !important;
   color: #1a1a2e !important;
 }
-
-
-
-
 
 /* Removed duplicate CSS rules that were conflicting with the animation */
 

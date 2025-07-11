@@ -1,8 +1,5 @@
 <template>
   <div class="table-management">
-    <!-- Breadcrumb Navigation -->
-    <AdminBreadcrumb :current-table="tableName" />
-
     <!-- Header -->
     <div class="table-header">
       <div class="header-content">
@@ -13,6 +10,10 @@
       </div>
       
       <div class="header-actions">
+        <button v-if="tableName === 'product_licenses'" @click="showCsvUpload = true" class="upload-btn">
+          <i class="fas fa-file-upload"></i>
+          Import CSV
+        </button>
         <button @click="showCreateModal = true" class="create-btn">
           <i class="fas fa-plus"></i>
           Add New {{ tableDisplayName.slice(0, -1) }}
@@ -39,16 +40,15 @@
       </div>
       
       <div class="filter-section">
-        <select v-model="selectedLimit" @change="changeLimit" class="limit-select">
-          <option value="10">10 per page</option>
-          <option value="20">20 per page</option>
-          <option value="50">50 per page</option>
-          <option value="100">100 per page</option>
-        </select>
+        <CustomSelect
+          v-model="selectedLimit"
+          :options="limitOptions"
+          @update:modelValue="changeLimit"
+        />
         
-        <button @click="resetFilters" class="reset-btn">
-          <i class="fas fa-undo"></i>
-          Reset
+        <button @click="refreshData" class="refresh-btn">
+          <i class="fas fa-sync"></i>
+          Refresh
         </button>
       </div>
     </div>
@@ -77,8 +77,15 @@
     <!-- Table Content -->
     <div v-else class="table-container">
       <!-- Table -->
-      <div class="table-wrapper">
-        <table class="data-table">
+      <div 
+        ref="tableWrapperRef"
+        class="table-wrapper"
+        @mousedown="onMouseDown"
+        @mouseleave="onMouseLeave"
+        @mouseup="onMouseUp"
+        @mousemove="onMouseMove"
+      >
+        <table v-if="hasData" class="data-table">
           <thead>
             <tr>
               <th 
@@ -101,13 +108,24 @@
           </thead>
           <tbody>
             <tr v-for="record in tableData" :key="record.id" class="data-row">
-              <td v-for="column in visibleColumns" :key="column.name" class="data-cell">
+              <td v-for="column in visibleColumns" :key="column.name" class="data-cell" :data-column="column.name">
                 <span v-if="column.name === 'password'">••••••••</span>
+                <span v-else-if="column.name === 'email'" class="email-cell">
+                  {{ record[column.name] }}
+                </span>
+                <span v-else-if="isCurrencyColumn(column)" class="currency-value">
+                  {{ formatCurrency(record[column.name]) }}
+                </span>
                 <span v-else-if="isDateColumn(column)" class="date-value">
                   {{ formatDate(record[column.name]) }}
                 </span>
                 <span v-else-if="isBooleanColumn(column)" class="boolean-value">
                   <i :class="record[column.name] ? 'fas fa-check text-success' : 'fas fa-times text-danger'"></i>
+                </span>
+                <span v-else-if="isStatusColumn(column)" class="status-column">
+                  <span class="status-badge" :class="`status-${record[column.name]?.toLowerCase()}`">
+                    {{ formatStatus(record[column.name]) }}
+                  </span>
                 </span>
                 <span v-else-if="isLongText(record[column.name])" class="long-text" :title="record[column.name]">
                   {{ truncateText(record[column.name]) }}
@@ -191,6 +209,7 @@
       :table-name="tableName"
       :columns="tableColumns"
       :record="editingRecord"
+      :relations="tableRelations"
       @close="closeModal"
       @save="handleSave"
     />
@@ -207,23 +226,34 @@
       @cancel="showDeleteModal = false"
     />
 
+    <!-- Csv Upload Modal -->
+    <CsvUploadModal
+      v-if="showCsvUpload"
+      :show="showCsvUpload"
+      @close="showCsvUpload = false"
+      @upload-complete="handleUploadComplete"
+    />
+
     <!-- Toast Notifications -->
     <ToastNotifications />
   </div>
 </template>
 
 <script setup lang="js">
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, computed, onMounted, watch, nextTick, onUnmounted } from 'vue';
+import { useRoute } from '#app';
 import { useAdminAuth } from '~/composables/useAdminAuth';
 import { useAdminTables } from '~/composables/useAdminTables';
 import { useAdminOverview } from '~/composables/useAdminOverview';
+import { useRuntimeConfig } from '#app';
+import { useUtils } from '~/composables/useUtils';
 
 // Components
-import AdminBreadcrumb from '~/components/admin/AdminBreadcrumb.vue';
 import RecordModal from '~/components/admin/RecordModal.vue';
 import ConfirmModal from '~/components/admin/ConfirmModal.vue';
 import ToastNotifications from '~/components/admin/ToastNotifications.vue';
+import CsvUploadModal from '~/components/admin/CsvUploadModal.vue';
+import CustomSelect from '~/components/admin/CustomSelect.vue';
 
 // Set page meta
 definePageMeta({
@@ -235,7 +265,7 @@ const route = useRoute();
 const { requireAdmin } = useAdminAuth();
 
 // Get table name from route
-const tableName = computed(() => route.params.table);
+const tableName = ref(route.params.table);
 const tableDisplayName = computed(() => {
   const { getTableDisplayName } = useAdminOverview();
   return getTableDisplayName(tableName.value);
@@ -247,6 +277,7 @@ const {
   error,
   tableData,
   tableColumns,
+  tableRelations,
   pagination,
   searchQuery,
   sortBy,
@@ -254,6 +285,7 @@ const {
   hasData,
   isFirstPage,
   isLastPage,
+  showCsvUpload,
   fetchTableData,
   createRecord,
   updateRecord,
@@ -263,11 +295,28 @@ const {
   prevPage,
   search,
   sort,
-  resetFilters
+  resetFilters,
+  refreshData,
+  changeLimit,
 } = useAdminTables();
 
+// Utils composable
+const {
+  getTableIcon,
+  formatColumnName,
+  isDateColumn,
+  isBooleanColumn,
+  isStatusColumn,
+  isCurrencyColumn,
+  isLongText,
+  truncateText,
+  formatDate,
+  formatStatus,
+  formatCurrency,
+} = useUtils();
+
 // Local state
-const searchInput = ref('');
+const searchInput = ref(searchQuery.value);
 const selectedLimit = ref(20);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
@@ -275,11 +324,60 @@ const showDeleteModal = ref(false);
 const editingRecord = ref(null);
 const deletingRecord = ref(null);
 
+// Drag-scroll logic
+const tableWrapperRef = ref(null);
+let isDragging = false;
+let startX = 0;
+let scrollLeft = 0;
+
+const onMouseDown = (e) => {
+  console.log('Mouse down on table wrapper');
+  isDragging = true;
+  startX = e.pageX - tableWrapperRef.value.offsetLeft;
+  scrollLeft = tableWrapperRef.value.scrollLeft;
+  tableWrapperRef.value.classList.add('dragging');
+  e.preventDefault();
+};
+
+const onMouseLeave = () => {
+  console.log('Mouse leave table wrapper');
+  isDragging = false;
+  if (tableWrapperRef.value) {
+    tableWrapperRef.value.classList.remove('dragging');
+  }
+};
+
+const onMouseUp = () => {
+  console.log('Mouse up on table wrapper');
+  isDragging = false;
+  if (tableWrapperRef.value) {
+    tableWrapperRef.value.classList.remove('dragging');
+  }
+};
+
+const onMouseMove = (e) => {
+  if (!isDragging) return;
+  e.preventDefault();
+  const x = e.pageX - tableWrapperRef.value.offsetLeft;
+  const walk = (x - startX) * 1.5; // scroll speed
+  tableWrapperRef.value.scrollLeft = scrollLeft - walk;
+};
+
 // Computed
 const visibleColumns = computed(() => {
-  return tableColumns.value.filter(col => 
-    !col.extra.includes('auto_increment') || col.name === 'id'
-  );
+  console.log('Computing visibleColumns with tableColumns:', tableColumns.value);
+  if (!tableColumns.value || !Array.isArray(tableColumns.value)) {
+    console.warn('tableColumns is not an array:', tableColumns.value);
+    return [];
+  }
+  
+  return tableColumns.value.filter(col => {
+    // Selalu tampilkan kolom ID
+    if (col.name === 'id') return true;
+    
+    // Jangan tampilkan kolom yang auto_increment selain ID
+    return !col.extra?.includes('auto_increment');
+  });
 });
 
 const visiblePages = computed(() => {
@@ -307,43 +405,14 @@ const visiblePages = computed(() => {
   return range;
 });
 
+const limitOptions = computed(() => [
+  { value: 10, label: '10 per page' },
+  { value: 20, label: '20 per page' },
+  { value: 50, label: '50 per page' },
+  { value: 100, label: '100 per page' },
+]);
+
 // Methods
-const { getTableIcon } = useAdminOverview();
-
-const formatColumnName = (name) => {
-  return name.split('_').map(word =>
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
-};
-
-const isDateColumn = (column) => {
-  return column.type.includes('timestamp') || column.type.includes('datetime') ||
-         column.name.includes('_at') || column.name.includes('date');
-};
-
-const isBooleanColumn = (column) => {
-  return column.type.includes('tinyint(1)') || column.name.startsWith('is_');
-};
-
-const isLongText = (text) => {
-  return text && typeof text === 'string' && text.length > 50;
-};
-
-const truncateText = (text, length = 50) => {
-  if (!text || typeof text !== 'string') return text;
-  return text.length > length ? text.substring(0, length) + '...' : text;
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleDateString('id-ID', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
 
 const handleSearch = () => {
   search(searchInput.value);
@@ -354,19 +423,8 @@ const clearSearch = () => {
   search('');
 };
 
-const changeLimit = () => {
-  pagination.limit = parseInt(selectedLimit.value);
-  pagination.page = 1;
-  loadTableData();
-};
-
 const handleSort = (column) => {
-  const newOrder = (sortBy.value === column && sortOrder.value === 'asc') ? 'desc' : 'asc';
-  sort(column, newOrder);
-};
-
-const loadTableData = () => {
-  fetchTableData(tableName.value);
+  sort(column);
 };
 
 const editRecord = (record) => {
@@ -387,43 +445,103 @@ const closeModal = () => {
 
 const handleSave = async (data) => {
   try {
-    if (showCreateModal.value) {
-      await createRecord(tableName.value, data);
-    } else if (showEditModal.value && editingRecord.value) {
-      await updateRecord(tableName.value, editingRecord.value.id, data);
+    if (data.id) {
+      // Update
+      await updateRecord(tableName.value, data.id, data.record);
+    } else {
+      // Create
+      await createRecord(tableName.value, data.record);
     }
     closeModal();
-  } catch (error) {
-    // Error is handled by the composable
+  } catch (err) {
+    console.error('Error saving record:', err);
+    // The error is already handled and displayed by useAdminTables and useToast
+    // No need to re-throw or display here, just prevent modal from closing
   }
 };
 
 const handleDelete = async () => {
-  try {
-    if (deletingRecord.value) {
-      await deleteRecord(tableName.value, deletingRecord.value.id);
-    }
+  if (deletingRecord.value) {
+    await deleteRecord(tableName.value, deletingRecord.value.id);
     showDeleteModal.value = false;
     deletingRecord.value = null;
-  } catch (error) {
-    // Error is handled by the composable
   }
 };
 
+const handleUploadComplete = () => {
+  refreshData();
+};
+
+const loadTableData = () => {
+  fetchTableData(tableName.value, { forceRefresh: true });
+};
+
+// Tambahkan method untuk memaksa refresh data
+const forceRefreshData = async () => {
+  console.log('Force refreshing data...');
+  loading.value = true;
+  await new Promise(resolve => setTimeout(resolve, 500)); // Delay sedikit untuk efek visual
+  await loadTableData();
+  loading.value = false;
+};
+
+// Tambahkan watch untuk debug tableData
+watch(tableData, (newData) => {
+  console.log('tableData changed:', newData);
+  console.log('hasData is now:', hasData.value);
+}, { deep: true });
+
 // Watch for route changes
-watch(() => route.params.table, (newTable) => {
+watch(() => route.params.table, async (newTable) => {
   if (newTable) {
-    loadTableData();
+    try {
+      await loadTableData();
+    } catch (err) {
+      console.error('Error loading table data for route change:', err);
+      error.value = err.message || 'Failed to load table data';
+    }
   }
 });
 
+// Get runtime config
+const config = useRuntimeConfig();
+const isDevelopment = computed(() => config.public.nodeEnv === 'development');
+
 // Initialize
 onMounted(async () => {
-  if (!requireAdmin()) {
-    return;
+  try {
+    console.log('Table component mounted, checking admin access...');
+    if (!requireAdmin()) {
+      console.error('Admin access required');
+      return;
+    }
+
+    console.log('Admin access confirmed, loading table data...');
+    await loadTableData();
+    console.log('Initial table data loaded');
+    
+    // Jika data tidak muncul, coba load ulang setelah delay singkat
+    if (!hasData.value && !error.value) {
+      console.log('No data loaded on first attempt, trying again after delay...');
+      setTimeout(async () => {
+        console.log('Reloading data after delay');
+        await loadTableData();
+      }, 1000);
+    }
+  } catch (err) {
+    console.error('Error initializing table management:', err);
+    error.value = err.message || 'Failed to initialize table management';
   }
 
-  await loadTableData();
+  // Add document event listeners for drag-scroll
+  document.addEventListener('mouseup', onMouseUp);
+  document.addEventListener('mouseleave', onMouseLeave);
+});
+
+// Cleanup event listeners
+onUnmounted(() => {
+  document.removeEventListener('mouseup', onMouseUp);
+  document.removeEventListener('mouseleave', onMouseLeave);
 });
 </script>
 

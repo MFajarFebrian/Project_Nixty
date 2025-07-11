@@ -99,18 +99,32 @@ function getClientIP(event) {
   return event.node.req.socket?.remoteAddress || 'unknown';
 }
 
+// Paths to exclude from rate limiting
+const excludedPaths = [
+  '/api/home-page',
+  '/api/products/group/', // Exclude product group lookups
+  '/api/products/'       // Exclude single product lookups by slug/id
+];
+
 export default defineEventHandler(async (event) => {
+  const url = event.node.req.url || '';
+
   // Only apply rate limiting to API routes
-  if (!event.node.req.url?.startsWith('/api/')) {
+  if (!url.startsWith('/api/')) {
     return;
   }
   
+  // Check if the path should be excluded
+  if (excludedPaths.some(path => url.startsWith(path))) {
+    return;
+  }
+
   // Clean up expired entries periodically
   if (Math.random() < 0.01) { // 1% chance to cleanup on each request
     cleanupExpiredEntries();
   }
   
-  const isAdminEndpoint = event.node.req.url.startsWith('/api/admin/');
+  const isAdminEndpoint = url.startsWith('/api/admin/');
   const clientIP = getClientIP(event);
   
   // Check rate limit

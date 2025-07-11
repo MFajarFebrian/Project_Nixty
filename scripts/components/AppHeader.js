@@ -1,4 +1,6 @@
 import { ref, computed } from 'vue';
+import { useAuth } from '~/composables/useAuth';
+import { useRouter, useRoute } from '#app';
 
 export const useAppHeader = (emit) => {
   const { user, initUser, logout } = useAuth();
@@ -31,11 +33,6 @@ export const useAppHeader = (emit) => {
 
     // Admin routes special handling
     if (path === '/admin' && currentRoute.value.startsWith('/admin')) {
-      return true;
-    }
-
-    // Dashboard routes
-    if (path === '/dashboard' && currentRoute.value === '/dashboard') {
       return true;
     }
 
@@ -78,7 +75,7 @@ export const useAppHeader = (emit) => {
   };
 
   const navigateToOrders = () => {
-    router.push('/orders');
+    router.push('/profile/transactions');
     isUserDropdownOpen.value = false;
   };
 
@@ -118,9 +115,21 @@ export const useAppHeader = (emit) => {
     isUserDropdownOpen.value = false;
   };
 
+  const navigateToStockManagement = () => {
+    router.push('/admin');
+    isUserDropdownOpen.value = false;
+    // We'll use a custom event to trigger the stock management modal
+    // This will be handled by the admin dashboard
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('open-stock-management'));
+    }, 100);
+  };
+
   const openAuthModal = (tab = 'login') => {
-    emit('open-auth-modal', tab);
-    isGuestDropdownOpen.value = false;
+    if (emit) {
+      emit('open-auth-modal', tab);
+      isGuestDropdownOpen.value = false;
+    }
   };
 
   const handleLogout = () => {
@@ -185,6 +194,7 @@ export const useAppHeader = (emit) => {
     navigateToTransactionManagement,
     navigateToAnnouncementManagement,
     navigateToLicenseManagement,
+    navigateToStockManagement,
     openAuthModal,
     handleLogout,
     handleSearch,

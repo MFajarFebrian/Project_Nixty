@@ -1,4 +1,4 @@
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useAdminAuth } from './useAdminAuth';
 import { useToast } from './useToast';
 
@@ -14,7 +14,7 @@ export function useAdminTables() {
   const error = ref(null);
   const tables = ref([]);
   const currentTable = ref(null);
-  const tableData = ref([]);
+  const allTableData = ref([]); // Store all data for client-side operations
   const tableColumns = ref([]);
   const pagination = reactive({
     page: 1,
@@ -25,9 +25,60 @@ export function useAdminTables() {
   const searchQuery = ref('');
   const sortBy = ref('id');
   const sortOrder = ref('asc');
+  const showCsvUpload = ref(false);
+  const tableRelations = ref({});
+
+  const tableData = computed(() => {
+    if (!allTableData.value) return [];
+    
+    let data = [...allTableData.value];
+    
+    // 1. Filter by search query
+    if (searchQuery.value) {
+      const lowerCaseQuery = searchQuery.value.toLowerCase();
+      data = data.filter(row => 
+        Object.values(row).some(value => 
+          String(value).toLowerCase().includes(lowerCaseQuery)
+        )
+      );
+    }
+
+    // 2. Sort data
+    if (sortBy.value) {
+      data.sort((a, b) => {
+        let valA = a[sortBy.value];
+        let valB = b[sortBy.value];
+
+        // Gracefully handle nulls and different types
+        if (valA == null) return 1;
+        if (valB == null) return -1;
+        
+        if (typeof valA === 'string' && typeof valB === 'string') {
+            valA = valA.toLowerCase();
+            valB = valB.toLowerCase();
+        }
+
+        if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+        if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    // 3. Update pagination totals based on filtered data
+    pagination.total = data.length;
+    pagination.totalPages = Math.ceil(data.length / pagination.limit);
+
+    // 4. Paginate data
+    const start = (pagination.page - 1) * pagination.limit;
+    const end = start + pagination.limit;
+    
+    return data.slice(start, end);
+  });
 
   // Computed
-  const hasData = computed(() => tableData.value.length > 0);
+  const hasData = computed(() => {
+    return Array.isArray(tableData.value) && tableData.value.length > 0;
+  });
   const isFirstPage = computed(() => pagination.page === 1);
   const isLastPage = computed(() => pagination.page >= pagination.totalPages);
 
@@ -65,37 +116,65 @@ export function useAdminTables() {
   };
 
   // Fetch table data
-  const fetchTableData = async (tableName, options = {}) => {
+  const fetchTableData = async (tableName, { forceRefresh = false } = {}) => {
     try {
+      if (!forceRefresh && allTableData.value.length > 0 && currentTable.value === tableName) {
+        console.log('Using cached data for', tableName);
+        pagination.page = 1; // Reset to first page when re-selecting a cached table
+        return true;
+      }
+      
       checkAdminAccess();
       loading.value = true;
       clearError();
+      
+      console.log(`Fetching all data for table: ${tableName}`);
 
-      const params = {
-        page: options.page || pagination.page,
-        limit: options.limit || pagination.limit,
-        search: options.search || searchQuery.value,
-        sortBy: options.sortBy || sortBy.value,
-        sortOrder: options.sortOrder || sortOrder.value
-      };
-
+      // Fetch ALL data, remove pagination params for this main fetch
       const response = await $fetch(`/api/admin/tables/${tableName}`, {
         headers: getAdminHeaders(),
-        query: params
+        query: {}
       });
+      
+      console.log('API Response (all data):', response);
 
-      if (response.success) {
+      if (response && response.success) {
         currentTable.value = tableName;
-        tableData.value = response.data.records || [];
-        tableColumns.value = response.data.columns || [];
         
-        // Update pagination
-        Object.assign(pagination, response.data.pagination);
+        if (Array.isArray(response.data)) {
+          allTableData.value = response.data;
+          console.log(`Cached ${allTableData.value.length} records`);
+        } else {
+          console.error('API returned non-array data:', response.data);
+          allTableData.value = [];
+        }
+        
+        if (response.meta && Array.isArray(response.meta.columns)) {
+          tableColumns.value = response.meta.columns;
+        } else {
+          console.error('API returned invalid columns data:', response.meta?.columns);
+          tableColumns.value = [];
+        }
+
+        if (response.meta && response.meta.relations) {
+          tableRelations.value = response.meta.relations;
+        }
+        
+        // Reset pagination and let the computed property handle the view
+        pagination.page = 1;
+        
+        return true;
       } else {
-        setError(response.message || 'Failed to fetch table data');
+        const errorMsg = response?.message || 'Failed to fetch table data';
+        console.error('API error:', errorMsg);
+        setError(errorMsg);
+        return false;
       }
     } catch (err) {
-      setError(err.message || 'Failed to fetch table data');
+      const errorMsg = err.message || 'Failed to fetch table data';
+      console.error('Exception in fetchTableData:', errorMsg);
+      setError(errorMsg);
+      return false;
     } finally {
       loading.value = false;
     }
@@ -116,7 +195,7 @@ export function useAdminTables() {
 
       if (response.success) {
         // Refresh table data
-        await fetchTableData(tableName);
+        await fetchTableData(tableName, { forceRefresh: true });
         success('Record created successfully!');
         return response.data;
       } else {
@@ -152,7 +231,7 @@ export function useAdminTables() {
 
       if (response.success) {
         // Refresh table data
-        await fetchTableData(tableName);
+        await fetchTableData(tableName, { forceRefresh: true });
         success('Record updated successfully!');
         return response.data;
       } else {
@@ -187,7 +266,7 @@ export function useAdminTables() {
 
       if (response.success) {
         // Refresh table data
-        await fetchTableData(tableName);
+        await fetchTableData(tableName, { forceRefresh: true });
         success('Record deleted successfully!');
         return response.data;
       } else {
@@ -210,39 +289,34 @@ export function useAdminTables() {
   const goToPage = (page) => {
     if (page >= 1 && page <= pagination.totalPages) {
       pagination.page = page;
-      if (currentTable.value) {
-        fetchTableData(currentTable.value);
-      }
     }
   };
 
   const nextPage = () => {
     if (!isLastPage.value) {
-      goToPage(pagination.page + 1);
+      pagination.page++;
     }
   };
 
   const prevPage = () => {
     if (!isFirstPage.value) {
-      goToPage(pagination.page - 1);
+      pagination.page--;
     }
   };
 
-  // Search and sort
   const search = (query) => {
     searchQuery.value = query;
-    pagination.page = 1; // Reset to first page
-    if (currentTable.value) {
-      fetchTableData(currentTable.value);
-    }
+    pagination.page = 1; // Reset to first page on new search
   };
 
-  const sort = (column, order = 'asc') => {
-    sortBy.value = column;
-    sortOrder.value = order;
-    if (currentTable.value) {
-      fetchTableData(currentTable.value);
+  const sort = (column) => {
+    if (sortBy.value === column) {
+      sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortBy.value = column;
+      sortOrder.value = 'asc';
     }
+    pagination.page = 1; // Reset to first page on new sort
   };
 
   const resetFilters = () => {
@@ -250,10 +324,24 @@ export function useAdminTables() {
     sortBy.value = 'id';
     sortOrder.value = 'asc';
     pagination.page = 1;
+  };
+
+  // New method to force refresh
+  const refreshData = () => {
     if (currentTable.value) {
-      fetchTableData(currentTable.value);
+      fetchTableData(currentTable.value, { forceRefresh: true });
     }
   };
+
+  const changeLimit = (newLimit) => {
+    pagination.limit = newLimit;
+    pagination.page = 1; // Go to first page when limit changes
+  };
+
+  // Initialize tables on mount
+  onMounted(() => {
+    fetchTables();
+  });
 
   return {
     // State
@@ -263,10 +351,12 @@ export function useAdminTables() {
     currentTable,
     tableData,
     tableColumns,
+    tableRelations,
     pagination,
     searchQuery,
     sortBy,
     sortOrder,
+    showCsvUpload,
     
     // Computed
     hasData,
@@ -285,6 +375,8 @@ export function useAdminTables() {
     prevPage,
     search,
     sort,
-    resetFilters
+    resetFilters,
+    refreshData,
+    changeLimit
   };
 }

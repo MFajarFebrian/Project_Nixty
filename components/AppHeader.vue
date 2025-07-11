@@ -8,10 +8,11 @@
     <nav class="nav-links" :class="{ 'nav-slide': isSearchExpanded }">
       <!-- Basic navigation for all users -->
       <NuxtLink to="/home" :class="{ 'active': isActiveRoute('/home') }">Home</NuxtLink>
+      <NuxtLink to="/products" :class="{ 'active': isActiveRoute('/products') }">Products</NuxtLink>
 
       <!-- Admin-only links -->
       <template v-if="user && user.account_type === 'admin'">
-        <NuxtLink to="/admin" :class="{ 'active': isActiveRoute( '/admin') }">Admin Panel</NuxtLink>
+        <NuxtLink to="/admin" :class="{ 'active': isActiveRoute('/admin') }">Admin Panel</NuxtLink>
       </template>
     </nav>
 
@@ -29,10 +30,43 @@
       <div class="auth-actions">
         <!-- User account dropdown (when logged in) -->
         <div v-if="user" class="user-account-dropdown" ref="userDropdownRef">
-          <button class="account-icon-btn" title="Account" @click="toggleUserDropdown">
-            <i class="fas fa-user"></i>
+          <button class="account-icon-btn profile-btn" title="Account" @click="toggleUserDropdown">
+            <!-- Debug: Show user data -->
+            <!-- <div style="position: absolute; top: -30px; left: 0; background: yellow; padding: 2px; font-size: 10px; z-index: 2000;">
+              User: {{ user.name }}<br>
+              PP: {{ user.profile_picture }}
+            </div> -->
+            
+            <div class="profile-picture-container">
+              <ProfilePicture
+                :src="user.profile_picture"
+                :alt="user.name"
+                :userName="user.name"
+                :userId="user.id"
+                :customFallback="true"
+              />
+            </div>
           </button>
           <div class="account-dropdown-content" :class="{ 'show': isUserDropdownOpen }">
+            <!-- User info section -->
+            <div class="user-info-section">
+              <div class="user-avatar">
+                <ProfilePicture
+                  :src="user.profile_picture"
+                  :alt="user.name"
+                  :userName="user.name"
+                  :userId="user.id"
+                  :customFallback="true"
+                  class="user-avatar-img"
+                />
+              </div>
+              <div class="user-details">
+                <div class="user-name">{{ user.name }}</div>
+                <div class="user-email">{{ user.email }}</div>
+              </div>
+            </div>
+            <div class="dropdown-divider"></div>
+            
             <!-- Admin-specific items -->
             <template v-if="user.account_type === 'admin'">
               <a href="#" class="dropdown-item admin-item" @click.prevent="navigateToAdminDashboard">
@@ -58,6 +92,10 @@
               <a href="#" class="dropdown-item admin-item" @click.prevent="navigateToLicenseManagement">
                 <i class="fas fa-key"></i>
                 <span>Manage Licenses</span>
+              </a>
+              <a href="#" class="dropdown-item admin-item" @click.prevent="navigateToStockManagement">
+                <i class="fas fa-boxes"></i>
+                <span>Stock Management</span>
               </a>
               <div class="dropdown-divider"></div>
             </template>
@@ -85,8 +123,8 @@
 
         <!-- Guest account dropdown (when not logged in) -->
         <div v-else class="guest-account-dropdown" ref="guestDropdownRef">
-          <button class="account-icon-btn" title="Login / Register" @click="toggleGuestDropdown">
-            <i class="fas fa-user"></i>
+          <button class="account-icon-btn login-btn" title="Login / Register" @click="toggleGuestDropdown">
+            <i class="fas fa-user-circle"></i>
           </button>
           <div class="account-dropdown-content" :class="{ 'show': isGuestDropdownOpen }">
             <a href="#" class="dropdown-item" @click.prevent="openAuthModal('login')">
@@ -107,10 +145,11 @@
 <script setup lang="js">
 import { onMounted, onUnmounted } from 'vue';
 import SearchBar from '~/components/SearchBar.vue';
+import ProfilePicture from '~/components/ProfilePicture.vue';
 import { useAppHeader } from '~/scripts/components/AppHeader.js';
 import '~/assets/css/components/AppHeader.css';
 
-// Emits
+// Define emits
 const emit = defineEmits(['open-auth-modal']);
 
 // Use the separated script logic
@@ -136,6 +175,7 @@ const {
   navigateToTransactionManagement,
   navigateToAnnouncementManagement,
   navigateToLicenseManagement,
+  navigateToStockManagement,
   openAuthModal,
   handleLogout,
   handleSearch,

@@ -453,8 +453,6 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Star icon is now handled by emoji in template */
-
 .slide-description {
   font-size: 0.9rem;
   line-height: 1.4;
@@ -465,46 +463,6 @@
 .slide-actions {
   display: flex;
   gap: var(--galaxy-space-lg);
-}
-
-.slide-product-image {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 40%;
-}
-
-.product-placeholder {
-  max-width: 100%;
-  max-height: 350px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--galaxy-card-gradient);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--galaxy-radius-lg);
-  padding: var(--galaxy-space-2xl);
-  text-align: center;
-}
-
-.product-icon {
-  font-size: 4rem;
-  margin-bottom: var(--galaxy-space-lg);
-}
-
-.product-placeholder h3 {
-  color: var(--galaxy-moonbeam);
-  margin-bottom: var(--galaxy-space-sm);
-  font-size: 1.5rem;
-  line-height: 1.3;
-}
-
-.product-placeholder p {
-  color: var(--galaxy-light-gray);
-  font-size: 1rem;
 }
 
 /* Carousel Controls */
@@ -570,6 +528,46 @@
   border-color: var(--galaxy-aurora-cyan);
   box-shadow: var(--galaxy-glow-cyan);
   transform: scale(1.15);
+}
+
+.slide-product-image {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 40%;
+}
+
+.product-placeholder {
+  max-width: 100%;
+  max-height: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--galaxy-card-gradient);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--galaxy-radius-lg);
+  padding: var(--galaxy-space-2xl);
+  text-align: center;
+}
+
+.product-icon {
+  font-size: 4rem;
+  margin-bottom: var(--galaxy-space-lg);
+}
+
+.product-placeholder h3 {
+  color: var(--galaxy-moonbeam);
+  margin-bottom: var(--galaxy-space-sm);
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+.product-placeholder p {
+  color: var(--galaxy-light-gray);
+  font-size: 1rem;
 }
 
 /* Buttons */
@@ -1114,7 +1112,7 @@
 }
 
 .deal-title {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: bold;
   color: var(--galaxy-moonbeam);
   margin-bottom: var(--galaxy-space-md);
@@ -1349,8 +1347,6 @@
   line-height: 1.3;
 }
 
-
-
 .recommendation-description {
   color: var(--galaxy-light-gray);
   font-size: 13px;
@@ -1551,8 +1547,6 @@
   transition: var(--galaxy-transition-normal);
 }
 
-
-
 .faq-answer {
   padding: 0 var(--galaxy-space-lg) var(--galaxy-space-lg);
   color: var(--galaxy-light-gray);
@@ -1643,7 +1637,7 @@
     padding: var(--galaxy-space-md);
   }
 
-  .hero-carousel {
+  .hero-carousel-container {
     height: 400px;
   }
 
@@ -1652,7 +1646,7 @@
   }
 
   .slide-title {
-    font-size: 2.2rem;
+    font-size: 2rem;
   }
 
   .slide-description {
@@ -1661,7 +1655,7 @@
 
   .slide-actions {
     flex-direction: column;
-    gap: var(--galaxy-space-md);
+    gap: 0.5rem;
   }
 
   .slide-actions .btn {
@@ -1741,16 +1735,17 @@
 }
 
 @media (max-width: 480px) {
-  .hero-carousel {
+  .hero-carousel-container {
     height: 350px;
   }
 
   .slide-title {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
   }
 
   .slide-description {
-    font-size: 14px;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
   }
 
   .section-title {
@@ -1781,8 +1776,44 @@
   }
 
   .carousel-btn {
-    width: 35px;
-    height: 35px;
-    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
   }
+}
+
+/* Pagination Controls */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+  padding-bottom: 2rem;
+  gap: 0.5rem;
+}
+
+.pagination-btn {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.pagination-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary-color-light);
+}
+
+.pagination-btn.active {
+  background-color: var(--primary-color);
+  color: #0c0a1a;
+  border-color: var(--primary-color-light);
+  transform: scale(1.1);
+  box-shadow: 0 0 15px var(--primary-color-glow);
 }

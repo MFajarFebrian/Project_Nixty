@@ -34,7 +34,8 @@
                 :placeholder="getPlaceholder(column)"
                 :required="isRequired(column)"
                 :readonly="isAutoFilled(column)"
-                :class="['form-input', { 'auto-filled': isAutoFilled(column) }]"
+                :disabled="isFieldDisabled(column) || isFieldLoading(column)"
+                :class="['form-input', { 'auto-filled': isAutoFilled(column), 'disabled': isFieldDisabled(column) }]"
               />
 
               <!-- Textarea -->
@@ -44,28 +45,33 @@
                 v-model="formData[column.name]"
                 :placeholder="getPlaceholder(column)"
                 :required="isRequired(column)"
+                :disabled="isFieldDisabled(column) || isFieldLoading(column)"
+                :class="['form-textarea', { 'disabled': isFieldDisabled(column) }]"
                 rows="4"
-                class="form-textarea"
               ></textarea>
 
               <!-- Select -->
               <div v-else-if="isSelect(column)" class="select-group">
-                <select
+                <div v-if="isFieldLoading(column)" class="select-loading-overlay">
+                  <i class="fas fa-spinner fa-spin"></i>
+                  <span>Loading...</span>
+                  <button 
+                    v-if="column.name === 'product_id'"
+                    @click="reloadProductOptions" 
+                    class="reload-btn"
+                    title="Reload products"
+                  >
+                    Reload
+                  </button>
+                </div>
+                <CustomSelect
                   :id="column.name"
                   v-model="formData[column.name]"
+                  :options="getSelectOptionsForCustomComponent(column)"
+                  :placeholder="`Select ${formatColumnName(column.name)}`"
                   :required="isRequired(column)"
-                  :disabled="isAutoFilled(column)"
-                  :class="['form-select', { 'auto-filled': isAutoFilled(column) }]"
-                >
-                  <option value="">Select {{ formatColumnName(column.name) }}</option>
-                  <option
-                    v-for="option in getSelectOptions(column)"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
+                  :disabled="isAutoFilled(column) || isFieldDisabled(column) || isFieldLoading(column)"
+                />
 
                 <!-- Auto-fill trigger button for product_id -->
                 <button
@@ -79,13 +85,31 @@
                 </button>
               </div>
 
+              <!-- Status Selector for Transactions -->
+              <div v-else-if="column.name === 'status' && props.tableName === 'transactions'" class="status-options">
+                <div 
+                  v-for="status in ['completed', 'pending', 'failed']" 
+                  :key="status"
+                  class="status-option"
+                  :class="[status, { active: formData.status === status }]"
+                  @click="formData.status = status"
+                >
+                  <i 
+                    :class="getStatusIcon(status)" 
+                    aria-hidden="true"
+                  ></i>
+                  {{ formatStatus(status) }}
+                </div>
+              </div>
+
               <!-- Boolean Checkbox -->
               <div v-else-if="isBoolean(column)" class="checkbox-wrapper">
                 <input
                   :id="column.name"
                   v-model="formData[column.name]"
                   type="checkbox"
-                  class="form-checkbox"
+                  :disabled="isFieldDisabled(column)"
+                  :class="['form-checkbox', { 'disabled': isFieldDisabled(column) }]"
                 />
                 <label :for="column.name" class="checkbox-label">
                   {{ getCheckboxLabel(column) }}
@@ -102,7 +126,8 @@
                 :min="getNumberMin(column)"
                 :placeholder="getPlaceholder(column)"
                 :required="isRequired(column)"
-                class="form-input"
+                :disabled="isFieldDisabled(column)"
+                :class="['form-input', { 'disabled': isFieldDisabled(column) }]"
               />
 
               <!-- Date Input -->
@@ -112,7 +137,8 @@
                 v-model="formData[column.name]"
                 type="datetime-local"
                 :required="isRequired(column)"
-                class="form-input"
+                :disabled="isFieldDisabled(column)"
+                :class="['form-input', { 'disabled': isFieldDisabled(column) }]"
               />
 
               <!-- Image Upload -->
@@ -123,8 +149,6 @@
                 :required="isRequired(column)"
               />
 
-
-
               <!-- Default Input -->
               <input
                 v-else
@@ -133,20 +157,32 @@
                 type="text"
                 :placeholder="getPlaceholder(column)"
                 :required="isRequired(column)"
-                class="form-input"
+                :disabled="isFieldDisabled(column)"
+                :class="['form-input', { 'disabled': isFieldDisabled(column) }]"
               />
 
               <!-- Field Help Text -->
-              <p v-if="getHelpText(column)" class="field-help">
+              <p v-if="getHelpText(column)" 
+                 :class="[
+                   'field-help',
+                   {
+                     'slug-tip': column.name === 'slug' && props.tableName === 'products' && !formData.category_id,
+                     'slug-auto': column.name === 'slug' && props.tableName === 'products' && formData.category_id
+                   }
+                 ]">
                 {{ getHelpText(column) }}
+              </p>
+
+              <!-- Disabled field explanation -->
+              <p v-if="isFieldDisabled(column)" class="field-help disabled-help">
+                <i class="fas fa-info-circle"></i>
+                Field disabled - not applicable for {{ formatLicenseTypeName(formData.license_type) }} licenses
               </p>
 
               <!-- Auto-filled indicator -->
               <p v-if="isAutoFilled(column)" class="auto-filled-note">
                 ✨ Auto-filled from selected product
               </p>
-
-
             </div>
           </div>
 
@@ -171,6 +207,7 @@
 <script setup lang="js">
 import { ref, computed, watch, onMounted } from 'vue';
 import ImageUpload from '~/components/admin/ImageUpload.vue';
+import CustomSelect from '~/components/admin/CustomSelect.vue';
 import { useAdminRelations } from '~/composables/useAdminRelations';
 
 // Props
@@ -195,6 +232,10 @@ const props = defineProps({
   record: {
     type: Object,
     default: null
+  },
+  relations: {
+    type: Object,
+    default: () => ({})
   }
 });
 
@@ -206,21 +247,16 @@ const loading = ref(false);
 const formData = ref({});
 
 // Relations composable
-const { getFieldOptions, getCachedOptions, fetchProductVersions, getProductById } = useAdminRelations();
+const { loadingStates, getFieldOptions, getCachedOptions, fetchProductVersions, getProductById } = useAdminRelations();
 
 // Computed
 const editableColumns = computed(() => {
-  return props.columns.filter(column => {
-    // Skip auto-increment primary keys
-    if (column.extra.includes('auto_increment')) {
-      return false;
-    }
-    // Skip timestamp system columns (they're automated)
-    if (['created_at', 'updated_at'].includes(column.name)) {
-      return false;
-    }
-    return true;
-  });
+  return props.columns.filter(col => 
+    !col.extra.includes('auto_increment') && 
+    col.name !== 'id' && 
+    col.name !== 'created_at' && 
+    col.name !== 'updated_at'
+  );
 });
 
 // Methods
@@ -233,15 +269,20 @@ const getTableDisplayName = (tableName) => {
     'deals': 'Deal',
     'hero_slides': 'Hero Slide',
     'transactions': 'Transaction',
-    'product_licenses': 'Product License'
+    'product_licenses': 'Product License',
+    'product_versions': 'Product Version',
+    'categories': 'Category',
+    'transactions': 'Transaction',
+    'posts': 'Post',
+    'pages': 'Page',
+    'settings': 'Setting',
+    'license_types': 'License Type'
   };
-  return displayNames[tableName] || tableName.charAt(0).toUpperCase() + tableName.slice(1);
+  return displayNames[tableName] || tableName;
 };
 
 const formatColumnName = (name) => {
-  return name.split('_').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
+  return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
 const isRequired = (column) => {
@@ -253,10 +294,11 @@ const isAutoFilled = (column) => {
   if (props.tableName === 'product_licenses') {
     return ['product_name', 'product_version'].includes(column.name) && formData.value.product_id;
   }
+  if (props.tableName === 'products' && column.name === 'slug') {
+    return !!formData.value.category_id;
+  }
   return false;
 };
-
-
 
 const isImageField = (column) => {
   const imageFieldNames = [
@@ -282,6 +324,8 @@ const isImageField = (column) => {
 };
 
 const isTextInput = (column) => {
+  // Pastikan version pada tabel products selalu dianggap text input
+  if (props.tableName === 'products' && column.name === 'version') return true;
   return column.type.includes('varchar') && !isSelect(column) && column.name !== 'password' && !isImageField(column);
 };
 
@@ -315,58 +359,67 @@ const getInputType = (column) => {
 };
 
 const getPlaceholder = (column) => {
-  const placeholders = {
-    'email': 'Enter email address',
-    'password': 'Enter password (min 6 characters)',
-    'name': 'Enter name',
-    'title': 'Enter title',
-    'description': 'Enter description',
-    'price': 'Enter price',
-    'amount': 'Enter amount',
-    'slug': 'Enter URL-friendly slug (lowercase, hyphens only)',
-    'content': 'Enter announcement content (optional)',
-    'image_url': 'Upload image or enter URL',
-    'old_price': 'Enter original price (e.g., 150000)',
-    'new_price': 'Enter discounted price (e.g., 120000)',
-    'discount_percentage': 'Enter discount % (e.g., 20)',
-    'badge': 'Enter badge text (e.g., Hot Deal)',
-    'background_image_url': 'Upload background image or enter URL',
-    'expires_at': 'Select expiration date (optional)'
-  };
-  return placeholders[column.name] || `Enter ${formatColumnName(column.name).toLowerCase()}`;
+  if (isCurrencyColumn(column)) {
+    return 'Contoh: 50000';
+  }
+  
+  return `Masukkan ${formatColumnName(column.name)}`;
 };
 
 const getSelectOptions = (column) => {
-  // Check for foreign key relationships first
-  if (['category_id', 'product_id', 'user_id', 'product_name'].includes(column.name)) {
-    const cachedOptions = getCachedOptions(column.name);
-    if (cachedOptions.length > 0) {
-      console.log(`Found ${cachedOptions.length} cached options for ${column.name}`);
-      return cachedOptions;
+  // Handle API-driven fields by checking cache
+  const apiDrivenFields = ['product_id', 'user_id', 'product_name'];
+  if (column.name === 'category_id') {
+    if (props.relations && props.relations.categories) {
+      return props.relations.categories.map(cat => ({ value: cat.id, label: cat.name }));
     }
-    // If no cached options, fetch them
-    console.log(`No cached options for ${column.name}, fetching...`);
-    getFieldOptions(column.name);
-    return [{ value: '', label: 'Loading...' }];
+    return [{ value: '', label: 'Loading categories...' }];
   }
 
-  // Special handling for product_version - depends on selected product_name
+  if (apiDrivenFields.includes(column.name)) {
+    console.log(`Getting select options for ${column.name}`, {
+      isLoading: isFieldLoading(column),
+      cachedOptions: getCachedOptions(column.name)
+    });
+    
+    const cachedOptions = getCachedOptions(column.name);
+    
+    // If loading, return loading state
+    if (isFieldLoading(column)) {
+      return [{ value: '', label: 'Loading...' }];
+    }
+    
+    // If cache is empty but not loading, trigger fetch and return loading state
+    if (cachedOptions.length === 0) {
+      getFieldOptions(column.name);
+      return [{ value: '', label: 'Loading...' }];
+    }
+    
+    return cachedOptions;
+  }
+
+  // Handle product_version which depends on product_name
   if (column.name === 'product_version') {
     const selectedProductName = formData.value.product_name;
     if (!selectedProductName) {
       return [{ value: '', label: 'Select product name first' }];
     }
-
-    const cachedOptions = getCachedOptions(column.name);
-    if (cachedOptions.length > 0) {
-      return cachedOptions;
+    
+    // If loading, return loading state
+    if (isFieldLoading(column)) {
+      return [{ value: '', label: 'Loading versions...' }];
     }
-
-    // Fetch versions for selected product name
-    getFieldOptions(column.name, { product_name: selectedProductName });
-    return [{ value: '', label: 'Loading versions...' }];
+    
+    const cachedOptions = getCachedOptions(column.name);
+    if (cachedOptions.length === 0) {
+      getFieldOptions(column.name, { product_name: selectedProductName });
+      return [{ value: '', label: 'Loading versions...' }];
+    }
+    
+    return cachedOptions;
   }
 
+  // Handle local, static options (enums, status, etc.)
   const options = {
     'status': [
       { value: 'active', label: 'Active' },
@@ -389,7 +442,6 @@ const getSelectOptions = (column) => {
     ]
   };
 
-  // Special handling for different table status fields
   if (column.name === 'status') {
     if (props.tableName === 'product_licenses') {
       return [
@@ -414,7 +466,6 @@ const getSelectOptions = (column) => {
     }
   }
 
-  // Handle enum types
   if (column.type.includes('enum')) {
     const enumValues = column.type.match(/enum\(([^)]+)\)/)?.[1];
     if (enumValues) {
@@ -429,6 +480,15 @@ const getSelectOptions = (column) => {
   }
 
   return options[column.name] || [];
+};
+
+const getSelectOptionsForCustomComponent = (column) => {
+  const options = getSelectOptions(column);
+  if (!options || !Array.isArray(options)) {
+    console.warn(`Tidak ada opsi valid untuk kolom: ${column.name}`);
+    return []; // Kembalikan array kosong jika tidak ada opsi
+  }
+  return options.map(opt => ({ value: opt.value, label: opt.label }));
 };
 
 const getCheckboxLabel = (column) => {
@@ -452,13 +512,24 @@ const getNumberMin = (column) => {
 };
 
 const getHelpText = (column) => {
+  // Special help text for slug in products table
+  if (column.name === 'slug' && props.tableName === 'products') {
+    if (!formData.value.category_id) {
+      return '💡 Tip: Select a Category first to auto-generate the slug (recommended), or enter manually using lowercase letters, numbers, and hyphens only.';
+    } else {
+      return 'Auto-generated from category. You can edit manually if needed. Use lowercase letters, numbers, and hyphens only.';
+    }
+  }
+  
   const helpTexts = {
     'password': 'Password must be at least 6 characters long',
     'email': 'Enter a valid email address',
     'slug': 'URL-friendly identifier. Use lowercase letters, numbers, and hyphens only (e.g., microsoft-office).',
     'price': 'Enter the price in the specified currency',
     'discount_percentage': 'Discount percentage (0-100)',
-    'category_id': 'Select the product category',
+    'category_id': props.tableName === 'products' 
+      ? 'Select the product category. This will auto-generate the slug for you.' 
+      : 'Select the product category',
     'image_url': 'Upload or enter the image URL',
     'short_description': 'Brief description for product listings',
     'description': 'Detailed product description',
@@ -466,16 +537,15 @@ const getHelpText = (column) => {
     'currency': 'Currency code (e.g., IDR, USD)',
     'period': 'Billing period (e.g., /month, /year) or leave empty for one-time',
     'time_left': 'Time remaining for deals (e.g., 5d, 2h)',
-    'product_key': 'Enter the product activation key (e.g., XXXXX-XXXXX-XXXXX-XXXXX-XXXXX)',
-    'license_type': 'Select the type of license/access method for this product',
-    'access_code': 'Enter access code or activation code',
-    'download_link': 'Enter the download URL for the product',
+    'product_key': 'Enter the product activation key (e.g., XXXXX-XXXXX-XXXXX-XXXXX-XXXXX). Can be used up to 5 times.',
+    'license_type': 'Select the type of license/access method for this product. This will show/hide relevant fields.',
+    'access_code': 'Enter access code or activation code. Can be used only once.',
+    'download_link': 'Enter the download URL for the product. Can be used multiple times.',
     'product_id': 'Select the product - this will auto-fill product name and version',
     'product_name': 'Product name (auto-filled when product is selected)',
     'product_version': 'Product version (auto-filled when product is selected)',
-    'usage_count': 'Number of times this license has been used',
-    'max_usage': 'Maximum number of times this license can be used (Product Keys: 5, Others: 1)',
-    'expires_at': 'Leave empty for permanent licenses',
+    'usage_count': 'Number of times this license has been used (auto-managed)',
+    'max_usage': 'Maximum number of times this license can be used (auto-set based on license type)',
     'notes': 'Internal notes about this license (not visible to customers)',
     // Announcements specific
     'title': 'Announcement title (minimum 2 characters)',
@@ -485,48 +555,105 @@ const getHelpText = (column) => {
     // Deals specific
     'old_price': 'Original price before discount (optional)',
     'new_price': 'Current discounted price (required, must be positive)',
-    'discount_percentage': 'Discount percentage (0-100, optional)',
     'badge': 'Deal badge text (e.g., "Hot Deal", "Limited Time")',
     'background_image_url': 'Background image for the deal card',
-    'is_featured': 'Mark as featured deal to highlight it',
-    'expires_at': 'Deal expiration date and time (optional - leave empty for permanent deals)',
-    'product_id': 'Link this deal to a specific product (optional - enables product integration)'
+    'is_featured': 'Mark as featured deal to highlight it'
   };
+  
+  // Add license type specific help text
+  if (props.tableName === 'product_licenses') {
+    const licenseType = formData.value.license_type;
+    if (licenseType) {
+      const typeSpecificHelp = {
+        'product_key': {
+          'product_key': 'Product activation key (e.g., XXXXX-XXXXX-XXXXX-XXXXX-XXXXX). Can be used up to 5 times.',
+          'max_usage': 'Auto-set to 5 for product keys (can be used multiple times)'
+        },
+        'email_password': {
+          'email': 'Email address for the account (required for email/password licenses)',
+          'password': 'Password for the account (minimum 6 characters, required for email/password licenses)',
+          'max_usage': 'Auto-set to 1 for email/password (single use only)'
+        },
+        'access_code': {
+          'access_code': 'Access or activation code (minimum 3 characters). Can be used only once.',
+          'max_usage': 'Auto-set to 1 for access codes (single use only)'
+        },
+        'download_link': {
+          'download_link': 'Direct download URL for the product. Can be used multiple times.',
+          'max_usage': 'Auto-set to 999 for download links (unlimited use)'
+        }
+      };
+      
+      if (typeSpecificHelp[licenseType]?.[column.name]) {
+        return typeSpecificHelp[licenseType][column.name];
+      }
+    }
+  }
+  
   return helpTexts[column.name];
 };
 
 const getFieldClass = (column) => {
-  if (isTextarea(column)) return 'full-width';
-  if (column.name === 'description' || column.name === 'content') return 'full-width';
-  return '';
+  const baseClass = 'form-group';
+  if (['notes', 'description', 'content', 'image_url', 'tags'].includes(column.name)) {
+    return `${baseClass} full-width`;
+  }
+  return baseClass;
+};
+
+const getLicenseTypeForField = (column) => {
+  if (props.tableName !== 'product_licenses') return '';
+  
+  const fieldToType = {
+    'product_key': 'product_key',
+    'email': 'email_password',
+    'password': 'email_password',
+    'access_code': 'access_code',
+    'download_link': 'download_link'
+  };
+  
+  return fieldToType[column.name] || '';
+};
+
+const formatLicenseTypeName = (licenseType) => {
+  const names = {
+    'product_key': 'Product Key',
+    'email_password': 'Email & Password',
+    'access_code': 'Access Code',
+    'download_link': 'Download Link'
+  };
+  return names[licenseType] || licenseType;
 };
 
 const initializeForm = () => {
-  const data = {};
-
-  editableColumns.value.forEach(column => {
-    if (props.mode === 'edit' && props.record) {
-      let value = props.record[column.name];
-
-      // Convert database boolean values (0/1) to JavaScript boolean (true/false)
-      if (isBoolean(column)) {
-        const originalValue = value;
-        value = Boolean(value) && value !== 0;
-        console.log(`Boolean conversion for ${column.name}: ${originalValue} -> ${value}`);
-      }
-
-      data[column.name] = value;
-    } else {
-      // Set default values for new records
-      if (isBoolean(column)) {
-        data[column.name] = false;
+  console.log('Initializing form for table:', props.tableName);
+  console.log('Mode:', props.mode);
+  console.log('Record:', props.record);
+  console.log('Columns:', props.columns);
+  
+  if (props.mode === 'edit' && props.record) {
+    // Edit mode: populate with existing record data
+    formData.value = { ...props.record };
+    console.log('Form initialized with record data:', formData.value);
+  } else {
+    // Create mode: initialize with empty values
+    formData.value = {};
+    editableColumns.value.forEach(column => {
+      // Set default values for certain fields
+      if (column.name === 'status' && props.tableName === 'product_licenses') {
+        formData.value[column.name] = 'available';
+      } else if (column.name === 'usage_count' && props.tableName === 'product_licenses') {
+        formData.value[column.name] = 0;
+      } else if (column.name === 'max_usage' && props.tableName === 'product_licenses') {
+        formData.value[column.name] = 1;
+      } else if (column.name === 'created_at' || column.name === 'updated_at') {
+        // Skip system fields
       } else {
-        data[column.name] = column.default || '';
+        formData.value[column.name] = '';
       }
-    }
-  });
-
-  formData.value = data;
+    });
+    console.log('Form initialized with default values:', formData.value);
+  }
 };
 
 // Method to manually trigger auto-fill for product fields
@@ -554,7 +681,26 @@ const triggerAutoFill = async () => {
   }
 };
 
-
+// Method to manually reload product options
+const reloadProductOptions = async () => {
+  try {
+    console.log('Manually reloading product options');
+    // Force re-fetch products
+    const options = await getFieldOptions('product_id');
+    console.log('Reloaded product options:', options);
+    
+    // Show success message
+    if (typeof window !== 'undefined' && window.$toast) {
+      window.$toast.success('Product list reloaded successfully');
+    }
+  } catch (error) {
+    console.error('Error reloading product options:', error);
+    // Show error message
+    if (typeof window !== 'undefined' && window.$toast) {
+      window.$toast.error('Failed to reload product list');
+    }
+  }
+};
 
 const handleOverlayClick = () => {
   emit('close');
@@ -562,74 +708,73 @@ const handleOverlayClick = () => {
 
 const handleSubmit = async () => {
   loading.value = true;
+  const dataToSend = {};
+
+  // Only include fields that have a value
+  for (const key in formData.value) {
+    const value = formData.value[key];
+    
+    // For edit mode, we want to allow sending null to clear a field.
+    // For create mode, we only send non-empty values.
+    if (props.mode === 'edit') {
+        // Always include all fields in edit mode to allow clearing them
+        dataToSend[key] = value === '' ? null : value;
+    } else { // Create mode
+        if (value !== null && value !== undefined && value !== '') {
+            dataToSend[key] = value;
+        }
+    }
+  }
+
+  // Remove password if it's empty during creation
+  if (props.mode === 'create' && !dataToSend.password) {
+    delete dataToSend.password;
+  }
+  
+  // Make sure boolean 'false' values are included
+  props.columns.forEach(col => {
+    if (isBoolean(col) && formData.value[col.name] === false) {
+      dataToSend[col.name] = false;
+    }
+  });
 
   try {
-    // Special handling for categories - ensure slug is generated if empty
-    if (props.tableName === 'categories' && formData.value.name && !formData.value.slug) {
-      formData.value.slug = generateSlug(formData.value.name);
-      console.log('Auto-generated slug for categories:', formData.value.slug);
-    }
-
-    // Clean up form data
-    const cleanData = {};
-    Object.keys(formData.value).forEach(key => {
-      const value = formData.value[key];
-
-      // For image fields, include empty strings to allow clearing
-      const isImageField = key.includes('image') || key.includes('picture') || key.includes('photo') || key.includes('avatar');
-
-      if (value !== null && value !== undefined) {
-        if (value !== '' || isImageField) {
-          // Find the column to check if it's a boolean field
-          const column = editableColumns.value.find(col => col.name === key);
-
-          // Convert boolean values to integers for database storage
-          if (column && isBoolean(column)) {
-            const convertedValue = value ? 1 : 0;
-            console.log(`Boolean submission for ${key}: ${value} -> ${convertedValue}`);
-            cleanData[key] = convertedValue;
-          } else {
-            cleanData[key] = value;
-          }
-        }
-      }
+    await emit('save', {
+      id: props.record ? props.record.id : null,
+      record: dataToSend
     });
-
-    console.log('Raw form data:', formData.value);
-    console.log('Cleaned form data being submitted:', cleanData);
-
-    // Additional validation for categories
-    if (props.tableName === 'categories') {
-      if (!cleanData.name || cleanData.name.trim().length < 2) {
-        throw new Error('Category name must be at least 2 characters long');
-      }
-      if (!cleanData.slug || cleanData.slug.trim().length < 2) {
-        throw new Error('Category slug must be at least 2 characters long');
-      }
-      console.log('Categories validation passed:', { name: cleanData.name, slug: cleanData.slug });
-    }
-    emit('save', cleanData);
   } catch (error) {
-    console.error('Form submission error:', error);
+    console.error('Error saving record:', error);
+    // Optionally, display an error message to the user
+    if (typeof window !== 'undefined' && window.$toast) {
+      window.$toast.error(error.message || 'Failed to save record.');
+    }
   } finally {
     loading.value = false;
   }
 };
 
+  // Keep loading state until parent confirms
+  // loading.value = false; // Parent component will handle this
+
 // Watch for prop changes
-watch(() => props.show, async (newValue) => {
+watch(() => props.show, (newValue) => {
   if (newValue) {
     initializeForm();
-
-    // Pre-fetch products for product_licenses table to ensure auto-fill works
-    if (props.tableName === 'product_licenses') {
-      try {
-        await getFieldOptions('product_id');
-        console.log('Products pre-fetched for product_licenses');
-      } catch (error) {
-        console.error('Failed to pre-fetch products:', error);
+    // Pre-fetch data for all API-driven select fields when the modal opens.
+    editableColumns.value.forEach(column => {
+      if (isSelect(column)) {
+        const apiDrivenFields = ['category_id', 'product_id', 'user_id', 'product_name'];
+        if (apiDrivenFields.includes(column.name)) {
+          console.log(`Pre-fetching options for ${column.name}`);
+          getFieldOptions(column.name).then(options => {
+            console.log(`Fetched options for ${column.name}:`, options);
+          }).catch(err => {
+            console.error(`Error fetching options for ${column.name}:`, err);
+          });
+        }
       }
-    }
+    });
   }
 });
 
@@ -659,40 +804,209 @@ watch(() => formData.value.product_id, async (newProductId, oldProductId) => {
   if (newProductId && newProductId !== oldProductId && props.tableName === 'product_licenses') {
     console.log('Product ID changed:', newProductId);
 
-    // First try to get from cached products
-    let productDetails = getProductById(newProductId);
-    console.log('Product details from cache:', productDetails);
+    try {
+      // First try to get from cached products
+      let productDetails = getProductById(newProductId);
+      console.log('Product details from cache:', productDetails);
 
-    // If not found in cache, fetch products first
-    if (!productDetails) {
-      console.log('Product not in cache, fetching products...');
-      try {
+      // If not found in cache, fetch products first
+      if (!productDetails) {
+        console.log('Product not in cache, fetching products...');
         await getFieldOptions('product_id');
         // Try again after fetching
         productDetails = getProductById(newProductId);
         console.log('Product details after fetch:', productDetails);
-      } catch (error) {
-        console.error('Failed to fetch products:', error);
       }
-    }
 
-    if (productDetails) {
-      // Auto-fill product_name and product_version
-      formData.value.product_name = productDetails.name || '';
-      formData.value.product_version = productDetails.version || '';
+      if (productDetails) {
+        // Auto-fill product_name and product_version
+        formData.value.product_name = productDetails.name || '';
+        formData.value.product_version = productDetails.version || '';
 
-      console.log('Auto-filled successfully:', {
-        product_name: productDetails.name,
-        product_version: productDetails.version || '(no version)'
-      });
-    } else {
-      console.warn('Could not find product details for ID:', newProductId);
-      // Clear the fields if product not found
+        console.log('Auto-filled successfully:', {
+          product_name: productDetails.name,
+          product_version: productDetails.version || '(no version)'
+        });
+      } else {
+        console.warn('Could not find product details for ID:', newProductId);
+        // Clear the fields if product not found
+        formData.value.product_name = '';
+        formData.value.product_version = '';
+        
+        // Show error message
+        if (typeof window !== 'undefined' && window.$toast) {
+          window.$toast.error('Product not found. Please select a valid product.');
+        }
+      }
+    } catch (error) {
+      console.error('Error auto-filling product details:', error);
+      // Clear the fields on error
       formData.value.product_name = '';
       formData.value.product_version = '';
+      
+      // Show error message
+      if (typeof window !== 'undefined' && window.$toast) {
+        window.$toast.error('Failed to load product details. Please try again.');
+      }
     }
   }
 });
+
+// Watch for name changes to auto-generate slug if empty
+watch(() => formData.value.name, (newName) => {
+  if (props.tableName === 'products' && newName && (!formData.value.slug || props.mode === 'create')) {
+    // Buat slug dari nama produk yang lebih SEO-friendly
+    let productType = newName
+      .toLowerCase()
+      .replace(/microsoft\s+/i, '') // Hapus kata "Microsoft"
+      .replace(/\s+/g, '-') // Ganti spasi dengan tanda hubung
+      .replace(/[^a-z0-9-]/g, ''); // Hapus karakter yang tidak diizinkan dalam slug
+    
+    // Jika nama mengandung Office, Project, atau Visio, gunakan category slug
+    if (newName.toLowerCase().includes('office')) {
+      productType = 'office';
+    } else if (newName.toLowerCase().includes('project')) {
+      productType = 'project';
+    } else if (newName.toLowerCase().includes('visio')) {
+      productType = 'visio';
+    }
+    
+    formData.value.slug = productType;
+    console.log('Auto-generated slug from product name:', formData.value.slug);
+  }
+});
+
+// Watch for category_id changes to auto-fill slug
+watch(() => formData.value.category_id, (newCategoryId) => {
+  if (props.tableName === 'products' && newCategoryId) {
+    const category = props.relations.categories.find(c => c.id === newCategoryId);
+    if (category) {
+      // Buat slug dari category slug yang konsisten
+      // Format: 'office', 'project', 'visio'
+      let productType = '';
+      
+      if (category.name.toLowerCase().includes('office')) {
+        productType = 'office';
+      } else if (category.name.toLowerCase().includes('project')) {
+        productType = 'project';
+      } else if (category.name.toLowerCase().includes('visio')) {
+        productType = 'visio';
+      } else {
+        // Fallback: gunakan nama produk yang sudah ada di form jika ada
+        if (formData.value.name) {
+          productType = formData.value.name
+            .toLowerCase()
+            .replace(/microsoft\s+/i, '') // Hapus kata "Microsoft"
+            .replace(/\s+/g, '-') // Ganti spasi dengan tanda hubung
+            .replace(/[^a-z0-9-]/g, ''); // Hapus karakter yang tidak diizinkan dalam slug
+        } else {
+          // Jika tidak ada nama produk, gunakan nama kategori yang disederhanakan
+          productType = category.name
+            .toLowerCase()
+            .replace(/microsoft\s+/i, '')
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '');
+        }
+      }
+      
+      formData.value.slug = productType;
+      console.log('Auto-filled slug from product type:', formData.value.slug);
+    } else {
+      console.warn('Category not found:', newCategoryId);
+    }
+  }
+});
+watch(() => formData.value.license_type, (newLicenseType, oldLicenseType) => {
+  if (newLicenseType && newLicenseType !== oldLicenseType && props.tableName === 'product_licenses') {
+    console.log('License type changed from', oldLicenseType, 'to', newLicenseType);
+    
+    // Clear fields that are not relevant to the new license type
+    const fieldsToClear = {
+      'product_key': ['email', 'password', 'access_code', 'download_link'],
+      'email_password': ['product_key', 'access_code', 'download_link'],
+      'access_code': ['product_key', 'email', 'password', 'download_link'],
+      'download_link': ['product_key', 'email', 'password', 'access_code']
+    };
+    
+    const fieldsToClearForNewType = fieldsToClear[newLicenseType] || [];
+    fieldsToClearForNewType.forEach(field => {
+      if (formData.value[field] !== undefined) {
+        console.log('Clearing field:', field);
+        formData.value[field] = '';
+      }
+    });
+    
+    // Set default max_usage based on license type
+    const maxUsageByType = {
+      'product_key': 5,
+      'email_password': 1,
+      'access_code': 1,
+      'download_link': 999
+    };
+    
+    if (maxUsageByType[newLicenseType]) {
+      formData.value.max_usage = maxUsageByType[newLicenseType];
+      console.log('Set max_usage to:', maxUsageByType[newLicenseType]);
+    }
+  }
+});
+
+const isFieldDisabled = (column) => {
+  if (props.tableName === 'products' && column.name === 'slug') {
+    // Slug otomatis digenerate saat pembuatan, tetapi dapat diedit manual setelahnya
+    return false; // Selalu aktif, baik mode create maupun edit
+  }
+
+  if (props.tableName !== 'product_licenses') return false;
+  
+  const licenseType = formData.value.license_type;
+  if (!licenseType) return false;
+  
+  // Fields yang selalu enabled
+  const alwaysEnabled = [
+    'product_id', 'product_name', 'product_version', 'license_type', 
+    'status', 'usage_count', 'max_usage', 'notes'
+  ];
+  
+  if (alwaysEnabled.includes(column.name)) return false;
+  
+  // Fields yang spesifik untuk setiap license type
+  const typeSpecificFields = {
+    'product_key': ['product_key'],
+    'email_password': ['email', 'password'],
+    'access_code': ['access_code'],
+    'download_link': ['download_link']
+  };
+  
+  // Disable field jika tidak sesuai dengan license type yang dipilih
+  return !typeSpecificFields[licenseType]?.includes(column.name);
+};
+
+const isFieldLoading = (column) => {
+  console.log(`Checking loading state for ${column.name}:`, loadingStates.value);
+  
+  if (column.name === 'product_id') {
+    return loadingStates.value.products || false;
+  }
+  
+  if (column.name === 'category_id') {
+    return loadingStates.value.categories || false;
+  }
+  
+  if (column.name === 'user_id') {
+    return loadingStates.value.users || false;
+  }
+  
+  if (column.name === 'product_name') {
+    return loadingStates.value.productNames || false;
+  }
+  
+  if (column.name === 'product_version') {
+    return loadingStates.value.productVersions || false;
+  }
+  
+  return false;
+};
 
 // Initialize on mount
 onMounted(() => {
@@ -700,6 +1014,61 @@ onMounted(() => {
     initializeForm();
   }
 });
+
+// Format status helper
+const formatStatus = (status) => {
+  if (!status) return '';
+  
+  const statusMap = {
+    'completed': 'Selesai',
+    'pending': 'Menunggu',
+    'failed': 'Gagal',
+    'available': 'Tersedia',
+    'used': 'Digunakan',
+    'expired': 'Kedaluwarsa',
+    'reserved': 'Dipesan',
+    'active': 'Aktif',
+    'inactive': 'Tidak Aktif',
+    'out_of_stock': 'Stok Habis'
+  };
+  
+  return statusMap[status.toLowerCase()] || status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+// Get status icon helper
+const getStatusIcon = (status) => {
+  const iconMap = {
+    'completed': 'fas fa-check-circle',
+    'pending': 'fas fa-clock',
+    'failed': 'fas fa-times-circle',
+    'available': 'fas fa-check',
+    'used': 'fas fa-user-check',
+    'expired': 'fas fa-calendar-times',
+    'reserved': 'fas fa-bookmark'
+  };
+  
+  return iconMap[status.toLowerCase()] || 'fas fa-circle';
+};
+
+// Format currency helper for display
+const formatCurrency = (amount) => {
+  if (amount === undefined || amount === null) return '';
+  return new Intl.NumberFormat('id-ID', { 
+    style: 'currency', 
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
+};
+
+// Check if column is a currency field
+const isCurrencyColumn = (column) => {
+  return column.name === 'price' || 
+         column.name === 'amount' || 
+         column.name.includes('_price') ||
+         column.name === 'old_price' || 
+         column.name === 'new_price';
+};
 </script>
 
 <style scoped>
@@ -792,6 +1161,51 @@ onMounted(() => {
 }
 
 .auto-fill-btn:active {
+  transform: scale(0.95);
+}
+
+.select-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.reload-btn {
+  background: var(--galaxy-accent);
+  border: 1px solid var(--galaxy-accent);
+  border-left: 1px solid var(--galaxy-accent);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: var(--galaxy-radius);
+  border-bottom-right-radius: var(--galaxy-radius);
+  padding: 0;
+  margin: 0;
+  color: white;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  width: 2rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.reload-btn:hover {
+  background: var(--galaxy-accent-hover);
+  border-color: var(--galaxy-accent-hover);
+}
+
+.reload-btn:active {
   transform: scale(0.95);
 }
 </style>

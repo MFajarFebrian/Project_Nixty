@@ -13,6 +13,8 @@ export function useAdminOverview() {
   const statistics = ref({});
   const recentActivity = ref([]);
   const tablesInfo = ref({});
+  const products = ref([]);
+  const productsLoading = ref(false);
 
   // Computed
   const totalUsers = computed(() => statistics.value.users || 0);
@@ -78,11 +80,19 @@ export function useAdminOverview() {
       const response = await $fetch('/api/admin/overview', {
         headers: getAdminHeaders()
       });
+      
+      console.log('Raw Admin Overview API Response:', response);
 
       if (response.success) {
         statistics.value = response.data.statistics || {};
         recentActivity.value = response.data.recentActivity || [];
         tablesInfo.value = response.data.tables || {};
+        
+        console.log('Processed overview data:', {
+          statistics: statistics.value,
+          recentActivity: recentActivity.value,
+          tablesInfo: tablesInfo.value
+        });
       } else {
         setError(response.message || 'Failed to fetch overview data');
       }
@@ -155,6 +165,44 @@ export function useAdminOverview() {
     }
   ]);
 
+  // Fetch products data with stock information
+  async function loadProducts() {
+    try {
+      products.value = [];
+      productsLoading.value = true;
+      
+      // Fetch products with stock data
+      const response = await $fetch('/api/admin/tables/products', {
+        query: {
+          orderBy: 'name',
+          orderDir: 'asc',
+          pageSize: 1000 // Get all products for accurate overview
+        }
+      });
+      
+      if (response && response.success && Array.isArray(response.data)) {
+        // Process products data
+        products.value = response.data.map(product => ({
+          ...product,
+          // Gunakan available_stock jika ada, atau fallback ke stock lama
+          stock: product.available_stock !== undefined ? product.available_stock : (product.stock || 0),
+          // Tambahkan data lisensi
+          total_licenses: product.total_licenses || 0,
+          used_licenses: product.used_licenses || 0,
+          expired_licenses: product.expired_licenses || 0,
+          reserved_licenses: product.reserved_licenses || 0
+        }));
+      } else {
+        throw new Error('Invalid products data received');
+      }
+      
+    } catch (error) {
+      console.error('Error loading products:', error);
+    } finally {
+      productsLoading.value = false;
+    }
+  }
+
   return {
     // State
     loading,
@@ -162,6 +210,8 @@ export function useAdminOverview() {
     statistics,
     recentActivity,
     tablesInfo,
+    products,
+    productsLoading,
     
     // Computed
     totalUsers,
@@ -181,6 +231,7 @@ export function useAdminOverview() {
     formatDate,
     getStatusBadgeClass,
     getTableDisplayName,
-    getTableIcon
+    getTableIcon,
+    loadProducts
   };
 }

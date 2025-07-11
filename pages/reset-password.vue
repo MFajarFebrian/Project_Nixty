@@ -43,7 +43,7 @@
       
       <div v-if="isReset" class="success-container">
         <p>Your password has been reset successfully!</p>
-        <NuxtLink to="/login" class="login-button">Go to Login</NuxtLink>
+        <NuxtLink to="/home" class="home-button">Go to Login</NuxtLink>
       </div>
     </div>
   </div>

@@ -1,0 +1,86 @@
+import { defineEventHandler, createError } from 'h3';
+import db from '../../utils/db';
+
+export default defineEventHandler(async (event) => {
+  const id = event.context.params?.id;
+
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Product ID is required',
+    });
+  }
+
+  try {
+    // Query to get the main product details
+    const productQuery = `
+      SELECT 
+        p.id, p.name, p.version, p.slug, p.short_description, p.description, 
+        p.price, p.image_url, p.is_new, p.is_featured, p.discount_percentage,
+        c.name as category_name, c.slug as category_slug
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.id = ? AND p.status = 'active'
+    `;
+
+    // The versions concept is not based on a separate table in the current schema.
+    // The main product itself is the only version we can fetch.
+    const [[product]] = await db.query(productQuery, [id]);
+
+    if (!product) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Product not found',
+      });
+    }
+    
+    // The checkout page expects a "product" object and a "versions" array.
+    // We will create a "versions" array containing only the main product.
+    const allVersions = [
+      {
+        id: product.id,
+        name: product.name,
+        version: product.version || 'Standard',
+        price: product.price,
+        image_url: product.image_url
+      }
+    ];
+
+    return {
+      product: {
+        ...product,
+        // Ensure features are parsed if they exist in the description,
+        // which the checkout component expects.
+        features: parseFeatures(product.description),
+      },
+      versions: allVersions,
+    };
+
+  } catch (err) {
+    const error = err as any;
+    console.error(`Error fetching product with ID ${id}:`, error);
+    
+    // Re-throw framework errors
+    if (error.statusCode) {
+      throw error;
+    }
+    
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'An internal error occurred while fetching the product.',
+    });
+  }
+});
+
+function parseFeatures(description: string | null | undefined): string[] {
+  if (!description) return [];
+  
+  const featuresSection = description.match(/<h4>Features<\/h4>\s*<ul>([\s\S]*?)<\/ul>/);
+  if (featuresSection && featuresSection[1]) {
+    const listItems = featuresSection[1].match(/<li>(.*?)<\/li>/g);
+    if (listItems) {
+      return listItems.map((item: string) => item.replace(/<\/?li>/g, '').trim());
+    }
+  }
+  return [];
+} 

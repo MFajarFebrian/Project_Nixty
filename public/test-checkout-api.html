@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Checkout API</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #4A90E2;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #357ABD;
+    }
+    pre {
+      background-color: #f0f0f0;
+      padding: 15px;
+      border-radius: 4px;
+      overflow: auto;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test Checkout API</h1>
+  
+  <div class="form-group">
+    <label for="slug">Product Slug:</label>
+    <select id="slug">
+      <option value="office-pro-plus">Office Pro Plus</option>
+      <option value="project-pro">Project Pro</option>
+      <option value="visio-pro">Visio Pro</option>
+      <option value="custom">Custom (enter below)</option>
+    </select>
+  </div>
+  
+  <div class="form-group" id="customSlugGroup" style="display: none;">
+    <label for="customSlug">Custom Slug:</label>
+    <input type="text" id="customSlug" placeholder="Enter custom product slug">
+  </div>
+  
+  <button id="testButton">Test API</button>
+  <button id="openCheckoutButton">Open Checkout Page</button>
+  
+  <h2>Response:</h2>
+  <pre id="response"></pre>
+  
+  <script>
+    // Show/hide custom slug input based on selection
+    document.getElementById('slug').addEventListener('change', function() {
+      const customSlugGroup = document.getElementById('customSlugGroup');
+      if (this.value === 'custom') {
+        customSlugGroup.style.display = 'block';
+      } else {
+        customSlugGroup.style.display = 'none';
+      }
+    });
+    
+    document.getElementById('testButton').addEventListener('click', async () => {
+      const selectElement = document.getElementById('slug');
+      let slug;
+      
+      if (selectElement.value === 'custom') {
+        slug = document.getElementById('customSlug').value.trim();
+      } else {
+        slug = selectElement.value;
+      }
+      
+      const responseElement = document.getElementById('response');
+      
+      if (!slug) {
+        responseElement.innerHTML = '<span class="error">Please enter a product slug</span>';
+        return;
+      }
+      
+      responseElement.textContent = 'Loading...';
+      
+      try {
+        const response = await fetch(`/api/products/checkout?slug=${encodeURIComponent(slug)}`);
+        const data = await response.json();
+        
+        responseElement.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        responseElement.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+      }
+    });
+    
+    document.getElementById('openCheckoutButton').addEventListener('click', () => {
+      const selectElement = document.getElementById('slug');
+      let slug;
+      
+      if (selectElement.value === 'custom') {
+        slug = document.getElementById('customSlug').value.trim();
+      } else {
+        slug = selectElement.value;
+      }
+      
+      if (!slug) {
+        alert('Please enter a product slug');
+        return;
+      }
+      
+      window.location.href = `/product/${slug}/checkout`;
+    });
+  </script>
+</body>
+</html> 

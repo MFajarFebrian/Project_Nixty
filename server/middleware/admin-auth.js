@@ -1,58 +1,62 @@
 import pool from '../utils/db';
+import { getHeaders, createError } from 'h3';
 
 /**
  * Admin authentication middleware
  * Verifies that the user is authenticated and has admin privileges
  */
 export default defineEventHandler(async (event) => {
-  // Only apply to admin API routes
-  if (!event.node.req.url?.startsWith('/api/admin/')) {
+  const config = useRuntimeConfig();
+  
+  // Skip authentication for development mode
+  const isDev = process.env.NODE_ENV === 'development';
+  const bypassAuth = isDev && config.public.bypassAdminAuth === 'true';
+  
+  if (bypassAuth) {
+    console.log('Admin auth bypassed for development');
+    // Add mock admin headers for development
+    event.node.req.headers['x-user-id'] = 'dev-admin-id';
+    event.node.req.headers['x-user-email'] = 'dev-admin@example.com';
     return;
   }
-
+  
+  // Regular authentication process
+  const headers = getHeaders(event);
+  const userId = headers['x-user-id'];
+  const userEmail = headers['x-user-email'];
+  
+  if (!userId || !userEmail) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Authentication required'
+    });
+  }
+  
+  // Check if user is an admin
   try {
-    // Get user ID from headers (you might need to adjust this based on your auth implementation)
-    const userId = getHeader(event, 'x-user-id');
-    const userEmail = getHeader(event, 'x-user-email');
+    const [users] = await pool.execute(
+      'SELECT role FROM users WHERE id = ? AND email = ? LIMIT 1', 
+      [userId, userEmail]
+    );
     
-    if (!userId && !userEmail) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Authentication required'
-      });
-    }
-
-    // Verify user exists and is admin
-    let query, params;
-    if (userId) {
-      query = 'SELECT id, email, account_type FROM users WHERE id = ? AND account_type = ?';
-      params = [userId, 'admin'];
-    } else {
-      query = 'SELECT id, email, account_type FROM users WHERE email = ? AND account_type = ?';
-      params = [userEmail, 'admin'];
-    }
-
-    const [rows] = await pool.execute(query, params);
+    const isAdmin = users && users.length > 0 && users[0].role === 'admin';
     
-    if (rows.length === 0) {
+    if (!isAdmin) {
       throw createError({
         statusCode: 403,
         statusMessage: 'Admin access required'
       });
     }
-
-    // Add user info to event context for use in handlers
-    event.context.adminUser = rows[0];
     
   } catch (error) {
     if (error.statusCode) {
       throw error;
     }
     
-    console.error('Admin auth middleware error:', error);
+    console.error('Error checking admin status:', error);
     throw createError({
       statusCode: 500,
-      statusMessage: 'Authentication error'
+      statusMessage: 'Failed to validate admin status'
     });
   }
 });

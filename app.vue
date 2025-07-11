@@ -8,32 +8,45 @@
 
     <!-- Auth Modal -->
     <AuthModal
+      v-if="isAuthModalOpen"
       :is-open="isAuthModalOpen"
       :default-tab="authModalTab"
       @close="closeAuthModal"
     />
+    <WhatsAppChat phone-number="1234567890" />
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue';
+<script setup>
+import { ref, onMounted } from 'vue';
 import '~/assets/css/global/main.css';
+import { useAuth } from '~/composables/useAuth';
 
 // Auth modal state
 const isAuthModalOpen = ref(false);
 const authModalTab = ref('login');
 
+// Use auth composable
+const { initUser } = useAuth();
+
 // Methods
 const openAuthModal = (tab = 'login') => {
+  console.log('Opening auth modal with tab:', tab);
   authModalTab.value = tab;
   isAuthModalOpen.value = true;
 };
 
 const closeAuthModal = () => {
+  console.log('Closing auth modal');
   isAuthModalOpen.value = false;
 };
 
+// Initialize user on mount
+onMounted(() => {
+  initUser();
+});
 
+// Use Nuxt's useHead correctly
 useHead({
   link: [
     {

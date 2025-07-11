@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed } from 'vue';
 
 export const useSearchBar = (emit) => {
   // Reactive data

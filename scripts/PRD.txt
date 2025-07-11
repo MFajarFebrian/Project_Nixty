@@ -1,0 +1,170 @@
+# Project Nixty: Minimum Viable Product (MVP) PRD
+
+## Overview
+
+Project Nixty is a modern, full-featured web application for selling digital products and licenses. This document outlines the requirements for the Minimum Viable Product (MVP), which will focus on delivering the core functionality for users to purchase products and for administrators to manage inventory.
+
+-   **Problem:** Creators and resellers of digital goods (like software licenses) need a streamlined platform to manage their inventory and sell directly to customers. Customers need a trustworthy and simple way to purchase and receive these digital goods.
+-   **Audience:** The primary audience consists of two groups:
+    1.  **End Users:** Individuals or businesses looking to purchase digital products like software licenses.
+    2.  **Administrators:** The platform owner(s) responsible for managing products, licenses, and transactions.
+-   **Value:** Project Nixty provides a robust, all-in-one solution with a clean user interface, secure payment processing, and essential administrative tools, reducing the complexity of digital sales.
+
+## Core Features (MVP)
+
+### 1. User Authentication
+
+-   **What it does:** Allows users to create an account, log in, and log out. Supports both traditional email/password registration and Google OAuth for convenience.
+-   **Why it's important:** Authentication is fundamental for tracking user purchases, managing profiles, and securing the application. Google OAuth reduces friction for new users.
+-   **How it works:** A user can click "Login/Register" to open a modal. They can fill out a registration form or use the "Continue with Google" button. The backend will handle user creation and session management.
+
+### 2. Product Catalog & Detail View
+
+-   **What it does:** Displays a list of available products. Users can click on a product to view a detailed page with its description, price, and version.
+-   **Why it's important:** This is the main entry point for users to discover and learn about what is being sold.
+-   **How it works:** The homepage and `/products` page will fetch and display product data from the API. Clicking a product card will navigate the user to a dynamic route (`/product/[slug]`) showing detailed information for that specific product.
+
+### 3. Checkout & Payment
+
+-   **What it does:** Enables a user to purchase a product. This includes a checkout page to confirm the order and integration with the Midtrans payment gateway to handle the transaction.
+-   **Why it's important:** The checkout flow is the core monetization engine of the platform. A secure and smooth payment process is critical for user trust and conversion.
+-   **How it works:** From a product page, a user clicks "Buy Now" to proceed to the checkout page. The system initiates a transaction with Midtrans. Upon successful payment, the backend is notified via a webhook, and a license is assigned to the user.
+
+### 4. User Profile & Transaction History
+
+-   **What it does:** Provides a dedicated section for logged-in users to view their profile information and a list of their past transactions.
+-   **Why it's important:** Allows users to keep track of their purchases and access their purchased licenses or products, which is essential for a good post-purchase experience.
+-   **How it works:** A `/profile` page will be available to authenticated users. It will fetch and display the user's details and a list of transactions linked to their user ID from the `transactions` table.
+
+### 5. Admin: Product & Category Management
+
+-   **What it does:** A secure admin dashboard for creating, updating, and managing products and categories.
+-   **Why it's important:** Administrators need a way to manage the product catalog without direct database manipulation. This is essential for the site to have anything to sell.
+-   **How it works:** An `/admin` section, protected by middleware, will provide a UI for CRUD (Create, Read, Update, Delete) operations on the `products` and `categories` tables.
+
+### 6. Admin: License & Stock Management
+
+-   **What it does:** Allows administrators to add new licenses for each product, view current stock levels, and see which licenses have been used.
+-   **Why it's important:** This is the core of the inventory system. The platform must be able to manage and automatically assign a unique, available license upon a successful purchase.
+-   **How it works:** The admin dashboard will have a section for license management. Admins can select a product and upload license keys (e.g., via CSV or a form). The system will automatically mark a license as "used" and associate it with a transaction ID upon a successful sale.
+
+## User Experience
+
+### User Personas
+
+-   **Alex (The Customer):** A freelance developer who needs to buy a genuine license for Microsoft Visio for a project. Alex values a quick, secure, and straightforward purchasing process.
+-   **Sam (The Administrator):** The owner of the Nixty store. Sam needs an efficient way to add new software products, upload batches of license keys, and track sales without needing deep technical knowledge.
+
+### Key User Flows (MVP)
+
+1.  **First-Time Purchase Flow (Alex):**
+    -   Lands on the homepage.
+    -   Clicks "Products" to browse the catalog.
+    -   Finds "Microsoft Visio 2021" and clicks to view details.
+    -   Clicks "Buy Now".
+    -   Is prompted to log in or register. Chooses "Continue with Google".
+    -   After successful authentication, is redirected to the checkout page.
+    -   Completes the payment via Midtrans.
+    -   Receives a confirmation and can view the transaction and license key in their profile.
+
+2.  **Admin Inventory Management Flow (Sam):**
+    -   Logs in with their admin account.
+    -   Navigates to the Admin Dashboard.
+    -   Goes to "Manage Products" and adds a new product: "Microsoft Office 2021".
+    -   Goes to "Manage Licenses", selects the new product, and uploads a CSV file containing 50 license keys.
+    -   The product is now live on the site with a stock of 50.
+
+### UI/UX Considerations
+
+-   **Clarity and Simplicity:** The UI should be clean and intuitive, especially the checkout process, to minimize user friction.
+-   **Responsiveness:** The entire application must be fully responsive and functional on desktop and mobile devices.
+-   **Feedback:** Provide clear loading indicators, success messages, and error notifications for all user interactions (e.g., login, payment, form submissions).
+
+## Technical Architecture
+
+### System Components
+
+-   **Frontend:** Vue.js 3 / Nuxt.js 3 for server-side rendering, routing, and a component-based UI.
+-   **Backend:** Node.js API built within the Nuxt `server/` directory to handle business logic and database interactions.
+-   **Database:** A relational SQL database (MariaDB), with the schema defined in `nixty.sql`.
+
+### Data Models (MVP)
+
+-   **`users`:** Stores user information, including email, hashed password, name, and Google OAuth ID.
+-   **`products`:** Contains all product details like name, version, slug, description, and price.
+-   **`categories`:** Organizes products into groups (e.g., "Microsoft Office", "Microsoft Visio").
+-   **`product_licenses`:** Stores individual license keys or credentials, linked to a `product_id`. Tracks usage status (`available`, `used`).
+-   **`transactions`:** Records every purchase attempt, linking a `user_id` and `product_id`. Stores order details, payment status, and the assigned license info.
+
+### APIs and Integrations
+
+-   **Internal RESTful API:** A set of endpoints under `/api/` for all frontend-backend communication (e.g., `/api/login`, `/api/products`, `/api/checkout`).
+-   **Google OAuth:** For user authentication.
+-   **Midtrans:** For processing payments. Integration will use their Snap.js library on the frontend and webhooks on the backend to confirm transaction status.
+
+## Development Roadmap
+
+### MVP Requirements
+
+The goal is to build a fully functional, end-to-end slice of the application.
+
+1.  **Foundation:** Setup database and Nuxt project.
+2.  **Authentication:** Implement email/password and Google OAuth login/registration.
+3.  **Admin Panel (Core):**
+    -   Product CRUD.
+    -   Category CRUD.
+    -   License/Stock management (upload and view).
+    -   View transactions list.
+4.  **User-Facing Flow:**
+    -   Product catalog and detail pages.
+    -   Checkout flow with Midtrans integration.
+    -   User profile page to view transaction history and assigned licenses.
+
+### Future Enhancements (Post-MVP)
+
+-   Deals & Promotions System (`deals` table).
+-   Homepage Hero Slider & Announcements (`hero_slides`, `announcements` tables).
+-   Advanced Admin Dashboard with charts and analytics.
+-   User password reset functionality.
+-   More granular user/admin roles and permissions.
+-   Search functionality for products, deals, and news.
+-   User-facing settings page.
+
+## Logical Dependency Chain
+
+Development should proceed in the following logical order to ensure a stable build process.
+
+1.  **Environment & Database Setup:**
+    -   Initialize the Nuxt project.
+    -   Set up the MariaDB database and run the `nixty.sql` schema.
+
+2.  **Core Authentication:**
+    -   Build the `users` table API endpoints (`/api/register`, `/api/login`, `/api/auth/google-login`).
+    -   Create the frontend `AuthModal.vue` component and integrate it with the API.
+    -   Implement middleware to protect admin routes.
+
+3.  **Admin Foundation:**
+    -   Build the basic admin dashboard layout.
+    -   Implement Product and Category management UI and APIs.
+    -   Implement License management UI and APIs, including CSV upload.
+
+4.  **Product Display:**
+    -   Create the `/products` and `/product/[slug]` pages to display the data entered by the admin.
+
+5.  **Checkout & Transaction Logic:**
+    -   Build the `/api/checkout` endpoint to initiate a transaction with Midtrans.
+    -   Build the `/api/payment/notification` webhook endpoint to listen for Midtrans status updates.
+    -   Implement the backend logic to reserve and assign a license from `product_licenses` upon successful payment.
+    -   Create the frontend checkout page.
+
+6.  **Post-Purchase Experience:**
+    -   Build the `/profile` and `/profile/transactions` pages for users to view their purchase history and access their license keys.
+
+## Risks and Mitigations
+
+-   **Risk:** Payment gateway integration (Midtrans) can be complex and have many edge cases.
+    -   **Mitigation:** Thoroughly test the entire payment flow in the Midtrans sandbox environment. Document the webhook logic carefully to handle different statuses (pending, success, failure, expiry).
+-   **Risk:** Scope creep, adding non-essential features to the MVP.
+    -   **Mitigation:** Strictly adhere to the features defined in this document. All other features (deals, announcements, etc.) will be explicitly deferred to a post-MVP release.
+-   **Risk:** Ensuring the license assignment logic is atomic and reliable.
+    -   **Mitigation:** Use database transactions when creating a transaction record and updating a license's status to ensure that both operations succeed or fail together, preventing data inconsistency.

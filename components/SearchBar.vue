@@ -26,6 +26,7 @@
           @input="onSearchInput"
           @focus="onInputFocus"
           @blur="onInputBlur"
+          @keyup.enter="performSearch"
           class="search-input"
         />
 

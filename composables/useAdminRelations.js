@@ -8,7 +8,14 @@ export function useAdminRelations() {
   const { getAdminHeaders, checkAdminAccess } = useAdminAuth();
   
   // State
-  const loading = ref(false);
+  const loading = ref(false); // General loading state
+  const loadingStates = ref({
+    categories: false,
+    products: false,
+    users: false,
+    productNames: false,
+    productVersions: false,
+  });
   const error = ref(null);
   const categories = ref([]);
   const products = ref([]);
@@ -30,31 +37,37 @@ export function useAdminRelations() {
    * Fetch categories for dropdowns
    */
   const fetchCategories = async () => {
+    if (loadingStates.value.categories) return;
     try {
       checkAdminAccess();
-      loading.value = true;
+      loadingStates.value.categories = true;
       clearError();
       
       const response = await $fetch('/api/admin/tables/categories', {
         headers: getAdminHeaders(),
-        query: { limit: 100 } // Get all categories
+        query: { pageSize: 100 } // Get all categories
       });
       
+      console.log('Categories response:', response);
+      
       if (response.success) {
-        categories.value = response.data.records.map(cat => ({
+        categories.value = response.data.map(cat => ({
           value: cat.id,
-          label: cat.name
+          label: cat.name,
+          slug: cat.slug // Simpan slug kategori untuk digunakan nanti
         }));
+        console.log('Processed categories:', categories.value);
         return categories.value;
       } else {
         setError('Failed to fetch categories');
         return [];
       }
     } catch (err) {
+      console.error('Error fetching categories:', err);
       setError(err.message || 'Failed to fetch categories');
       return [];
     } finally {
-      loading.value = false;
+      loadingStates.value.categories = false;
     }
   };
   
@@ -62,33 +75,39 @@ export function useAdminRelations() {
    * Fetch products for dropdowns
    */
   const fetchProducts = async () => {
+    if (loadingStates.value.products) return;
     try {
       checkAdminAccess();
-      loading.value = true;
+      loadingStates.value.products = true;
       clearError();
 
       const response = await $fetch('/api/admin/tables/products', {
         headers: getAdminHeaders(),
-        query: { limit: 100 } // Get all products
+        query: { pageSize: 100 } // Get all products
       });
 
+      console.log('Products response:', response);
+
       if (response.success) {
-        products.value = response.data.records.map(product => ({
+        // Data produk ada di response.data, bukan response.data.records
+        products.value = response.data.map(product => ({
           value: product.id,
           label: `${product.name}${product.version ? ` (${product.version})` : ''}`,
           name: product.name,
           version: product.version
         }));
+        console.log('Processed products:', products.value);
         return products.value;
       } else {
         setError('Failed to fetch products');
         return [];
       }
     } catch (err) {
+      console.error('Error fetching products:', err);
       setError(err.message || 'Failed to fetch products');
       return [];
     } finally {
-      loading.value = false;
+      loadingStates.value.products = false;
     }
   };
   
@@ -96,31 +115,36 @@ export function useAdminRelations() {
    * Fetch users for dropdowns
    */
   const fetchUsers = async () => {
+    if (loadingStates.value.users) return;
     try {
       checkAdminAccess();
-      loading.value = true;
+      loadingStates.value.users = true;
       clearError();
       
       const response = await $fetch('/api/admin/tables/users', {
         headers: getAdminHeaders(),
-        query: { limit: 100 } // Get all users
+        query: { pageSize: 100 } // Get all users
       });
       
+      console.log('Users response:', response);
+      
       if (response.success) {
-        users.value = response.data.records.map(user => ({
+        users.value = response.data.map(user => ({
           value: user.id,
           label: `${user.name || user.email} (${user.email})`
         }));
+        console.log('Processed users:', users.value);
         return users.value;
       } else {
         setError('Failed to fetch users');
         return [];
       }
     } catch (err) {
+      console.error('Error fetching users:', err);
       setError(err.message || 'Failed to fetch users');
       return [];
     } finally {
-      loading.value = false;
+      loadingStates.value.users = false;
     }
   };
   
@@ -128,9 +152,10 @@ export function useAdminRelations() {
    * Fetch product names for dropdowns
    */
   const fetchProductNames = async () => {
+    if (loadingStates.value.productNames) return;
     try {
       checkAdminAccess();
-      loading.value = true;
+      loadingStates.value.productNames = true;
       clearError();
 
       const response = await $fetch('/api/admin/product-names-versions', {
@@ -149,7 +174,7 @@ export function useAdminRelations() {
       setError(err.message || 'Failed to fetch product names');
       return [];
     } finally {
-      loading.value = false;
+      loadingStates.value.productNames = false;
     }
   };
 
@@ -157,9 +182,10 @@ export function useAdminRelations() {
    * Fetch product versions for a specific product name
    */
   const fetchProductVersions = async (productName) => {
+    if (loadingStates.value.productVersions) return;
     try {
       checkAdminAccess();
-      loading.value = true;
+      loadingStates.value.productVersions = true;
       clearError();
 
       const response = await $fetch('/api/admin/product-names-versions', {
@@ -178,7 +204,7 @@ export function useAdminRelations() {
       setError(err.message || 'Failed to fetch product versions');
       return [];
     } finally {
-      loading.value = false;
+      loadingStates.value.productVersions = false;
     }
   };
 
@@ -246,6 +272,7 @@ export function useAdminRelations() {
   return {
     // State
     loading,
+    loadingStates,
     error,
     categories,
     products,

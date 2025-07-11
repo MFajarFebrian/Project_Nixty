@@ -1,6 +1,9 @@
 import { nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 
 export const useSearchBarActions = (searchBarState, emit) => {
+  const router = useRouter();
+  
   const {
     searchQuery,
     dropdownOpen,
@@ -175,12 +178,40 @@ export const useSearchBarActions = (searchBarState, emit) => {
   const selectSuggestion = (item) => {
     searchQuery.value = item.name || item.title;
     suggestionsVisible.value = false;
+    
+    // Navigate to search results page with the selected item
+    router.push({
+      path: '/search',
+      query: {
+        q: searchQuery.value,
+        type: item.type || selectedFilter.value
+      }
+    });
+    
+    // Close search bar
+    toggleSearch();
+    
     emit('suggestion-selected', { suggestion: item, filter: selectedFilter.value });
     console.log('Suggestion selected:', item);
   };
 
   const performSearch = () => {
+    if (searchQuery.value.length < 2) return;
+    
     suggestionsVisible.value = false;
+    
+    // Navigate to search results page
+    router.push({
+      path: '/search',
+      query: {
+        q: searchQuery.value,
+        type: selectedFilter.value
+      }
+    });
+    
+    // Close search bar
+    toggleSearch();
+    
     emit('search', { query: searchQuery.value, filter: selectedFilter.value });
     console.log('Search performed:', searchQuery.value, selectedFilter.value);
   };

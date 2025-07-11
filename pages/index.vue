@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- This page will redirect to /login or /dashboard, so we don't need content here -->
+    <!-- This page redirects to /home. It acts as the root entry point. -->
   </div>
 </template>
 

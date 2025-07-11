@@ -44,39 +44,60 @@ export default defineEventHandler(async (event) => {
       throw error;
     }
 
-    // Validate that product_name and product_version are provided
-    if (!validData.product_name) {
+    // If product_id is provided, get product details from database
+    let product = null;
+    if (validData.product_id) {
+      const [productRows] = await pool.execute(
+        'SELECT id, name, version FROM products WHERE id = ? AND status = "active" LIMIT 1',
+        [validData.product_id]
+      );
+
+      if (productRows.length === 0) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid product ID: Product not found or inactive'
+        });
+      }
+
+      product = productRows[0];
+      
+      // Auto-fill product_name and product_version if not provided
+      if (!validData.product_name) {
+        validData.product_name = product.name;
+      }
+      if (!validData.product_version) {
+        validData.product_version = product.version || '';
+      }
+    } else if (validData.product_name) {
+      // If product_id not provided but product_name is, find the product
+      const whereClause = validData.product_version
+        ? 'name = ? AND version = ?'
+        : 'name = ? AND (version IS NULL OR version = "")';
+
+      const params = validData.product_version
+        ? [validData.product_name, validData.product_version]
+        : [validData.product_name];
+
+      const [productRows] = await pool.execute(
+        `SELECT id, name, version FROM products WHERE ${whereClause} AND status = 'active' LIMIT 1`,
+        params
+      );
+
+      if (productRows.length === 0) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid product name/version combination: Product not found or inactive'
+        });
+      }
+
+      product = productRows[0];
+      validData.product_id = product.id;
+    } else {
       throw createError({
         statusCode: 400,
-        statusMessage: 'product_name is required'
+        statusMessage: 'Either product_id or product_name is required'
       });
     }
-
-    // Verify that the product_name and product_version combination exists
-    const whereClause = validData.product_version
-      ? 'name = ? AND version = ?'
-      : 'name = ? AND (version IS NULL OR version = "")';
-
-    const params = validData.product_version
-      ? [validData.product_name, validData.product_version]
-      : [validData.product_name];
-
-    const [productRows] = await pool.execute(
-      `SELECT id, name, version FROM products WHERE ${whereClause} AND status = 'active' LIMIT 1`,
-      params
-    );
-
-    if (productRows.length === 0) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid product name/version combination: Product not found or inactive'
-      });
-    }
-
-    const product = productRows[0];
-
-    // Update product_id to match the selected name/version if different
-    validData.product_id = product.id;
 
     // Set max_usage based on license_type
     const maxUsageByType = {

@@ -75,7 +75,7 @@
           <form @submit.prevent="handleRegister">
             <div class="form-group">
               <label for="registerName">Name:</label>
-              <input type="text" id="registerName" v-model="registerName" />
+              <input type="text" id="registerName" v-model="registerName" required />
             </div>
             <div class="form-group">
               <label for="registerEmail">Email:</label>
@@ -111,6 +111,7 @@
 </template>
 
 <script setup lang="js">
+import { onMounted, watch } from 'vue';
 import { useAuthModal } from '~/scripts/components/AuthModal.js';
 import '~/assets/css/components/AuthModal.css';
 
@@ -118,11 +119,18 @@ import '~/assets/css/components/AuthModal.css';
 const props = defineProps({
   isOpen: {
     type: Boolean,
-    default: false
+    required: true
   },
   defaultTab: {
     type: String,
     default: 'login'
+  }
+});
+
+// Watch for prop changes
+watch(() => props.defaultTab, (newTab) => {
+  if (newTab) {
+    activeTab.value = newTab;
   }
 });
 
