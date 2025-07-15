@@ -62,6 +62,7 @@ export default defineEventHandler(async (event) => {
       rating: row.rating,
       image_url: row.image_url,
       category: row.category_slug,
+      category_id: row.category_id,
       categoryName: row.category_name,
       stock: row.stock || 0,
       isNew: Boolean(row.is_new),

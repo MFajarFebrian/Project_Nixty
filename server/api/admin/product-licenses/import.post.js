@@ -41,8 +41,8 @@ export default defineEventHandler(async (event) => {
       // Prepare the insert query
       const insertQuery = `
         INSERT INTO product_licenses 
-        (product_id, license_key, status, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, NOW(), NOW())
+        (product_id, license_key, status, notes, usage_count, send_license, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 0, 0, NOW(), NOW())
       `
 
       // Insert each row
@@ -76,4 +76,4 @@ export default defineEventHandler(async (event) => {
       message: error.message
     })
   }
-}) 
+})

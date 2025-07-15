@@ -1,41 +1,47 @@
 import { ref } from 'vue';
 
-// Create a reactive user state that persists across components
 const user = ref(null);
+const isReady = ref(false);
 
 export function useAuth() {
-  // Initialize user from sessionStorage if available
   const initUser = () => {
-    const userJson = sessionStorage.getItem('currentUser');
-    if (userJson) {
-      try {
-        user.value = JSON.parse(userJson);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
+    if (process.client && !isReady.value) {
+      const userJson = sessionStorage.getItem('currentUser');
+      if (userJson) {
+        try {
+          user.value = JSON.parse(userJson);
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          user.value = null;
+        }
+      }
+      isReady.value = true;
+    }
+  };
+
+  const setUser = (newUser) => {
+    if (process.client) {
+      user.value = newUser;
+      if (newUser) {
+        sessionStorage.setItem('currentUser', JSON.stringify(newUser));
+      } else {
+        sessionStorage.removeItem('currentUser');
       }
     }
   };
 
-  // Set the current user and update sessionStorage
-  const setUser = (newUser) => {
-    user.value = newUser;
-    if (newUser) {
-      sessionStorage.setItem('currentUser', JSON.stringify(newUser));
-    } else {
+  const logout = () => {
+    if (process.client) {
+      user.value = null;
       sessionStorage.removeItem('currentUser');
     }
   };
 
-  // Clear the current user (logout)
-  const logout = () => {
-    user.value = null;
-    sessionStorage.removeItem('currentUser');
-  };
-
   return {
     user,
+    isReady,
     initUser,
     setUser,
     logout
   };
-} 
+}

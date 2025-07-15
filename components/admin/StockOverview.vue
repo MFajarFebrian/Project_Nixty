@@ -45,16 +45,15 @@
     </div>
 
     <div class="quick-actions">
-      <button @click="refreshData" class="action-btn refresh" :disabled="loading">
+      <button @click="refreshData" class="action-btn refresh" :disabled="loading" title="Refresh Data">
         <span v-if="loading" class="loading-spinner">⟳</span>
         <span v-else>⟳</span>
-        Refresh Data
       </button>
-      <button @click="exportStockReport" class="action-btn export">
-        📊 Export Report
+      <button @click="exportStockReport" class="action-btn export" title="Export Report">
+        📊
       </button>
-      <button @click="viewStockManagement" class="action-btn manage">
-        🛠️ Manage Stock
+      <button @click="viewStockManagement" class="action-btn manage" title="Manage">
+        🛠️
       </button>
     </div>
   </div>
@@ -79,21 +78,21 @@ export default {
     },
     inStockCount() {
       return this.products.filter(p => {
-        const stock = p.available_stock || p.stock;
+        const stock = p.available_stock !== undefined ? p.available_stock : p.stock;
         const threshold = p.min_stock_threshold || 5;
         return stock > threshold;
       }).length;
     },
     lowStockCount() {
       return this.products.filter(p => {
-        const stock = p.available_stock || p.stock;
+        const stock = p.available_stock !== undefined ? p.available_stock : p.stock;
         const threshold = p.min_stock_threshold || 5;
         return stock > 0 && stock <= threshold;
       }).length;
     },
     outOfStockCount() {
       return this.products.filter(p => {
-        const stock = p.available_stock || p.stock;
+        const stock = p.available_stock !== undefined ? p.available_stock : p.stock;
         return stock === 0;
       }).length;
     },

@@ -1,5 +1,6 @@
 import pool from '../../../../utils/db';
 import { validateTableName, validateRecordId } from '../../../../utils/admin-validation';
+import { useSupabase } from '../../../../utils/config.js';
 
 /**
  * Get user-friendly record type name
@@ -53,7 +54,8 @@ export default defineEventHandler(async (event) => {
           ['admin']
         );
         
-        if (adminCount[0].count <= 1) {
+        const countValue = useSupabase ? parseInt(adminCount[0].count) : adminCount[0].count;
+        if (countValue <= 1) {
           throw createError({
             statusCode: 400,
             statusMessage: 'Cannot delete the last admin user'
@@ -62,36 +64,23 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Check for foreign key constraints
-    const foreignKeyChecks = {
-      categories: [
-        { table: 'products', column: 'category_id', name: 'products' }
-      ],
-      products: [
-        { table: 'deals', column: 'product_id', name: 'deals' },
-        { table: 'hero_slides', column: 'product_id', name: 'hero slides' },
-        { table: 'product_licenses', column: 'product_id', name: 'product licenses' }
-      ],
-      transactions: [
-        { table: 'product_licenses', column: 'used_by_transaction_id', name: 'product licenses' }
-      ]
-    };
-
-    if (foreignKeyChecks[tableName]) {
-      for (const check of foreignKeyChecks[tableName]) {
-        const [relatedRecords] = await pool.execute(
-          `SELECT COUNT(*) as count FROM ${check.table} WHERE ${check.column} = ?`,
+    // Special handling for product deletion: delete related licenses first
+    if (tableName === 'products') {
+      try {
+        const [deleteLicensesResult] = await pool.execute(
+          'DELETE FROM product_licenses WHERE product_id = ?',
           [validRecordId]
         );
         
-        if (relatedRecords[0].count > 0) {
-          const count = relatedRecords[0].count;
-          const recordType = getRecordTypeName(tableName);
-          throw createError({
-            statusCode: 400,
-            statusMessage: `Cannot delete this ${recordType}: it is currently being used by ${count} ${check.name}. Please remove or reassign the related ${check.name} first.`
-          });
-        }
+        const deletedLicensesCount = useSupabase ? deleteLicensesResult.rowCount : deleteLicensesResult.affectedRows;
+        console.log(`Deleted ${deletedLicensesCount} related product licenses.`);
+
+      } catch (licenseError) {
+        console.error('Error deleting related product licenses:', licenseError);
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to delete related product licenses. Please check for dependencies on transactions.',
+        });
       }
     }
 
@@ -101,7 +90,10 @@ export default defineEventHandler(async (event) => {
       [validRecordId]
     );
 
-    if (result.affectedRows === 0) {
+    // Handle affectedRows for different databases
+    const affectedRows = useSupabase ? result.rowCount : result.affectedRows;
+    
+    if (affectedRows === 0) {
       throw createError({
         statusCode: 404,
         statusMessage: 'Record not found or already deleted'
@@ -113,7 +105,7 @@ export default defineEventHandler(async (event) => {
       message: 'Record deleted successfully',
       data: {
         deletedRecord: existingRecord[0],
-        affectedRows: result.affectedRows
+        affectedRows: affectedRows
       }
     };
 

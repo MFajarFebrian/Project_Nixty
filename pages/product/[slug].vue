@@ -6,7 +6,7 @@
     </div>
     <div v-else-if="error" class="state-container">
       <p class="error-text">&#10060; {{ error }}</p>
-      <button @click="fetchProductData" class="galaxy-button-secondary">Try Again</button>
+        <button @click="fetchProductData" class="galaxy-button-secondary">Try Again</button>
     </div>
     <div v-else class="product-content">
       <!-- Product Header -->
@@ -73,6 +73,7 @@ const products = ref([]);
 const selectedProduct = ref(null);
 const isLoading = ref(true);
 const error = ref(null);
+const product = ref(null);
 
 // Compute the product family name (without version)
 const productFamily = computed(() => {
@@ -95,12 +96,18 @@ const fetchProductData = async () => {
     });
     console.log('API Response:', response);
 
-    if (!response || !response.product || !Array.isArray(response.versions)) {
+    // Handle different response formats
+    if (response.success && response.product && Array.isArray(response.versions)) {
+      // New API format
+      product.value = response.product;
+      products.value = response.versions;
+    } else if (response.product && Array.isArray(response.versions)) {
+      // Direct format
+      product.value = response.product;
+      products.value = response.versions;
+    } else {
       throw new Error('Invalid product data received');
     }
-
-    product.value = response.product;
-    products.value = response.versions;
 
     // Set the newest version as selected by default or based on productId
     if (route.query.productId) {
@@ -130,7 +137,9 @@ const showDetails = (product) => {
 };
 
 const goToCheckout = (product) => {
-  router.push(`/checkout?productId=${product.id}`);
+  // Use the main product slug if available, otherwise use the current route slug
+  const productSlug = product.slug || route.params.slug;
+  router.push(`/product/${productSlug}/checkout`);
 };
 
 const formatCurrency = (value) => {

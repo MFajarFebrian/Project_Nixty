@@ -24,7 +24,7 @@
       <h3 class="product-title" :title="fullProductName">{{ fullProductName }}</h3>
       
       <div class="product-meta">
-        <span v-if="product.category" class="product-category">{{ product.category }}</span>
+        <span v-if="product.category_name || product.category" class="product-category">{{ product.category_name || product.category }}</span>
         <span v-if="product.version" class="product-version">v{{ product.version }}</span>
       </div>
       
@@ -32,8 +32,8 @@
       <div class="product-pricing">
         <div class="price-container">
           <span v-if="product.discount_percentage" 
-                class="original-price">{{ formatCurrency(product.original_price) }}</span>
-          <span class="current-price">{{ formatCurrency(product.price) }}</span>
+                class="original-price">{{ formatCurrency(product.price) }}</span>
+          <span class="current-price">{{ formatCurrency(product.discount_price || product.price) }}</span>
         </div>
       </div>
     </div>
@@ -68,8 +68,16 @@ const fullProductName = computed(() => {
 });
 
 const goToCheckout = () => {
+  console.log('ProductCard clicked! Product data:', props.product);
+  console.log('Product slug:', props.product.slug);
+  console.log('Product ID:', props.product.id);
+  
   if (props.product.slug && props.product.id) {
-    router.push(`/checkout?slug=${props.product.slug}&productId=${props.product.id}`);
+    const url = `/checkout?slug=${props.product.slug}&productId=${props.product.id}`;
+    console.log('Navigating to:', url);
+    router.push(url);
+  } else {
+    console.error('Missing slug or ID for product:', props.product);
   }
 };
 

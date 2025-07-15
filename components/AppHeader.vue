@@ -12,7 +12,7 @@
 
       <!-- Admin-only links -->
       <template v-if="user && user.account_type === 'admin'">
-        <NuxtLink to="/admin" :class="{ 'active': isActiveRoute('/admin') }">Admin Panel</NuxtLink>
+<NuxtLink to="/admin" :class="{ 'active': isActiveRoute('/admin') }">Dashboard</NuxtLink>
       </template>
     </nav>
 
@@ -71,31 +71,7 @@
             <template v-if="user.account_type === 'admin'">
               <a href="#" class="dropdown-item admin-item" @click.prevent="navigateToAdminDashboard">
                 <i class="fas fa-tachometer-alt"></i>
-                <span>Admin Dashboard</span>
-              </a>
-              <a href="#" class="dropdown-item admin-item" @click.prevent="navigateToUserManagement">
-                <i class="fas fa-users-cog"></i>
-                <span>Manage Users</span>
-              </a>
-              <a href="#" class="dropdown-item admin-item" @click.prevent="navigateToProductManagement">
-                <i class="fas fa-boxes"></i>
-                <span>Manage Products</span>
-              </a>
-              <a href="#" class="dropdown-item admin-item" @click.prevent="navigateToTransactionManagement">
-                <i class="fas fa-credit-card"></i>
-                <span>Manage Transactions</span>
-              </a>
-              <a href="#" class="dropdown-item admin-item" @click.prevent="navigateToAnnouncementManagement">
-                <i class="fas fa-bullhorn"></i>
-                <span>Manage Announcements</span>
-              </a>
-              <a href="#" class="dropdown-item admin-item" @click.prevent="navigateToLicenseManagement">
-                <i class="fas fa-key"></i>
-                <span>Manage Licenses</span>
-              </a>
-              <a href="#" class="dropdown-item admin-item" @click.prevent="navigateToStockManagement">
-                <i class="fas fa-boxes"></i>
-                <span>Stock Management</span>
+              <span>Dashboard</span>
               </a>
               <div class="dropdown-divider"></div>
             </template>
@@ -103,11 +79,11 @@
             <!-- Regular user items -->
             <a href="#" class="dropdown-item" @click.prevent="navigateToProfile">
               <i class="fas fa-user-circle"></i>
-              <span>My Profile</span>
+              <span>Profile</span>
             </a>
             <a href="#" class="dropdown-item" @click.prevent="navigateToOrders">
               <i class="fas fa-shopping-bag"></i>
-              <span>My Orders</span>
+              <span>Orders</span>
             </a>
             <a href="#" class="dropdown-item" @click.prevent="navigateToSettings">
               <i class="fas fa-cog"></i>

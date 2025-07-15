@@ -29,9 +29,6 @@
                   </span>
                 </div>
                 <p class="slide-description">{{ slide.description }}</p>
-                <div class="slide-actions">
-                  <button class="btn primary-btn cosmic-button">Learn More</button>
-                </div>
               </div>
             </div>
           </div>
@@ -57,7 +54,7 @@
       <div class="announcements-section">
         <div class="section-header">
           <h2 class="section-title">Latest Updates</h2>
-          <a href="/announcements" class="view-all-link">View All</a>
+          <a href="/announcements" class="view-all-link">All</a>
         </div>
 
         <div class="announcements-carousel">
@@ -148,91 +145,7 @@
       </div>
     </div>
 
-    <!-- Software Categories Section -->
-    <div class="categories-section">
-      <h2 class="section-title stellar-shimmer">Software Categories</h2>
-      <p class="section-subtitle">Explore products based on their category.</p>
-      
-      <div v-if="isLoadingCategories" class="categories-skeleton">
-        <div class="skeleton-category-card" v-for="n in 4" :key="n"></div>
-      </div>
-      <div v-else-if="productCategories.length === 0" class="no-data-message">
-        No categories found.
-      </div>
-      <div v-else class="category-grid">
-        <CategoryCard
-          v-for="category in productCategories"
-          :key="category.id"
-          :category="category"
-        />
-      </div>
-    </div>
 
-    <!-- Featured Deals Section -->
-    <div class="featured-deals-section alt-bg" data-section="deals">
-      <h2 class="section-title stellar-shimmer">Featured Deals</h2>
-      <div class="deals-grid">
-        <div v-if="isLoadingDeals" class="deals-skeleton">
-          <div class="skeleton-featured-deal">
-            <div class="skeleton-deal-content">
-              <div class="skeleton-deal-badge"></div>
-              <div class="skeleton-deal-title"></div>
-              <div class="skeleton-deal-description"></div>
-              <div class="skeleton-deal-price"></div>
-              <div class="skeleton-deal-button"></div>
-            </div>
-          </div>
-          <div class="skeleton-side-deals">
-            <div class="skeleton-side-deal" v-for="n in 2" :key="n">
-              <div class="skeleton-side-deal-image"></div>
-              <div class="skeleton-side-deal-content">
-                <div class="skeleton-side-deal-title"></div>
-                <div class="skeleton-side-deal-price"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-else-if="!featuredDeal" class="no-data-message">No featured deals available</div>
-        <div v-else class="deal-card large-deal">
-          <div class="deal-background">
-            <img :src="getImageUrl(featuredDeal.backgroundImage)" :alt="featuredDeal.title" class="deal-bg-image" @error="handleImageError($event, featuredDeal.backgroundImage)" />
-            <div class="deal-overlay"></div>
-          </div>
-          <div class="deal-content">
-            <span class="deal-badge">{{ featuredDeal.badge }}</span>
-            <h3 class="deal-title">{{ featuredDeal.title }}</h3>
-            <p class="deal-description">{{ featuredDeal.description }}</p>
-            <div class="deal-pricing">
-              <span class="old-price">{{ formatCurrency(featuredDeal.oldPrice) }}</span>
-              <span class="new-price">{{ formatCurrency(featuredDeal.newPrice) }}</span>
-            </div>
-            <button class="btn primary-btn cosmic-button">Shop Now</button>
-          </div>
-        </div>
-        <div class="side-deals">
-          <div class="deal-card side-deal" v-for="deal in sideDeals" :key="deal.id">
-            <img :src="getImageUrl(deal.image)" :alt="deal.title" class="deal-image" @error="handleImageError($event, deal.image)" />
-            <div class="side-deal-content">
-              <h4 class="deal-title">{{ deal.title }}</h4>
-              <p class="deal-price">{{ formatCurrency(deal.price) }}</p>
-              <span class="deal-badge">{{ deal.badge }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Newsletter Section -->
-    <div class="newsletter-section cosmic-overlay">
-      <div class="newsletter-content">
-        <h2 class="section-title stellar-shimmer">Stay Updated</h2>
-        <p>Get the latest software deals and updates delivered to your inbox</p>
-        <div class="newsletter-form">
-          <input type="email" placeholder="Enter your email address" class="newsletter-input" />
-          <button class="btn newsletter-btn cosmic-button">Subscribe</button>
-        </div>
-      </div>
-    </div>
   </div>
   <WhatsAppChat phone-number="1234567890" />
 </template>
@@ -243,7 +156,6 @@ import { useHomePage } from '~/composables/useHomePage';
 import { useHomePageInteractions } from '~/composables/useHomePageInteractions';
 import { useImageLoader } from '~/composables/useImageLoader';
 import ProductCard from '~/components/ProductCard.vue';
-import CategoryCard from '~/components/CategoryCard.vue';
 import WhatsAppChat from '~/components/WhatsAppChat.vue';
 
 // Initialize home page state and data
@@ -283,12 +195,17 @@ const {
   setRecommendedProductsPage,
   formatCurrency
 } = useHomePageInteractions({
-  ...homePageState,
+  homePageState,
   heroSlides,
   announcements
 });
 
 const { getImageUrl, handleImageError } = useImageLoader();
+
+// Set page title
+useHead({
+  title: 'Home'
+});
 
 // Fetch data on mount
 onMounted(async () => {
@@ -299,46 +216,6 @@ onMounted(async () => {
 <style scoped>
 @import '~/assets/css/pages/home.css';
 
-.categories-section {
-  padding: var(--galaxy-space-2xl) var(--galaxy-space-lg);
-  text-align: center;
-}
-
-.section-subtitle {
-  max-width: 600px;
-  margin: 0 auto var(--galaxy-space-xl) auto;
-  color: var(--galaxy-cloud-gray);
-  font-size: 1.1rem;
-}
-
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--galaxy-space-xl);
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.categories-skeleton {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--galaxy-space-xl);
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.skeleton-category-card {
-  height: 110px;
-  background-color: var(--galaxy-dark-matter-deep);
-  border-radius: var(--galaxy-radius-lg);
-  animation: pulse 1.5s infinite ease-in-out;
-}
-
-@keyframes pulse {
-  0% { background-color: var(--galaxy-dark-matter-deep); }
-  50% { background-color: var(--galaxy-asteroid-gray); }
-  100% { background-color: var(--galaxy-dark-matter-deep); }
-}
 </style>
 
 

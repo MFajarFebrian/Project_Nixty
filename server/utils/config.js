@@ -1,5 +1,5 @@
 // Database configuration
-export const useSupabase = false; // Set to true for PostgreSQL
+export const useSupabase = true; // Set to true for PostgreSQL
 export const useOnlineDB = false; // Set to true for online MySQL
 
 // Midtrans configuration (Sandbox)

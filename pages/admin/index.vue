@@ -10,15 +10,13 @@
         <p class="dashboard-subtitle">Manage your database and system settings</p>
       </div>
       <div class="header-right">
-        <div class="quick-actions">
-          <button @click="showStockManagement = true" class="quick-btn stock-btn">
-            <i class="fas fa-boxes"></i>
-            Stock Management
-          </button>
-          <button @click="refreshData" class="quick-btn refresh-btn" :disabled="loading">
-            <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
-            Refresh
-          </button>
+        <div class="header-controls">
+          <div class="quick-actions">
+            <button @click="refreshData" class="quick-btn refresh-btn" :disabled="loading">
+              <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -85,7 +83,7 @@
         <!-- Left Column -->
         <div class="left-column">
           <!-- Transaction Chart Widget -->
-          <TransactionChart />
+          <TransactionChart @dateRangeChanged="handleDateRangeChanged" />
           <!-- Stock Overview Widget -->
           <div class="widget stock-widget">
             <div class="widget-header">
@@ -234,7 +232,6 @@
     <div v-if="showStockManagement" class="modal-overlay" @click="showStockManagement = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Stock Management</h3>
           <button @click="showStockManagement = false" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
@@ -296,7 +293,8 @@ const {
   productsLoading,
   loadProducts,
   totalTransactions,
-  totalUsers
+  totalUsers,
+  getQuickStats
 } = useAdminOverview();
 
 // Stock management state
@@ -304,36 +302,7 @@ const showStockManagement = ref(false);
 const categories = ref([]);
 
 // Computed properties
-const getQuickStats = computed(() => [
-  {
-    title: 'Total Revenue',
-    value: formatCurrency(statistics.value?.totalRevenue || 0),
-    change: '+12.5% from last month',
-    color: 'green',
-    icon: 'fas fa-dollar-sign'
-  },
-  {
-    title: 'Total Orders',
-    value: statistics.value?.totalOrders || 0,
-    change: '+8.2% from last month',
-    color: 'blue',
-    icon: 'fas fa-shopping-cart'
-  },
-  {
-    title: 'Active Users',
-    value: statistics.value?.activeUsers || 0,
-    change: '+15.3% from last month',
-    color: 'purple',
-    icon: 'fas fa-users'
-  },
-  {
-    title: 'Products Sold',
-    value: statistics.value?.productsSold || 0,
-    change: '+5.7% from last month',
-    color: 'gold',
-    icon: 'fas fa-box'
-  }
-]);
+// const getQuickStats = computed(() => []); // replaced by composable version
 
 const stockStats = computed(() => {
   const total = products.value.length;
@@ -348,7 +317,10 @@ const loadCategories = async () => {
   try {
     const response = await $fetch('/api/admin/tables/categories');
     if (response && response.success) {
-      categories.value = response.data;
+      categories.value = response.data.map(category => ({
+        id: category.id,
+        name: category.name
+      }));
     }
   } catch (error) {
     console.error('Error loading categories:', error);
@@ -379,10 +351,37 @@ const viewProduct = (productId) => {
   }
 };
 
+// Handle date range changes from TransactionChart
+const handleDateRangeChanged = async (dateRange) => {
+  try {
+    console.log('Date range changed in TransactionChart:', dateRange);
+    
+    // Fetch filtered overview data based on the date range
+    loading.value = true;
+    
+    // Update all dashboard data with the selected date range
+    await fetchOverview(dateRange.startDate, dateRange.endDate);
+    
+    // Also refresh other related data
+    await loadProducts();
+
+    console.log('Dashboard updated with date range:', dateRange);
+  } catch (err) {
+    console.error('Error updating overview with date range:', err);
+    error.value = err.message || 'Failed to update dashboard data';
+  } finally {
+    loading.value = false;
+  }
+};
+
 // Lifecycle
+// Set page title
+useHead({
+  title: 'Admin Dashboard'
+});
+
 onMounted(() => {
-  fetchOverview();
-  loadProducts();
+  refreshData();
 });
 </script>
 
@@ -485,6 +484,16 @@ onMounted(() => {
 .quick-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.quick-btn.warning-btn {
+  background: linear-gradient(135deg, var(--galaxy-solar-yellow), #ff9800);
+  color: var(--galaxy-deep-space);
+}
+
+.quick-btn.warning-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(255, 193, 7, 0.3);
 }
 
 /* Loading and Error States */
@@ -998,10 +1007,12 @@ onMounted(() => {
   border-radius: var(--galaxy-radius-lg);
   backdrop-filter: blur(20px);
   max-width: 95vw;
-  max-height: 95vh;
+  height: 75%;
   overflow: hidden;
   box-shadow: var(--galaxy-shadow-large), var(--galaxy-glow-blue);
   animation: modalSlideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes modalSlideIn {
@@ -1057,7 +1068,8 @@ onMounted(() => {
 
 .modal-body {
   overflow-y: auto;
-  max-height: calc(95vh - 80px);
+  flex: 1;
+  height: 100%;
 }
 
 /* Responsive Design */

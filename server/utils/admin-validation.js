@@ -50,8 +50,7 @@ export const TABLE_VALIDATION_RULES = {
     numeric: ['price', 'discount_percentage', 'sold_count', 'view_count', 'category_id', 'min_stock_threshold'],
     positiveNumber: ['price'],
     enum: {
-      status: ['active', 'inactive', 'out_of_stock'],
-      license_type_default: ['product_key', 'email_password', 'access_code', 'download_link']
+      status: ['active', 'inactive', 'out_of_stock']
     }
   },
   categories: {
@@ -133,15 +132,12 @@ export const TABLE_VALIDATION_RULES = {
       product_key: 5,
       email: 5,
       password: 6,
-      access_code: 3,
       product_name: 2
     },
     maxLength: {
       product_key: 500,
       email: 255,
       password: 255,
-      access_code: 255,
-      download_link: 1000,
       product_name: 255,
       product_version: 50,
       notes: 1000
@@ -150,8 +146,8 @@ export const TABLE_VALIDATION_RULES = {
     positiveNumber: ['product_id'],
     email: ['email'],
     enum: {
-      license_type: ['product_key', 'email_password', 'access_code', 'download_link'],
-      status: ['available', 'partially_used', 'used', 'expired', 'reserved']
+      license_type: ['product_key', 'email_password'],
+      status: ['available', 'used', 'expired', 'reserved']
     }
   }
 };

@@ -3,16 +3,27 @@
     <div class="modal-container" @click.stop>
       <div class="modal-header">
         <h2 class="modal-title">
-          <i :class="mode === 'create' ? 'fas fa-plus' : 'fas fa-edit'"></i>
-          {{ mode === 'create' ? 'Create New' : 'Edit' }} {{ getTableDisplayName(tableName) }}
+          <i :class="isMassAdd ? 'fas fa-cubes' : (mode === 'create' ? 'fas fa-plus' : 'fas fa-edit')"></i>
+          <span v-if="isMassAdd">Mass Add {{ getTableDisplayName(tableName) }}s</span>
+          <span v-else>{{ mode === 'create' ? 'Create New' : 'Edit' }} {{ getTableDisplayName(tableName) }}</span>
         </h2>
-        <button @click="$emit('close')" class="close-btn">
-          <i class="fas fa-times"></i>
-        </button>
+        <div class="header-actions">
+          <label v-if="mode === 'create' && tableName === 'products'" class="mass-add-toggle">
+            <input type="checkbox" v-model="isMassAdd" class="toggle-checkbox">
+            <div class="toggle-switch">
+              <div class="toggle-handle"></div>
+            </div>
+            <span class="toggle-label">Mass Add</span>
+          </label>
+          <button @click="$emit('close')" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
       </div>
 
       <div class="modal-body">
-        <form @submit.prevent="handleSubmit" class="record-form">
+        <!-- Single Product Form -->
+        <form v-if="!isMassAdd" @submit.prevent="handleSubmit" class="record-form">
           <div class="form-grid">
             <div
               v-for="column in editableColumns"
@@ -199,16 +210,168 @@
             </button>
           </div>
         </form>
+
+        <!-- Mass Add Products Form -->
+        <form v-else @submit.prevent="handleMassSubmit" class="record-form">
+          <div class="mass-add-container">
+            <div class="mass-add-header">
+              <h3 class="mass-add-title">
+                <i class="fas fa-cubes"></i>
+                Add Multiple Products
+              </h3>
+              <button @click="addProduct" class="add-product-btn" type="button">
+                <i class="fas fa-plus"></i>
+                Add Product
+              </button>
+            </div>
+            
+            <div class="mass-add-products" v-if="products.length > 0">
+              <div 
+                v-for="(product, index) in products" 
+                :key="index" 
+                class="mass-product-item"
+              >
+                <div class="mass-product-header">
+                  <h4 class="mass-product-title">
+                    <i class="fas fa-box"></i>
+                    Product {{ index + 1 }}
+                  </h4>
+                  <button 
+                    @click="removeProduct(index)" 
+                    class="mass-remove-btn"
+                    type="button"
+                    v-if="products.length > 1"
+                    :title="`Remove Product ${index + 1}`"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+                
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label :for="`product-name-${index}`" class="form-label">
+                      Product Name
+                      <span class="required">*</span>
+                    </label>
+                    <input 
+                      :id="`product-name-${index}`"
+                      v-model="product.name"
+                      @input="generateSlug(index)"
+                      type="text" 
+                      placeholder="Enter product name"
+                      required
+                      class="form-input"
+                    >
+                  </div>
+                  
+                  <div class="form-group">
+                    <label :for="`product-slug-${index}`" class="form-label">Slug</label>
+                    <input 
+                      :id="`product-slug-${index}`"
+                      v-model="product.slug"
+                      type="text"
+                      placeholder="auto-generated-slug"
+                      readonly
+                      class="form-input auto-filled"
+                    >
+                    <p class="auto-filled-note">
+                      ✨ Auto-filled from selected category's slug
+                    </p>
+                  </div>
+
+                  <div class="form-group">
+                    <label :for="`product-price-${index}`" class="form-label">
+                      Price
+                      <span class="required">*</span>
+                    </label>
+                    <input 
+                      :id="`product-price-${index}`"
+                      v-model="product.price" 
+                      type="number" 
+                      step="0.01"
+                      placeholder="0.00"
+                      required
+                      class="form-input"
+                    >
+                  </div>
+                  
+                  <div class="form-group">
+                    <label :for="`product-category-${index}`" class="form-label">
+                      Category
+                      <span class="required">*</span>
+                    </label>
+                    <div class="select-group">
+                      <CustomSelect
+                        :id="`product-category-${index}`"
+                        v-model="product.category_id"
+                        :options="getCategoryOptionsForMassAdd()"
+                        placeholder="Select Category"
+                        :required="true"
+                        @update:modelValue="generateSlug(index)"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div class="form-group full-width">
+                    <label :for="`product-description-${index}`" class="form-label">Description</label>
+                    <textarea 
+                      :id="`product-description-${index}`"
+                      v-model="product.description" 
+                      placeholder="Enter product description"
+                      rows="3"
+                      class="form-textarea"
+                    ></textarea>
+                  </div>
+                  
+                  <div class="form-group full-width">
+                    <label class="form-label">Product Image</label>
+                    <ImageUpload
+                      v-model="product.image_url"
+                      :label="`Product Image ${index + 1}`"
+                      :required="false"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div v-else class="mass-empty-state">
+              <div class="mass-empty-content">
+                <i class="fas fa-box-open"></i>
+                <h4>No products added yet</h4>
+                <p>Start by adding your first product to the batch</p>
+                <button @click="addProduct" class="mass-add-first-btn" type="button">
+                  <i class="fas fa-plus"></i>
+                  Add Your First Product
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mass Add Form Actions -->
+          <div class="form-actions">
+            <button type="button" @click="$emit('close')" class="cancel-btn">
+              <i class="fas fa-times"></i>
+              Cancel
+            </button>
+            <button type="submit" :disabled="loading || !canMassSubmit" class="save-btn">
+              <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+              <i v-else class="fas fa-plus"></i>
+              {{ loading ? 'Adding...' : `Add ${products.length} Products` }}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="js">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
 import ImageUpload from '~/components/admin/ImageUpload.vue';
 import CustomSelect from '~/components/admin/CustomSelect.vue';
 import { useAdminRelations } from '~/composables/useAdminRelations';
+import { useAdminAuth } from '~/composables/useAdminAuth';
 
 // Props
 const props = defineProps({
@@ -245,9 +408,14 @@ const emit = defineEmits(['close', 'save']);
 // State
 const loading = ref(false);
 const formData = ref({});
+const isMassAdd = ref(false);
+const products = reactive([]);
+const categories = ref([]);
+
 
 // Relations composable
 const { loadingStates, getFieldOptions, getCachedOptions, fetchProductVersions, getProductById } = useAdminRelations();
+const { getAdminHeaders } = useAdminAuth();
 
 // Computed
 const editableColumns = computed(() => {
@@ -259,7 +427,188 @@ const editableColumns = computed(() => {
   );
 });
 
+const canMassSubmit = computed(() => {
+  if (!isMassAdd.value || products.length === 0) {
+    console.log('canMassSubmit: false - isMassAdd:', isMassAdd.value, 'products.length:', products.length);
+    return false;
+  }
+  
+  const validProducts = products.filter(product => {
+    const isValid = product.name && 
+                   product.price && 
+                   product.category_id && 
+                   product.slug;
+    if (!isValid) {
+      console.log('Invalid product:', {
+        name: product.name,
+        price: product.price,
+        category_id: product.category_id,
+        slug: product.slug
+      });
+    }
+    return isValid;
+  });
+  
+  const canSubmit = validProducts.length === products.length;
+  console.log('canMassSubmit:', canSubmit, 'valid:', validProducts.length, 'total:', products.length);
+  return canSubmit;
+});
+
 // Methods
+// Add a product entry to the mass add form
+const addProduct = () => {
+  console.log('Adding new product to mass add form');
+  const newProduct = {
+    name: '',
+    price: '',
+    description: '',
+    category_id: '', // Initialize with empty string instead of null
+    slug: '',
+    image_url: '',
+    image: null,       // For the File object
+    imagePreview: null // For the data URL
+  };
+  products.push(newProduct);
+  console.log('Products array now has', products.length, 'items');
+};
+
+// Get category options for mass add
+const getCategoryOptionsForMassAdd = () => {
+  if (props.relations && props.relations.categories) {
+    return props.relations.categories.map(cat => ({ value: cat.id, label: cat.name }));
+  }
+  return [];
+};
+
+// Remove a specific product entry by index
+const removeProduct = (index) => {
+  products.splice(index, 1);
+};
+
+// Handle image file selection and preview
+const handleImageUpload = (index, event) => {
+  const file = event.target.files[0];
+  if (file) {
+    products[index].image = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      products[index].imagePreview = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    products[index].image = null;
+    products[index].imagePreview = null;
+  }
+};
+
+// Remove image from a product entry by index
+const removeImage = (index) => {
+  products[index].image = null;
+  products[index].imagePreview = null;
+};
+
+// Generate a slug for a specific product based on its category
+const generateSlug = (index) => {
+  const product = products[index];
+  const category = props.relations.categories.find(c => c.id === product.category_id);
+  if (category) {
+    // Use category slug EXACTLY as requested
+    product.slug = category.slug;
+    console.log(`Product ${index + 1}: Using category slug '${category.slug}' for category '${category.name}'`);
+  } else {
+    product.slug = '';
+  }
+};
+
+// Fetch categories for the category dropdown
+const fetchCategories = async () => {
+  try {
+    const response = await $fetch('/api/admin/tables/categories');
+    if (response && response.success) {
+      categories.value = response.data;
+    }
+  } catch (error) {
+    console.error('Error loading categories:', error);
+  }
+};
+
+// Handle submission of multiple products
+const handleMassSubmit = async () => {
+  if (!canMassSubmit.value) {
+    console.warn('Cannot submit mass add:', { canMassSubmit: canMassSubmit.value, products: products.length });
+    return;
+  }
+  
+  console.log('Starting mass submit with products:', products);
+  loading.value = true;
+  
+  try {
+    const formData = new FormData();
+    formData.append('tableName', props.tableName);
+
+    // Prepare products data, excluding image objects
+    const productsData = products.map(p => {
+      const categoryName = props.relations.categories.find(c => c.id === p.category_id)?.name || '';
+      console.log(`Product ${p.name}: category_id=${p.category_id}, category_name=${categoryName}`);
+      return {
+        name: p.name,
+        price: p.price,
+        category: categoryName, // Fix: Use 'category' to match backend expectation
+        description: p.description || ''
+      };
+    });
+    
+    console.log('Products data prepared:', productsData);
+    formData.append('products', JSON.stringify(productsData));
+
+    // Append image files from ImageUpload component
+    products.forEach((p, index) => {
+      // Check if there's an image URL (from ImageUpload component)
+      if (p.image_url && p.image_url.startsWith('blob:')) {
+        // This is a blob URL from the ImageUpload component
+        // We need to get the actual file from the ImageUpload component
+        console.log(`Product ${index} has image URL:`, p.image_url);
+      } else if (p.image) {
+        // This is a direct file object
+        formData.append(`image_${index}`, p.image);
+        console.log(`Appending image for product ${index}:`, p.image.name);
+      }
+    });
+
+    console.log('Sending request to /api/admin/tables/massAdd');
+    const response = await $fetch('/api/admin/tables/massAdd', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        ...getAdminHeaders(),
+        // No need for Content-Type, browser will set it for FormData
+      }
+    });
+
+    console.log('Mass add response:', response);
+
+    if (response.success) {
+      // Clear the products array
+      products.splice(0, products.length);
+      
+      emit('save');
+      emit('close');
+      if (typeof window !== 'undefined' && window.$toast) {
+        window.$toast.success(response.message || 'Products added successfully');
+      }
+    } else {
+      throw new Error(response.message || 'Mass add failed');
+    }
+  } catch (error) {
+    console.error('Error in handleMassSubmit:', error);
+    if (typeof window !== 'undefined' && window.$toast) {
+      window.$toast.error(error.data?.message || error.message || 'Failed to add products');
+    }
+  } finally {
+    loading.value = false;
+  }
+};
+
 const getTableDisplayName = (tableName) => {
   const displayNames = {
     'users': 'User',
@@ -295,7 +644,7 @@ const isAutoFilled = (column) => {
     return ['product_name', 'product_version'].includes(column.name) && formData.value.product_id;
   }
   if (props.tableName === 'products' && column.name === 'slug') {
-    return !!formData.value.category_id;
+    return true; // Always auto-filled for products (from category slug)
   }
   return false;
 };
@@ -436,9 +785,7 @@ const getSelectOptions = (column) => {
     ],
     'license_type': [
       { value: 'product_key', label: 'Product Key' },
-      { value: 'email_password', label: 'Email & Password' },
-      { value: 'access_code', label: 'Access Code' },
-      { value: 'download_link', label: 'Download Link' }
+      { value: 'email_password', label: 'Email & Password' }
     ]
   };
 
@@ -514,11 +861,7 @@ const getNumberMin = (column) => {
 const getHelpText = (column) => {
   // Special help text for slug in products table
   if (column.name === 'slug' && props.tableName === 'products') {
-    if (!formData.value.category_id) {
-      return '💡 Tip: Select a Category first to auto-generate the slug (recommended), or enter manually using lowercase letters, numbers, and hyphens only.';
-    } else {
-      return 'Auto-generated from category. You can edit manually if needed. Use lowercase letters, numbers, and hyphens only.';
-    }
+    return '✨ Auto-filled from selected category\'s slug. This field is read-only.';
   }
   
   const helpTexts = {
@@ -573,14 +916,6 @@ const getHelpText = (column) => {
           'email': 'Email address for the account (required for email/password licenses)',
           'password': 'Password for the account (minimum 6 characters, required for email/password licenses)',
           'max_usage': 'Auto-set to 1 for email/password (single use only)'
-        },
-        'access_code': {
-          'access_code': 'Access or activation code (minimum 3 characters). Can be used only once.',
-          'max_usage': 'Auto-set to 1 for access codes (single use only)'
-        },
-        'download_link': {
-          'download_link': 'Direct download URL for the product. Can be used multiple times.',
-          'max_usage': 'Auto-set to 999 for download links (unlimited use)'
         }
       };
       
@@ -607,9 +942,7 @@ const getLicenseTypeForField = (column) => {
   const fieldToType = {
     'product_key': 'product_key',
     'email': 'email_password',
-    'password': 'email_password',
-    'access_code': 'access_code',
-    'download_link': 'download_link'
+    'password': 'email_password'
   };
   
   return fieldToType[column.name] || '';
@@ -618,9 +951,7 @@ const getLicenseTypeForField = (column) => {
 const formatLicenseTypeName = (licenseType) => {
   const names = {
     'product_key': 'Product Key',
-    'email_password': 'Email & Password',
-    'access_code': 'Access Code',
-    'download_link': 'Download Link'
+    'email_password': 'Email & Password'
   };
   return names[licenseType] || licenseType;
 };
@@ -642,7 +973,7 @@ const initializeForm = () => {
       // Set default values for certain fields
       if (column.name === 'status' && props.tableName === 'product_licenses') {
         formData.value[column.name] = 'available';
-      } else if (column.name === 'usage_count' && props.tableName === 'product_licenses') {
+      } else if ((column.name === 'usage_count' || column.name === 'send_license') && props.tableName === 'product_licenses') {
         formData.value[column.name] = 0;
       } else if (column.name === 'max_usage' && props.tableName === 'product_licenses') {
         formData.value[column.name] = 1;
@@ -710,19 +1041,24 @@ const handleSubmit = async () => {
   loading.value = true;
   const dataToSend = {};
 
-  // Only include fields that have a value
+  // Get a list of actual column names from the props to filter out joined fields
+  const validColumnNames = props.columns.map(c => c.name);
+
+  // Only include fields that are actual columns in the table
   for (const key in formData.value) {
-    const value = formData.value[key];
-    
-    // For edit mode, we want to allow sending null to clear a field.
-    // For create mode, we only send non-empty values.
-    if (props.mode === 'edit') {
-        // Always include all fields in edit mode to allow clearing them
-        dataToSend[key] = value === '' ? null : value;
-    } else { // Create mode
-        if (value !== null && value !== undefined && value !== '') {
-            dataToSend[key] = value;
-        }
+    if (validColumnNames.includes(key)) {
+      const value = formData.value[key];
+      
+      // For edit mode, we want to allow sending null to clear a field.
+      // For create mode, we only send non-empty values.
+      if (props.mode === 'edit') {
+          // Always include all fields in edit mode to allow clearing them
+          dataToSend[key] = value === '' ? null : value;
+      } else { // Create mode
+          if (value !== null && value !== undefined && value !== '') {
+              dataToSend[key] = value;
+          }
+      }
     }
   }
 
@@ -852,65 +1188,16 @@ watch(() => formData.value.product_id, async (newProductId, oldProductId) => {
   }
 });
 
-// Watch for name changes to auto-generate slug if empty
-watch(() => formData.value.name, (newName) => {
-  if (props.tableName === 'products' && newName && (!formData.value.slug || props.mode === 'create')) {
-    // Buat slug dari nama produk yang lebih SEO-friendly
-    let productType = newName
-      .toLowerCase()
-      .replace(/microsoft\s+/i, '') // Hapus kata "Microsoft"
-      .replace(/\s+/g, '-') // Ganti spasi dengan tanda hubung
-      .replace(/[^a-z0-9-]/g, ''); // Hapus karakter yang tidak diizinkan dalam slug
-    
-    // Jika nama mengandung Office, Project, atau Visio, gunakan category slug
-    if (newName.toLowerCase().includes('office')) {
-      productType = 'office';
-    } else if (newName.toLowerCase().includes('project')) {
-      productType = 'project';
-    } else if (newName.toLowerCase().includes('visio')) {
-      productType = 'visio';
-    }
-    
-    formData.value.slug = productType;
-    console.log('Auto-generated slug from product name:', formData.value.slug);
-  }
-});
+// Note: Removed name-to-slug watcher for products as slugs are now auto-filled from category only
 
 // Watch for category_id changes to auto-fill slug
 watch(() => formData.value.category_id, (newCategoryId) => {
   if (props.tableName === 'products' && newCategoryId) {
     const category = props.relations.categories.find(c => c.id === newCategoryId);
     if (category) {
-      // Buat slug dari category slug yang konsisten
-      // Format: 'office', 'project', 'visio'
-      let productType = '';
-      
-      if (category.name.toLowerCase().includes('office')) {
-        productType = 'office';
-      } else if (category.name.toLowerCase().includes('project')) {
-        productType = 'project';
-      } else if (category.name.toLowerCase().includes('visio')) {
-        productType = 'visio';
-      } else {
-        // Fallback: gunakan nama produk yang sudah ada di form jika ada
-        if (formData.value.name) {
-          productType = formData.value.name
-            .toLowerCase()
-            .replace(/microsoft\s+/i, '') // Hapus kata "Microsoft"
-            .replace(/\s+/g, '-') // Ganti spasi dengan tanda hubung
-            .replace(/[^a-z0-9-]/g, ''); // Hapus karakter yang tidak diizinkan dalam slug
-        } else {
-          // Jika tidak ada nama produk, gunakan nama kategori yang disederhanakan
-          productType = category.name
-            .toLowerCase()
-            .replace(/microsoft\s+/i, '')
-            .replace(/\s+/g, '-')
-            .replace(/[^a-z0-9-]/g, '');
-        }
-      }
-      
-      formData.value.slug = productType;
-      console.log('Auto-filled slug from product type:', formData.value.slug);
+      // Use category slug EXACTLY as requested
+      formData.value.slug = category.slug;
+      console.log('Auto-filled slug from category slug:', formData.value.slug);
     } else {
       console.warn('Category not found:', newCategoryId);
     }
@@ -922,10 +1209,8 @@ watch(() => formData.value.license_type, (newLicenseType, oldLicenseType) => {
     
     // Clear fields that are not relevant to the new license type
     const fieldsToClear = {
-      'product_key': ['email', 'password', 'access_code', 'download_link'],
-      'email_password': ['product_key', 'access_code', 'download_link'],
-      'access_code': ['product_key', 'email', 'password', 'download_link'],
-      'download_link': ['product_key', 'email', 'password', 'access_code']
+      'product_key': ['email', 'password'],
+      'email_password': ['product_key']
     };
     
     const fieldsToClearForNewType = fieldsToClear[newLicenseType] || [];
@@ -939,9 +1224,7 @@ watch(() => formData.value.license_type, (newLicenseType, oldLicenseType) => {
     // Set default max_usage based on license type
     const maxUsageByType = {
       'product_key': 5,
-      'email_password': 1,
-      'access_code': 1,
-      'download_link': 999
+      'email_password': 1
     };
     
     if (maxUsageByType[newLicenseType]) {
@@ -953,8 +1236,8 @@ watch(() => formData.value.license_type, (newLicenseType, oldLicenseType) => {
 
 const isFieldDisabled = (column) => {
   if (props.tableName === 'products' && column.name === 'slug') {
-    // Slug otomatis digenerate saat pembuatan, tetapi dapat diedit manual setelahnya
-    return false; // Selalu aktif, baik mode create maupun edit
+    // Slug is always auto-generated from the category and should be read-only.
+    return true;
   }
 
   if (props.tableName !== 'product_licenses') return false;
@@ -973,9 +1256,7 @@ const isFieldDisabled = (column) => {
   // Fields yang spesifik untuk setiap license type
   const typeSpecificFields = {
     'product_key': ['product_key'],
-    'email_password': ['email', 'password'],
-    'access_code': ['access_code'],
-    'download_link': ['download_link']
+    'email_password': ['email', 'password']
   };
   
   // Disable field jika tidak sesuai dengan license type yang dipilih
@@ -1012,6 +1293,7 @@ const isFieldLoading = (column) => {
 onMounted(() => {
   if (props.show) {
     initializeForm();
+    fetchCategories();
   }
 });
 
@@ -1071,8 +1353,11 @@ const isCurrencyColumn = (column) => {
 };
 </script>
 
-<style scoped>
+<style>
 @import '~/assets/css/components/admin-modals.css';
+</style>
+
+<style scoped>
 
 .readonly-field {
   margin-top: 0.5rem;

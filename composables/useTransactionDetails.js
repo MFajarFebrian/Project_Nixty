@@ -7,7 +7,7 @@ export function useTransactionDetails() {
   const isFetchingLicense = ref(false);
 
   const isPendingOrExpired = (status, gatewayStatus) => {
-    const pendingStatuses = ['pending', 'expire', 'cancel', 'failed'];
+    const pendingStatuses = ['pending', 'expire', 'cancel', 'failed', 'not_found_in_gateway'];
     return pendingStatuses.includes(status?.toLowerCase()) || 
            pendingStatuses.includes(gatewayStatus?.toLowerCase());
   };
@@ -26,7 +26,7 @@ export function useTransactionDetails() {
       }
 
       // Get a new payment token for the order
-      const response = await $fetch(`/api/profile/transactions/repay`, {
+      const response = await $fetch(`/api/profile/history_order/repay`, {
         method: 'POST',
         body: { transactionId },
         headers: {
@@ -73,7 +73,7 @@ export function useTransactionDetails() {
         throw new Error('Transaction ID is required.');
       }
 
-      const response = await $fetch(`/api/profile/transactions/get-license`, {
+      const response = await $fetch(`/api/profile/history_order/get-license`, {
         method: 'POST',
         body: { transactionId },
         headers: {

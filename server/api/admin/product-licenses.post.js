@@ -109,6 +109,7 @@ export default defineEventHandler(async (event) => {
 
     validData.max_usage = maxUsageByType[validData.license_type] || 1;
     validData.usage_count = 0; // New licenses start with 0 usage
+    validData.send_license = 0; // Initialize send_license to 0
 
     // Set default status
     if (!validData.status) {

@@ -75,12 +75,12 @@ export const useAppHeader = (emit) => {
   };
 
   const navigateToOrders = () => {
-    router.push('/profile/transactions');
+    router.push('/profile/history_order');
     isUserDropdownOpen.value = false;
   };
 
   const navigateToSettings = () => {
-    router.push('/settings');
+    router.push('/profile/settings');
     isUserDropdownOpen.value = false;
   };
 
@@ -90,40 +90,6 @@ export const useAppHeader = (emit) => {
     isUserDropdownOpen.value = false;
   };
 
-  const navigateToUserManagement = () => {
-    router.push('/admin/tables/users');
-    isUserDropdownOpen.value = false;
-  };
-
-  const navigateToProductManagement = () => {
-    router.push('/admin/tables/products');
-    isUserDropdownOpen.value = false;
-  };
-
-  const navigateToTransactionManagement = () => {
-    router.push('/admin/tables/transactions');
-    isUserDropdownOpen.value = false;
-  };
-
-  const navigateToAnnouncementManagement = () => {
-    router.push('/admin/tables/announcements');
-    isUserDropdownOpen.value = false;
-  };
-
-  const navigateToLicenseManagement = () => {
-    router.push('/admin/tables/product_licenses');
-    isUserDropdownOpen.value = false;
-  };
-
-  const navigateToStockManagement = () => {
-    router.push('/admin');
-    isUserDropdownOpen.value = false;
-    // We'll use a custom event to trigger the stock management modal
-    // This will be handled by the admin dashboard
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('open-stock-management'));
-    }, 100);
-  };
 
   const openAuthModal = (tab = 'login') => {
     if (emit) {
@@ -189,12 +155,6 @@ export const useAppHeader = (emit) => {
     navigateToOrders,
     navigateToSettings,
     navigateToAdminDashboard,
-    navigateToUserManagement,
-    navigateToProductManagement,
-    navigateToTransactionManagement,
-    navigateToAnnouncementManagement,
-    navigateToLicenseManagement,
-    navigateToStockManagement,
     openAuthModal,
     handleLogout,
     handleSearch,

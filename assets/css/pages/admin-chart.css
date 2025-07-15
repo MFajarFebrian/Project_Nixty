@@ -1,0 +1,14 @@
+.date-picker-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 100;
+  background: var(--galaxy-deep-space);
+  border: 1px solid var(--galaxy-aurora-cyan);
+  border-radius: var(--galaxy-radius-lg);
+  box-shadow: var(--galaxy-shadow-large);
+  width: 320px;
+  overflow: hidden;
+  animation: fadeInDown 0.3s ease-out;
+}
+

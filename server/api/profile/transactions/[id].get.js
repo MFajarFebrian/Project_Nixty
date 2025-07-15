@@ -1,156 +1,104 @@
-import pool from '../../../utils/db';
-import { requireAuth } from '../../../utils/auth';
+import db from '~/server/utils/db';
+import { requireAuth } from '~/server/utils/auth';
 
 export default defineEventHandler(async (event) => {
+  // Require authentication
+  const user = await requireAuth(event);
+  
+  const transactionId = getRouterParam(event, 'id');
+  
+  if (!transactionId) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Transaction ID is required'
+    });
+  }
+  
   try {
-    // Validate user authentication
-    const user = await requireAuth(event);
-    
-    // Get transaction ID from route parameter
-    const transactionId = getRouterParam(event, 'id');
-    
-    if (!transactionId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Transaction ID is required',
-      });
-    }
-
-    // Get detailed transaction info with license data
-    const [transactions] = await pool.execute(
-      `SELECT 
-        t.id, 
-        t.order_id, 
-        t.product_name, 
-        t.quantity,
-        t.amount, 
-        t.status, 
-        t.payment_method, 
-        t.va_number, 
-        t.created_at,
-        t.updated_at,
+    // Get transaction details
+    const [rows] = await db.execute(`
+      SELECT 
+        t.id,
+        t.order_id,
+        t.product_id,
+        t.product_name,
         t.customer_name,
         t.email,
-        t.product_id,
+        t.amount,
+        t.quantity,
+        t.status,
+        t.payment_method,
         t.payment_gateway_status,
         t.payment_gateway_payload,
+        t.license_info,
+        t.created_at,
+        t.updated_at,
         p.name as product_name_full,
         p.version as product_version,
-        p.description as product_description,
-        p.price as product_price,
-        p.currency as product_currency,
-        p.license_type_default,
-        c.name as category_name
+        p.image_url as product_image
       FROM transactions t
       LEFT JOIN products p ON t.product_id = p.id
-      LEFT JOIN categories c ON p.category_id = c.id
-      WHERE t.id = ? AND t.user_id = ?`,
-      [transactionId, user.id]
-    );
-
-    if (transactions.length === 0) {
+      WHERE t.id = ? AND t.user_id = ?
+    `, [transactionId, user.id]);
+    
+    if (rows.length === 0) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Transaction not found',
+        statusMessage: 'Transaction not found'
       });
     }
-
-    const transaction = transactions[0];
-
-    // If transaction is completed, get license information
-    let licenseData = null;
-    const isCompleted = transaction.status === 'completed' || 
-                       ['settlement', 'capture'].includes(transaction.payment_gateway_status?.toLowerCase());
     
-    if (isCompleted) {
-      // Start with an empty licenses array
-      let licenses = [];
-      
+    const transaction = rows[0];
+    
+    // Parse payment gateway payload if exists
+    let paymentGatewayPayload = null;
+    if (transaction.payment_gateway_payload) {
       try {
-        // Attempt to get licenses from license_usage_history, but handle if table doesn't exist
-        const [historyLicenses] = await pool.execute(
-          `SELECT 
-            pl.license_type,
-            pl.product_key,
-            pl.email,
-            pl.password,
-            pl.additional_info,
-            pl.notes,
-            pl.expires_at,
-            pl.send_license,
-            pl.max_usage,
-            luh.usage_number
-          FROM license_usage_history luh
-          JOIN product_licenses pl ON pl.id = luh.license_id
-          WHERE luh.transaction_id = ?
-          ORDER BY luh.used_at ASC`,
-          [transactionId]
-        );
-        licenses = historyLicenses;
-      } catch (err) {
-        console.log('license_usage_history table may not exist, trying legacy method:', err.message);
-        // Continue to legacy method if table doesn't exist
-      }
-      
-      // If no history found, try legacy method (used_by_transaction_id)
-      if (licenses.length === 0) {
-        try {
-          const [legacyLicenses] = await pool.execute(
-            `SELECT 
-              pl.license_type,
-              pl.product_key,
-              pl.email,
-              pl.password,
-              pl.additional_info,
-              pl.notes,
-              pl.expires_at,
-              pl.send_license,
-              pl.max_usage,
-              1 as usage_number
-            FROM product_licenses pl
-            WHERE pl.product_id = ? AND pl.used_by_transaction_id = ?
-            ORDER BY pl.id ASC`,
-            [transaction.product_id, transactionId]
-          );
-          licenses = legacyLicenses;
-          
-          // If still no licenses found, check transaction license_info JSON column
-          if (licenses.length === 0 && transaction.license_info) {
-            try {
-              const licenseInfo = JSON.parse(transaction.license_info);
-              if (Array.isArray(licenseInfo) && licenseInfo.length > 0) {
-                licenses = licenseInfo;
-              }
-            } catch (jsonErr) {
-              console.error('Error parsing license_info JSON:', jsonErr);
-            }
-          }
-        } catch (err) {
-          console.error('Error fetching legacy licenses:', err);
-        }
-      }
-
-      // Always return array for consistent handling
-      if (licenses.length > 0) {
-        licenseData = licenses;
+        paymentGatewayPayload = JSON.parse(transaction.payment_gateway_payload);
+      } catch (error) {
+        console.error('Error parsing payment gateway payload:', error);
       }
     }
-
+    
+    // Parse license info if exists
+    let licenseInfo = null;
+    if (transaction.license_info) {
+      try {
+        licenseInfo = JSON.parse(transaction.license_info);
+      } catch (error) {
+        console.error('Error parsing license info:', error);
+      }
+    }
+    
     return {
       success: true,
-      data: {
-        ...transaction,
-        license: licenseData
-      },
+      transaction: {
+        id: transaction.id,
+        order_id: transaction.order_id,
+        product_id: transaction.product_id,
+        product_name: transaction.product_name,
+        product_version: transaction.product_version,
+        product_image: transaction.product_image,
+        customer_name: transaction.customer_name,
+        email: transaction.email,
+        amount: transaction.amount,
+        quantity: transaction.quantity,
+        status: transaction.status,
+        payment_method: transaction.payment_method,
+        payment_gateway_status: transaction.payment_gateway_status,
+        created_at: transaction.created_at,
+        updated_at: transaction.updated_at,
+        payment_gateway_payload: paymentGatewayPayload,
+        license_info: licenseInfo,
+        has_license: licenseInfo && licenseInfo.length > 0
+      }
     };
+    
   } catch (error) {
-    console.error('Error fetching transaction details:', error);
-    if (error.statusCode) {
-      throw error; // Re-throw authentication/validation errors
-    }
+    console.error('Error retrieving transaction:', error);
     throw createError({
       statusCode: 500,
-      statusMessage: 'Failed to fetch transaction details',
+      statusMessage: 'Failed to retrieve transaction'
     });
   }
 });

@@ -8,12 +8,30 @@
       <p class="status-message">
         Your transaction has been canceled. If this was unintentional, please try again.
       </p>
-      <div class="action-buttons">
-        <NuxtLink to="/products" class="galaxy-button-primary">
-          <i class="fas fa-shopping-cart"></i> Continue Shopping
+      
+      <!-- Show order details if available -->
+      <div class="order-details" v-if="hasOrderDetails">
+        <div class="detail-row" v-if="route.query.order_id">
+          <span>Order ID:</span>
+          <span class="order-id">{{ route.query.order_id }}</span>
+        </div>
+        <div class="detail-row" v-if="route.query.transaction_status">
+          <span>Status:</span>
+          <span>{{ route.query.transaction_status }}</span>
+        </div>
+        <div class="detail-row" v-if="route.query.status_code">
+          <span>Status Code:</span>
+          <span>{{ route.query.status_code }}</span>
+        </div>
+      </div>
+      
+      <div class="cancel-actions">
+        <NuxtLink to="/products" class="galaxy-button-secondary">
+          <i class="fas fa-shopping-cart"></i> Lanjut Belanja
         </NuxtLink>
-        <NuxtLink to="/profile/transactions" class="galaxy-button-secondary">
-          <i class="fas fa-history"></i> View My Transactions
+        <NuxtLink to="/profile/history_order" class="galaxy-button-secondary">
+          <i class="fas fa-history"></i>
+          Lihat Riwayat Pesanan
         </NuxtLink>
       </div>
     </div>
@@ -21,7 +39,15 @@
 </template>
 
 <script setup>
-// You can add any specific logic here if needed, e.g., logging the cancellation.
+const route = useRoute()
+
+// Log the received data for debugging
+console.log('Payment cancel page - Received query:', route.query)
+
+// Show order details if available
+const hasOrderDetails = computed(() => {
+  return route.query.order_id || route.query.transaction_status || route.query.status_code
+})
 </script>
 
 <style scoped>
@@ -67,8 +93,34 @@
 .status-message {
   font-size: 1.1rem;
   color: var(--galaxy-cloud-gray);
-  margin-bottom: var(--galaxy-space-2xl);
+  margin-bottom: var(--galaxy-space-lg);
   line-height: 1.6;
+}
+
+.order-details {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--galaxy-radius-md);
+  padding: var(--galaxy-space-md);
+  margin-bottom: var(--galaxy-space-2xl);
+  text-align: left;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--galaxy-space-xs) 0;
+  color: var(--galaxy-cloud-gray);
+  font-size: 0.9rem;
+}
+
+.detail-row:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.order-id {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--galaxy-aurora-cyan);
 }
 
 .action-buttons {

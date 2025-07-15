@@ -1,11 +1,11 @@
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { useAuth } from './useAuth';
 
 /**
  * Admin authentication and authorization composable
  */
 export function useAdminAuth() {
-  const { user } = useAuth();
+  const { user, isReady } = useAuth(); // Destructure isReady
   
   // Computed properties
   const isAdmin = computed(() => {
@@ -70,6 +70,7 @@ export function useAdminAuth() {
     user,
     isAdmin,
     isAuthenticated,
+    isReady, // Expose isReady
     
     // Methods
     checkAdminAccess,

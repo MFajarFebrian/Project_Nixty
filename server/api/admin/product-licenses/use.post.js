@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     const license = licenseRows[0];
 
     // Check if license can be used
-    if (license.usage_count >= license.max_usage) {
+    if (license.send_license >= license.max_usage) {
       throw createError({
         statusCode: 400,
         statusMessage: 'License has reached maximum usage limit'
@@ -73,11 +73,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // Increment usage count
-    const newUsageCount = license.usage_count + 1;
+    
     
     // Determine new status
     let newStatus;
-    if (newUsageCount >= license.max_usage) {
+    if (newSendLicense >= license.max_usage) {
       newStatus = 'used';
     } else {
       newStatus = 'partially_used';
@@ -86,20 +86,16 @@ export default defineEventHandler(async (event) => {
     // Update the license
     const updateQuery = `
       UPDATE product_licenses 
-      SET 
-        usage_count = ?,
-        status = ?,
-        is_used = ?,
-        used_by_transaction_id = ?,
-        used_at = NOW(),
+      SET send_license = ?, status = ?,
         updated_at = NOW()
       WHERE id = ?
     `;
 
     await pool.execute(updateQuery, [
-      newUsageCount,
+      newSendLicense,
+      newSendLicense,
       newStatus,
-      newUsageCount >= license.max_usage ? 1 : 0,
+      
       transaction_id || null,
       license_id
     ]);
@@ -116,18 +112,18 @@ export default defineEventHandler(async (event) => {
       WHERE pl.id = ?
     `, [license_id]);
 
-    console.log(`License ${license_id} used. Usage: ${newUsageCount}/${license.max_usage}, Status: ${newStatus}`);
+    console.log(`License ${license_id} used. Usage: ${newSendLicense}/${license.max_usage}, Status: ${newStatus}`);
 
     return {
       success: true,
-      message: `License used successfully. ${license.max_usage - newUsageCount} uses remaining.`,
+      message: `License used successfully. ${license.max_usage - newSendLicense} uses remaining.`,
       data: {
         license: updatedLicense[0],
         usage_info: {
-          previous_usage: license.usage_count,
-          new_usage: newUsageCount,
+          previous_usage: license.send_license,
+          new_usage: newSendLicense,
           max_usage: license.max_usage,
-          remaining_uses: license.max_usage - newUsageCount,
+          remaining_uses: license.max_usage - newSendLicense,
           status_changed: license.status !== newStatus,
           previous_status: license.status,
           new_status: newStatus

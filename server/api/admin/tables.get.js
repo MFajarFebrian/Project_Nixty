@@ -1,17 +1,37 @@
 import pool from '../../utils/db';
+import { useSupabase } from '../../utils/config.js';
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get current database name first
-    const [dbResult] = await pool.execute('SELECT DATABASE() as db_name');
-    const dbName = dbResult[0].db_name;
+    let dbName, tables;
     
-    // Get tables from current database
-    const [rows] = await pool.execute('SHOW TABLES');
-    
-    const tables = rows.map(row => {
-      return Object.values(row)[0];
-    });
+    if (useSupabase) {
+      // PostgreSQL queries for Supabase
+      const [dbResult] = await pool.execute('SELECT current_database() as db_name');
+      dbName = dbResult[0].db_name;
+      
+      // Get tables from public schema (excluding system tables)
+      const [rows] = await pool.execute(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_type = 'BASE TABLE'
+        ORDER BY table_name
+      `);
+      
+      tables = rows.map(row => row.table_name);
+    } else {
+      // MySQL queries for local/online MySQL
+      const [dbResult] = await pool.execute('SELECT DATABASE() as db_name');
+      dbName = dbResult[0].db_name;
+      
+      // Get tables from current database
+      const [rows] = await pool.execute('SHOW TABLES');
+      
+      tables = rows.map(row => {
+        return Object.values(row)[0];
+      });
+    }
     
     console.log(`Found ${tables.length} tables in database: ${dbName}`);
     
@@ -28,4 +48,4 @@ export default defineEventHandler(async (event) => {
       message: 'An error occurred while fetching tables'
     };
   }
-}); 
+});

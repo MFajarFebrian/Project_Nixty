@@ -1,13 +1,13 @@
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, reactive } from 'vue';
 
 export const useHomePage = () => {
   // State to be managed by useHomePageInteractions
-  const homePageState = {
-    currentSlide: ref(0),
-    currentAnnouncementSlide: ref(0),
-    activeRecommendationTab: ref('all'),
-    recommendedProductsCurrentPage: ref(1),
-  };
+  const homePageState = reactive({
+    currentSlide: 0,
+    currentAnnouncementSlide: 0,
+    activeRecommendationTab: 'all',
+    recommendedProductsCurrentPage: 1,
+  });
 
   // Loading states
   const isLoadingHeroSlides = ref(true);
@@ -41,6 +41,9 @@ export const useHomePage = () => {
   ]);
 
   const fetchHomePageData = async () => {
+    // Clear cache flags to ensure fresh data load
+    cacheFlags.value.homePage = false;
+    
     // Prevent re-fetching if data is already loaded
     if (cacheFlags.value.homePage) return;
 
@@ -63,18 +66,28 @@ export const useHomePage = () => {
           title: slide.title,
           description: slide.description,
           categories: slide.categories || [],
-          isNew: slide.isNew,
+          isNew: slide.is_new || false,
           backgroundImage: slide.background_image_url
         }));
 
         // 2. Populate Announcements
+        console.log('Raw announcements data received:', data.announcements?.length || 0, 'announcements');
+        if (data.announcements?.length > 0) {
+          console.log('First announcement sample:', data.announcements[0]);
+        }
+        
         announcements.value = (data.announcements || []).map(announcement => ({
           id: announcement.id,
           title: announcement.title,
           date: new Date(announcement.created_at).toLocaleDateString(),
-          isNew: true, // Placeholder
+          isNew: announcement.is_new || false,
           image: announcement.image_url
         }));
+        
+        console.log('Announcements mapped:', announcements.value.length, 'announcements');
+        if (announcements.value.length > 0) {
+          console.log('First mapped announcement:', announcements.value[0]);
+        }
 
         // Log category data
         console.log('Received categories:', data.categories);
@@ -83,33 +96,27 @@ export const useHomePage = () => {
         productCategories.value = data.categories || [];
         console.log('Set productCategories to:', productCategories.value);
         
-        const mapProduct = p => ({
-          id: p.id,
-          name: p.name,
-          version: p.version,
-          short_description: p.short_description,
-          price: p.price,
-          original_price: p.discount_percentage > 0 ? p.price / (1 - p.discount_percentage / 100) : p.price,
-          period: p.period,
-          image_url: p.image_url,
-          is_new: !!p.is_new,
-          discount_percentage: p.discount_percentage,
-          isTrending: !!p.is_trending,
-          recentlyUpdated: !!p.is_new,
-          soldCount: p.sold_count || 0,
-          category: p.category_slug,
-          slug: p.slug
-        });
-
         // 4. Populate All Products and Recommendations
-        // Use the new allProducts list from the API as the main source of truth
-        products.value = (data.allProducts || []).map(mapProduct);
+        // Log the raw products data for debugging
+        console.log('Raw allProducts data received:', data.allProducts?.length || 0, 'products');
+        if (data.allProducts?.length > 0) {
+          console.log('First product sample:', data.allProducts[0]);
+        }
+        
+        // The products are already processed by the API with discount_percentage calculated
+        products.value = data.allProducts || [];
+        
+        // Log the mapped products
+        console.log('Products loaded:', products.value.length, 'products');
+        if (products.value.length > 0) {
+          console.log('First product:', products.value[0]);
+        }
         
         // Let's simplify this. `recommendedProducts` will be an object of arrays.
         recommendedProducts.value = {
-          new: (data.newProducts || []).map(mapProduct),
-          featured: (data.featuredProducts || []).map(mapProduct),
-          trending: (data.trendingProducts || []).map(mapProduct),
+          new: data.newProducts || [],
+          featured: data.featuredProducts || [],
+          trending: data.trendingProducts || [],
         };
 
         // 5. Populate Deals
@@ -120,9 +127,9 @@ export const useHomePage = () => {
                 id: mainDeal.id,
                 title: mainDeal.name,
                 description: 'Special offer, big discount!',
-                oldPrice: mainDeal.price * 1.5,
-                newPrice: mainDeal.price,
-                discount: `${mainDeal.discount_percentage}% OFF`,
+                oldPrice: parseFloat(mainDeal.price),
+                newPrice: parseFloat(mainDeal.discount_price || mainDeal.price),
+                discount: `${mainDeal.discount_percentage || 0}% OFF`,
                 badge: 'Hot Deal',
                 backgroundImage: mainDeal.image_url
             };
@@ -130,8 +137,8 @@ export const useHomePage = () => {
         sideDeals.value = allDeals.slice(1, 3).map(deal => ({
              id: deal.id,
              title: deal.name,
-             price: deal.price,
-             discount: `${deal.discount_percentage}% OFF`,
+             price: parseFloat(deal.price),
+             discount: `${deal.discount_percentage || 0}% OFF`,
              image: deal.image_url,
              badge: 'Deal'
         }));
@@ -153,9 +160,9 @@ export const useHomePage = () => {
 
   // Computed properties
   const filteredRecommendedProducts = computed(() => {
-    if (!homePageState.activeRecommendationTab.value) return [];
+    if (!homePageState.activeRecommendationTab) return [];
     
-    switch(homePageState.activeRecommendationTab.value) {
+    switch(homePageState.activeRecommendationTab) {
       case 'new':
         return recommendedProducts.value.new || [];
       case 'popular':
@@ -168,7 +175,7 @@ export const useHomePage = () => {
 
   // New paginated computed properties
   const paginatedRecommendedProducts = computed(() => {
-    const start = (homePageState.recommendedProductsCurrentPage.value - 1) * recommendedProductsPerPage;
+    const start = (homePageState.recommendedProductsCurrentPage - 1) * recommendedProductsPerPage;
     const end = start + recommendedProductsPerPage;
     return filteredRecommendedProducts.value.slice(start, end);
   });
@@ -200,7 +207,9 @@ export const useHomePage = () => {
     paginatedRecommendedProducts,
     recommendedProductsTotalPages,
     // Pass reactive state for interactions
-    recommendedProductsCurrentPage: homePageState.recommendedProductsCurrentPage,
-    activeRecommendationTab: homePageState.activeRecommendationTab
+    recommendedProductsCurrentPage: computed(() => homePageState.recommendedProductsCurrentPage),
+    activeRecommendationTab: computed(() => homePageState.activeRecommendationTab),
+    currentSlide: computed(() => homePageState.currentSlide),
+    currentAnnouncementSlide: computed(() => homePageState.currentAnnouncementSlide)
   };
 }; 

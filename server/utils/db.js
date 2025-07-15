@@ -64,27 +64,103 @@ const db = {
         let paramIndex = 1;
         pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
 
-        // PostgreSQL query
+        // PostgreSQL query with enhanced error handling
         const client = await pool.connect();
         try {
+          console.log('Executing PostgreSQL query:', pgSql);
+          console.log('With parameters:', params);
           const result = await client.query(pgSql, params);
+          console.log('Query result rows:', result.rows.length);
           return [result.rows, result.fields];
         } finally {
           client.release();
         }
       } else {
         // MySQL query
+        console.log('Executing MySQL query:', sql);
+        console.log('With parameters:', params);
         const [rows, fields] = await pool.execute(sql, params);
+        console.log('Query result rows:', rows.length);
         return [rows, fields];
       }
     } catch (error) {
-      console.error('Database query error:', error);
+      console.error('Database query error:', {
+        message: error.message,
+        code: error.code,
+        detail: error.detail,
+        hint: error.hint,
+        sql: sql,
+        params: params
+      });
       throw error;
     }
   },
 
   async execute(sql, params = []) {
     return this.query(sql, params);
+  },
+
+  // Supabase-optimized methods
+  async insert(tableName, data) {
+    if (isPostgreSQL) {
+      const fields = Object.keys(data);
+      const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+      const values = Object.values(data);
+      const query = `INSERT INTO ${tableName} (${fields.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+      const [result] = await this.query(query, values);
+      return result[0];
+    } else {
+      const fields = Object.keys(data);
+      const placeholders = fields.map(() => '?').join(', ');
+      const values = Object.values(data);
+      const query = `INSERT INTO ${tableName} (${fields.join(', ')}) VALUES (${placeholders})`;
+      const [result] = await this.query(query, values);
+      const [fetchedRecord] = await this.query(`SELECT * FROM ${tableName} WHERE id = ?`, [result.insertId]);
+      return fetchedRecord[0];
+    }
+  },
+
+  async update(tableName, data, id) {
+    const fields = Object.keys(data);
+    const values = Object.values(data);
+    values.push(id);
+    
+    if (isPostgreSQL) {
+      const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
+      const query = `UPDATE ${tableName} SET ${setClause} WHERE id = $${fields.length + 1} RETURNING *`;
+      const [result] = await this.query(query, values);
+      return result[0];
+    } else {
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      const query = `UPDATE ${tableName} SET ${setClause} WHERE id = ?`;
+      await this.query(query, values);
+      const [fetchedRecord] = await this.query(`SELECT * FROM ${tableName} WHERE id = ?`, [id]);
+      return fetchedRecord[0];
+    }
+  },
+
+  async select(tableName, conditions = {}, options = {}) {
+    let query = `SELECT * FROM ${tableName}`;
+    const params = [];
+    
+    if (Object.keys(conditions).length > 0) {
+      const whereClause = Object.keys(conditions).map((key, i) => {
+        params.push(conditions[key]);
+        return isPostgreSQL ? `${key} = $${i + 1}` : `${key} = ?`;
+      }).join(' AND ');
+      query += ` WHERE ${whereClause}`;
+    }
+    
+    if (options.orderBy) {
+      query += ` ORDER BY ${options.orderBy}`;
+    }
+    
+    if (options.limit) {
+      query += ` LIMIT ${options.limit}`;
+    }
+    
+    const [result] = await this.query(query, params);
+    return result;
   }
 };
 

@@ -1,6 +1,7 @@
-import pool from '../../../../utils/db';
+import db from '../../../../utils/db';
 import bcrypt from 'bcryptjs';
 import { validateTableName, validateRecordId, validateRecordData } from '../../../../utils/admin-validation';
+import { useSupabase } from '../../../../utils/config.js';
 
 /**
  * PUT /api/admin/tables/[table]/[id]
@@ -42,7 +43,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Check if record exists
-    const [existingRecord] = await pool.execute(
+    const [existingRecord] = await db.execute(
       `SELECT * FROM ${tableName} WHERE id = ?`,
       [validRecordId]
     );
@@ -58,7 +59,7 @@ export default defineEventHandler(async (event) => {
     if (tableName === 'users') {
       // Check email uniqueness (if email is being updated)
       if (validData.email) {
-        const [existingUser] = await pool.execute(
+        const [existingUser] = await db.execute(
           'SELECT id FROM users WHERE email = ? AND id != ?',
           [validData.email, validRecordId]
         );
@@ -77,57 +78,40 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Convert boolean fields for database
-    const [columns] = await pool.execute(`DESCRIBE ${tableName}`);
-    const columnInfo = columns.reduce((acc, col) => {
-      acc[col.Field] = col;
-      return acc;
-    }, {});
-
-    // Convert boolean values to tinyint for database
-    Object.keys(validData).forEach(key => {
-      const column = columnInfo[key];
-      if (column && column.Type.includes('tinyint(1)') && typeof validData[key] === 'boolean') {
-        validData[key] = validData[key] ? 1 : 0;
-      }
-    });
+    // Get column information for boolean conversion (only for MySQL)
+    if (!useSupabase) {
+      const [columns] = await db.execute(`DESCRIBE ${tableName}`);
+      const columnInfo = columns.reduce((acc, col) => {
+        acc[col.Field] = col;
+        return acc;
+      }, {});
+      
+      // Convert boolean values for MySQL (tinyint)
+      Object.keys(validData).forEach(key => {
+        const column = columnInfo[key];
+        if (column && typeof validData[key] === 'boolean' && column.Type.includes('tinyint(1)')) {
+          validData[key] = validData[key] ? 1 : 0;
+        }
+      });
+    }
+    // Note: For PostgreSQL/Supabase, boolean values are handled natively
 
     if (Object.keys(validData).length === 0) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'No valid data provided for update'
+        statusMessage: 'No valid data provided'
       });
     }
 
-    // Build UPDATE query
-    const fields = Object.keys(validData);
-    const setClause = fields.map(field => `${field} = ?`).join(', ');
-    const values = [...Object.values(validData), validRecordId];
-
-    const query = `UPDATE ${tableName} SET ${setClause} WHERE id = ?`;
-
-    console.log('SQL Query:', query);
-    console.log('SQL Values:', values);
-
-    await pool.execute(query, values);
-
-    // Fetch the updated record
-    const [updatedRecord] = await pool.execute(
-      `SELECT * FROM ${tableName} WHERE id = ?`,
-      [validRecordId]
-    );
-
+    // Use optimized db.update method (handles both MySQL and PostgreSQL)
+    // Note: db.update expects (tableName, data, id) in that order
+    const updatedRecord = await db.update(tableName, validData, recordId);
+    
     return {
       success: true,
-      message: 'Record updated successfully',
-      data: updatedRecord[0]
+      data: updatedRecord
     };
-
   } catch (error) {
-    if (error.statusCode) {
-      throw error;
-    }
-    
     console.error('Error updating record:', error);
     throw createError({
       statusCode: 500,

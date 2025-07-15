@@ -2,7 +2,7 @@ import { defineEventHandler, readBody } from 'h3';
 import crypto from 'crypto';
 import db from '../../utils/db';
 import { sendLicenseEmail, sendMultipleLicenseEmail } from '../../utils/emailService.js';
-import { processLicenseDelivery } from '../../utils/licenseService.js';
+import { processLicenseDelivery, processMultipleLicenses } from '../../utils/licenseService.js';
 import WebhookLogger from '../../utils/webhookLogger.js';
 
 // In Nuxt 3 server routes, useRuntimeConfig is auto-imported.
@@ -52,23 +52,39 @@ export default defineEventHandler(async (event) => {
     const transactionStatus = body.transaction_status;
     orderId = body.order_id; // Use the already declared variable
     const fraudStatus = body.fraud_status;
+    const paymentType = body.payment_type;
+
+    // Helper to extract payment code/number
+    let paymentCode = null;
+    if (paymentType === 'bank_transfer' && body.va_numbers && body.va_numbers.length > 0) {
+      paymentCode = body.va_numbers[0].va_number;
+    } else if (paymentType === 'qris') {
+      paymentCode = body.acquirer; // e.g., 'gopay', 'shopeepay'
+    } else if (paymentType === 'cstore') {
+      paymentCode = body.payment_code;
+    }
 
     console.log(`Midtrans Notification: Received for order ${orderId} with status: ${transactionStatus}`);
 
     // 3. Update the transaction status in your database
-    // This query is an example. You should adjust it to your database schema.
     const updateQuery = `
       UPDATE transactions 
       SET 
         status = ?, 
         payment_gateway_status = ?, 
         payment_gateway_payload = ?,
+        payment_method = ?,
+        va_number = ?,
         updated_at = NOW()
       WHERE order_id = ?
     `;
 
     let dbStatus = 'pending'; // Default status
 
+    // QRIS Status Flow: QRIS transactions typically start with 'pending' status
+    // when the QR code is generated, then transition to 'settlement' when paid.
+    // The flow is: pending → settlement (completed)
+    
     if (transactionStatus == 'capture') {
       // For credit card transaction from charge, status is capture.
       // If fraud status is 'challenge', the status is 'pending'.
@@ -78,6 +94,7 @@ export default defineEventHandler(async (event) => {
       }
     } else if (transactionStatus == 'settlement') {
       // All other payment types, 'settlement' means success.
+      // For QRIS: This is the final successful status after payment is confirmed
       dbStatus = 'completed';
     } else if (transactionStatus == 'cancel' || transactionStatus == 'expire' || transactionStatus == 'deny') {
       dbStatus = 'failed';
@@ -87,10 +104,12 @@ export default defineEventHandler(async (event) => {
       dbStatus,
       transactionStatus,
       JSON.stringify(body), // Store the full notification payload for reference
+      paymentType,
+      paymentCode,
       orderId
     ]);
     
-    console.log(`Midtrans Notification: Order ${orderId} status updated to ${dbStatus}.`);
+    console.log(`Midtrans Notification: Order ${orderId} status updated to ${dbStatus}. Payment via ${paymentType}.`);
     
     // 5. Process license delivery if payment is completed
     let licenseProcessingSuccess = false;
@@ -148,58 +167,77 @@ export default defineEventHandler(async (event) => {
           const allLicenses = [];
           let licenseProcessSuccess = true;
           
-          // Process license delivery for each quantity
-          for (let i = 0; i < quantity; i++) {
-            console.log(`[WEBHOOK-${webhookLogId}] Processing license ${i + 1}/${quantity}...`);
+          // Get current stock before processing
+          const [beforeStock] = await db.execute(
+            `SELECT available_stock FROM product_stock_view WHERE product_id = ?`,
+            [transaction.product_id]
+          );
+          const stockBefore = beforeStock.length > 0 ? beforeStock[0].available_stock : 0;
+          console.log(`[WEBHOOK-${webhookLogId}] Stock before processing: ${stockBefore}`);
+          
+          // Process multiple licenses atomically
+          const multipleLicensesResult = await processMultipleLicenses(
+            transaction.id,
+            transaction.product_id,
+            quantity,
+            customEmail,
+            transaction.customer_name || 'Customer'
+          );
+          
+          if (multipleLicensesResult.success) {
+            allLicenses.push(...multipleLicensesResult.licenses);
+            licensesProcessed = multipleLicensesResult.licenses.length;
+            console.log(`[WEBHOOK-${webhookLogId}] Successfully processed ${licensesProcessed} licenses`);
+          } else {
+            console.error(`[WEBHOOK-${webhookLogId}] Failed to process multiple licenses: ${multipleLicensesResult.error || multipleLicensesResult.message}`);
+            licenseProcessSuccess = false;
+          }
+          
+          // Verify stock was properly reduced
+          const [afterStock] = await db.execute(
+            `SELECT available_stock FROM product_stock_view WHERE product_id = ?`,
+            [transaction.product_id]
+          );
+          const stockAfter = afterStock.length > 0 ? afterStock[0].available_stock : 0;
+          console.log(`[WEBHOOK-${webhookLogId}] Stock after processing: ${stockAfter}`);
+          
+          // Verify stock reduction
+          const expectedStockReduction = licensesProcessed;
+          const actualStockReduction = stockBefore - stockAfter;
+          
+          if (actualStockReduction !== expectedStockReduction) {
+            console.warn(`[WEBHOOK-${webhookLogId}] Stock reduction mismatch! Expected: ${expectedStockReduction}, Actual: ${actualStockReduction}`);
             
-            const licenseResult = await processLicenseDelivery(
-              transaction.id,
-              transaction.product_id,
-              customEmail,
-              transaction.customer_name || 'Customer'
-            );
-            
-            if (licenseResult.success) {
-              allLicenses.push(licenseResult.license);
-              licensesProcessed++;
-              console.log(`[WEBHOOK-${webhookLogId}] License ${i + 1} processed successfully`);
-              
-              // Store license in transaction record for easy retrieval
-              try {
-                await db.execute(
-                  `UPDATE transactions 
-                   SET license_info = JSON_ARRAY_APPEND(COALESCE(license_info, JSON_ARRAY()), '$', ?)
-                   WHERE id = ?`,
-                  [JSON.stringify(licenseResult.license), transaction.id]
-                );
-                console.log(`[WEBHOOK-${webhookLogId}] License ${i + 1} stored in transaction record`);
-              } catch (licenseStoreError) {
-                console.error(`[WEBHOOK-${webhookLogId}] Failed to store license info:`, licenseStoreError);
-              }
-            } else {
-              const errorMsg = `Failed to process license ${i + 1}: ${licenseResult.error || licenseResult.message}`;
-              console.error(`[WEBHOOK-${webhookLogId}] ${errorMsg}`);
-              
-              // Log the failure
-              await WebhookLogger.logLicenseDeliveryFailure(
-                transaction.id,
-                orderId,
-                errorMsg
-              );
-              
-              licenseProcessSuccess = false;
-              break; // Stop processing on first failure
+            // Force refresh stock view if needed
+            if (actualStockReduction < expectedStockReduction) {
+              console.log(`[WEBHOOK-${webhookLogId}] Attempting to refresh stock view...`);
+              await db.execute(`
+                UPDATE product_licenses 
+                SET updated_at = NOW() 
+                WHERE product_id = ? AND status = 'used' AND used_by_transaction_id = ?
+              `, [transaction.product_id, transaction.id]);
             }
           }
           
-          // Commit transaction if all licenses were processed successfully
-          if (licenseProcessSuccess) {
-            await db.execute('COMMIT');
-            console.log(`[WEBHOOK-${webhookLogId}] Database transaction committed`);
+          // If all licenses were processed successfully, store them in the transaction
+          if (licenseProcessSuccess && allLicenses.length > 0) {
+            // Store all licenses at once in the transaction record
+            await db.execute(
+              `UPDATE transactions 
+               SET license_info = ? 
+               WHERE id = ?`,
+              [JSON.stringify(allLicenses), transaction.id]
+            );
+            
             licenseProcessingSuccess = true;
+            console.log(`[WEBHOOK-${webhookLogId}] Successfully processed ${allLicenses.length} licenses for order ${orderId}`);
+            
+            // Commit the transaction
+            await db.execute('COMMIT');
           } else {
+            // Rollback if any license processing failed
             await db.execute('ROLLBACK');
-            console.log(`[WEBHOOK-${webhookLogId}] Database transaction rolled back due to license processing failure`);
+            console.error(`[WEBHOOK-${webhookLogId}] License processing failed, rolling back`);
           }
           
           // Send combined email with all licenses if successful
@@ -224,15 +262,6 @@ export default defineEventHandler(async (event) => {
             console.warn(`[WEBHOOK-${webhookLogId}] Partial license delivery for order ${orderId}: ${licensesProcessed}/${quantity} licenses processed`);
           } else {
             console.error(`[WEBHOOK-${webhookLogId}] Failed to process any licenses for order ${orderId}`);
-          }
-          
-          // Commit transaction if any licenses were processed
-          if (licensesProcessed > 0) {
-            await db.execute('COMMIT');
-            console.log(`[WEBHOOK-${webhookLogId}] Database transaction committed`);
-          } else {
-            await db.execute('ROLLBACK');
-            console.log(`[WEBHOOK-${webhookLogId}] Database transaction rolled back - no licenses processed`);
           }
         }
       } catch (licenseError) {

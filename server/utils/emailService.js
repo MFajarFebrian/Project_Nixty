@@ -23,9 +23,13 @@ const getTransporter = () => {
 
 // Email templates
 const getLicenseEmailTemplate = (customerName, productName, licenseInfo) => {
-  const { license_type, product_key, email, password, additional_info, notes } = licenseInfo;
+  const { license_type, product_key, email, password, additional_info, notes, send_license, max_usage } = licenseInfo;
   
   let licenseContent = '';
+  
+  // Usage information for display if available
+  const usageInfo = (send_license !== undefined && max_usage !== undefined) ? 
+    `<p><strong>License Usage:</strong> ${send_license}/${max_usage} ${max_usage > 1 ? '(This license can be used multiple times)' : ''}</p>` : '';
   
   switch (license_type) {
     case 'product_key':
@@ -35,6 +39,7 @@ const getLicenseEmailTemplate = (customerName, productName, licenseInfo) => {
           <p style="font-size: 18px; font-weight: bold; color: #e74c3c; font-family: monospace; background: white; padding: 15px; border: 2px dashed #3498db; border-radius: 5px; text-align: center;">
             ${product_key}
           </p>
+          ${usageInfo}
           ${additional_info ? `<p><strong>Additional Information:</strong> ${additional_info}</p>` : ''}
           ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
         </div>
@@ -49,6 +54,7 @@ const getLicenseEmailTemplate = (customerName, productName, licenseInfo) => {
             <p><strong>Email:</strong> <span style="font-family: monospace; color: #2980b9;">${email}</span></p>
             <p><strong>Password:</strong> <span style="font-family: monospace; color: #e74c3c;">${password}</span></p>
           </div>
+          ${usageInfo}
           ${additional_info ? `<p><strong>Additional Information:</strong> ${additional_info}</p>` : ''}
           ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
         </div>
@@ -100,7 +106,12 @@ const getMultipleLicenseEmailTemplate = (customerName, productName, licenseInfoA
   let licenseContentArray = [];
   
   licenseInfoArray.forEach((licenseInfo, index) => {
-    const { license_type, product_key, email, password, additional_info, notes } = licenseInfo;
+    const { license_type, product_key, email, password, additional_info, notes, send_license, max_usage } = licenseInfo;
+    
+    // Usage information for display if available
+    const usageInfo = (send_license !== undefined && max_usage !== undefined) ? 
+      `<p><strong>License Usage:</strong> ${send_license}/${max_usage} ${max_usage > 1 ? '(This license can be used multiple times)' : ''}</p>` : '';
+    
     let licenseContent = '';
     
     switch (license_type) {
@@ -111,6 +122,7 @@ const getMultipleLicenseEmailTemplate = (customerName, productName, licenseInfoA
             <p style="font-size: 16px; font-weight: bold; color: #e74c3c; font-family: monospace; background: white; padding: 12px; border: 2px dashed #3498db; border-radius: 5px; text-align: center;">
               ${product_key}
             </p>
+            ${usageInfo}
             ${additional_info ? `<p><strong>Additional Information:</strong> ${additional_info}</p>` : ''}
             ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
           </div>
@@ -125,6 +137,7 @@ const getMultipleLicenseEmailTemplate = (customerName, productName, licenseInfoA
               <p><strong>Email:</strong> <span style="font-family: monospace; color: #2980b9;">${email}</span></p>
               <p><strong>Password:</strong> <span style="font-family: monospace; color: #e74c3c;">${password}</span></p>
             </div>
+            ${usageInfo}
             ${additional_info ? `<p><strong>Additional Information:</strong> ${additional_info}</p>` : ''}
             ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
           </div>

@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
         SELECT 
           COUNT(*) as total_licenses,
           SUM(CASE 
-            WHEN status = 'available' AND (send_license < max_usage OR send_license IS NULL)
+            WHEN status = 'available' AND (COALESCE(send_license, 0) < max_usage)
             THEN (max_usage - COALESCE(send_license, 0))
             ELSE 0 
           END) as available_stock
@@ -65,16 +65,40 @@ export default defineEventHandler(async (event) => {
         WHERE product_id = ?
       `, [p.id]);
       
+      // Calculate discount percentage if discount_price exists
+      const originalPrice = parseFloat(p.price) || 0;
+      const discountPrice = parseFloat(p.discount_price) || 0;
+      let discountPercentage = 0;
+      
+      if (discountPrice > 0 && originalPrice > 0) {
+        discountPercentage = Math.round(((originalPrice - discountPrice) / originalPrice) * 100);
+      }
+      
       versions.push({
         id: p.id.toString(),
         name: p.version ? `${p.name} ${p.version}` : p.name,
         version: p.version,
         slug: p.slug,
-        price: parseFloat(p.price),
+        description: p.description, // Add description for each version
+        price: originalPrice,
+        discount_price: discountPrice > 0 ? discountPrice : null,
+        discount_percentage: discountPercentage,
+        final_price: discountPrice > 0 ? discountPrice : originalPrice,
         image_url: p.image_url || '/placeholder-product.png',
         available_stock: parseInt(stockInfo[0]?.available_stock || 0),
-        total_licenses: parseInt(stockInfo[0]?.total_licenses || 0)
+        total_licenses: parseInt(stockInfo[0]?.total_licenses || 0),
+        is_subscription: Boolean(p.is_subscription),
+        is_multi_license: Boolean(p.is_multi_license)
       });
+    }
+
+    // Calculate discount percentage for main product
+    const originalPrice = parseFloat(mainProduct.price) || 0;
+    const discountPrice = parseFloat(mainProduct.discount_price) || 0;
+    let discountPercentage = 0;
+    
+    if (discountPrice > 0 && originalPrice > 0) {
+      discountPercentage = Math.round(((originalPrice - discountPrice) / originalPrice) * 100);
     }
 
     // Format the product data in the expected format
@@ -84,8 +108,13 @@ export default defineEventHandler(async (event) => {
       version: mainProduct.version,
       slug: mainProduct.slug,
       description: mainProduct.description,
-      price: parseFloat(mainProduct.price),
+      price: originalPrice,
+      discount_price: discountPrice > 0 ? discountPrice : null,
+      discount_percentage: discountPercentage,
+      final_price: discountPrice > 0 ? discountPrice : originalPrice,
       image_url: mainProduct.image_url || '/placeholder-product.png',
+      is_subscription: Boolean(mainProduct.is_subscription),
+      is_multi_license: Boolean(mainProduct.is_multi_license),
       category: {
         name: mainProduct.category_name,
         slug: mainProduct.category_slug
@@ -106,4 +135,4 @@ export default defineEventHandler(async (event) => {
     }
     throw error;
   }
-}); 
+});

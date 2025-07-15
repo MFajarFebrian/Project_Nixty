@@ -1,9 +1,16 @@
 <template>
   <div class="category-card" @click="navigateToCategory">
-    <!-- Category Icon -->
+    <!-- Category Icon or Image -->
     <div class="category-icon">
-      <div class="icon-container">
-        <span v-if="categoryIcon" class="category-icon-emoji">{{ categoryIcon }}</span>
+      <div class="icon-container" :class="{ 'has-image': hasImage }">
+        <img 
+          v-if="hasImage" 
+          :src="category.imageUrl" 
+          :alt="category.name" 
+          class="category-image"
+          @error="onImageError" 
+        />
+        <span v-else-if="categoryIcon" class="category-icon-emoji">{{ categoryIcon }}</span>
         <span v-else class="category-icon-fallback">{{ nameInitial }}</span>
       </div>
     </div>
@@ -22,7 +29,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -36,9 +43,17 @@ const props = defineProps({
       slug: '',
       productCount: 0,
       mainProductSlug: null,
+      imageUrl: null,
     })
   }
 });
+
+const hasImage = ref(!!props.category.imageUrl);
+
+// Handle image loading error
+const onImageError = () => {
+  hasImage.value = false;
+};
 
 // Extract initial for fallback icon
 const nameInitial = computed(() => {
@@ -68,7 +83,7 @@ const navigateToCategory = () => {
   
   if (categorySlug) {
     // Navigasi ke halaman products dengan filter kategori berdasarkan slug
-    router.push(`/products?category=${categorySlug}`);
+    router.push(`/category/${categorySlug}`);
   } else {
     console.warn('Category slug tidak tersedia:', props.category);
     // Fallback ke halaman products umum
@@ -140,6 +155,19 @@ const navigateToCategory = () => {
   position: relative;
   overflow: hidden;
   box-shadow: inset 0 0 10px rgba(77, 208, 225, 0.2);
+}
+
+.icon-container.has-image {
+  background: none;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.category-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
 }
 
 .icon-container::after {

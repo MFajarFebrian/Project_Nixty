@@ -66,6 +66,26 @@
   box-shadow: var(--galaxy-glow-blue);
 }
 
+.back-btn {
+  background: transparent;
+  color: var(--galaxy-cloud-gray);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: var(--galaxy-space-md) var(--galaxy-space-lg);
+  border-radius: var(--galaxy-radius-md);
+  cursor: pointer;
+  transition: var(--galaxy-transition-normal);
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-sm);
+  font-weight: 500;
+}
+
+.back-btn:hover {
+  color: var(--galaxy-starlight);
+  border-color: var(--galaxy-aurora-cyan);
+  background: rgba(77, 208, 225, 0.1);
+}
+
 .upload-btn {
   display: flex;
   align-items: center;
@@ -272,15 +292,21 @@
   background: rgba(17, 24, 39, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--galaxy-radius-lg);
-  overflow: hidden;
+  overflow-x: auto; /* This container must scroll */
   backdrop-filter: blur(10px);
   position: relative;
   z-index: 1;
 }
 
-.table-wrapper {
+/* Stock Management Modal Table Container */
+.stock-management .table-container {
+  max-height: 50vh;
+  overflow-y: auto;
   overflow-x: auto;
-  overflow-y: visible;
+}
+
+.table-wrapper {
+  /* This wrapper no longer handles scrolling */
   cursor: grab;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -289,9 +315,8 @@
   transition: box-shadow 0.2s ease;
   border-radius: var(--galaxy-radius-md);
   position: relative;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(77, 208, 225, 0.5) rgba(255, 255, 255, 0.1);
-  max-height: 70vh;
+  max-height: 70vh; /* Handles vertical scrolling if needed */
+  overflow-y: auto;
 }
 
 .table-wrapper.dragging {
@@ -299,30 +324,30 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
-.table-wrapper::-webkit-scrollbar {
+.table-container::-webkit-scrollbar {
   height: 8px;
 }
 
-.table-wrapper::-webkit-scrollbar-track {
+.table-container::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 
-.table-wrapper::-webkit-scrollbar-thumb {
+.table-container::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.3);
   border-radius: 4px;
 }
 
-.table-wrapper::-webkit-scrollbar-thumb:hover {
+.table-container::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
 }
 
 .data-table {
-  width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 900px;
+  min-width: 100%; /* Use min-width to be responsive but also expandable */
   font-size: 0.95rem;
+  table-layout: fixed; /* This is crucial for resizing */
 }
 
 .data-table th,
@@ -371,8 +396,8 @@
 }
 
 .actions-header {
-  width: 120px;
   text-align: center;
+  /* width is no longer fixed, it will adapt */
 }
 
 .data-row {
@@ -388,6 +413,178 @@
   font-weight: 500;
   padding: 1.25rem 1rem;
   transition: background 0.15s ease;
+}
+
+/* Image Upload Cell Styling */
+.image-cell {
+  position: relative;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--galaxy-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 120px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-cell:hover {
+  background: rgba(77, 208, 225, 0.1);
+  border-color: var(--galaxy-aurora-cyan);
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(77, 208, 225, 0.2);
+}
+
+.image-cell.has-image {
+  background: transparent;
+  border: none;
+  padding: 0.25rem;
+}
+
+.image-cell.has-image:hover {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  transform: none;
+}
+
+.image-cell .table-image {
+  max-width: 100px;
+  max-height: 70px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.image-cell .table-image:hover {
+  transform: scale(1.05);
+  border-color: var(--galaxy-aurora-cyan);
+  box-shadow: 0 4px 16px rgba(77, 208, 225, 0.4);
+}
+
+.image-cell .empty-image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--galaxy-cloud-gray);
+  font-size: 0.85rem;
+  padding: 1rem;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: var(--galaxy-radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.3s ease;
+  width: 100%;
+  min-height: 70px;
+}
+
+.image-cell .empty-image-placeholder:hover {
+  border-color: var(--galaxy-aurora-cyan);
+  background: rgba(77, 208, 225, 0.1);
+  color: var(--galaxy-starlight);
+}
+
+.image-cell .empty-image-placeholder i {
+  font-size: 1.5rem;
+  color: var(--galaxy-aurora-cyan);
+  margin-bottom: 0.25rem;
+}
+
+.image-cell .empty-image-placeholder span {
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.image-cell .error-image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #ef4444;
+  font-size: 0.8rem;
+  padding: 1rem;
+  border: 2px dashed rgba(239, 68, 68, 0.4);
+  border-radius: var(--galaxy-radius-md);
+  background: rgba(239, 68, 68, 0.1);
+  transition: all 0.3s ease;
+  width: 100%;
+  min-height: 70px;
+}
+
+.image-cell .error-image-placeholder:hover {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.image-cell .error-image-placeholder i {
+  font-size: 1.2rem;
+  color: #ef4444;
+}
+
+.image-cell .image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: all 0.3s ease;
+  border-radius: var(--galaxy-radius-md);
+  backdrop-filter: blur(2px);
+}
+
+.image-cell:hover .image-overlay {
+  opacity: 1;
+}
+
+.image-cell .overlay-text {
+  color: var(--galaxy-starlight);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.image-cell .overlay-text i {
+  font-size: 1rem;
+  color: var(--galaxy-aurora-cyan);
+}
+
+/* Formatting specific columns */
+/* Compact long text cells (e.g., in Transactions Management) */
+.data-cell .long-text {
+  max-width: 220px; /* shrink width */
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Specifically cap JSON / payload columns */
+.data-cell[data-column$="_payload"],
+.data-cell[data-column*="payload"],
+.data-cell[data-column$="_details"] {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Formatting specific columns */

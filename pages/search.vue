@@ -175,7 +175,7 @@ const filterResults = (type) => {
 };
 
 const navigateToProduct = (product) => {
-  router.push(`/checkout?slug=${product.slug}&productId=${product.id}`);
+  router.push(`/product/${product.slug}`);
 };
 
 const navigateToDeal = (deal) => {

@@ -3,63 +3,60 @@
     <!-- Chart Controls -->
     <div class="chart-controls">
       <div class="control-group">
-        <label class="control-label">Periode:</label>
-        <select v-model="selectedPeriod" @change="handlePeriodChange" class="control-select">
-          <option value="day">Harian</option>
-          <option value="month">Bulanan</option>
-          <option value="year">Tahunan</option>
-        </select>
-      </div>
-      
-      <div class="control-group">
-        <label class="control-label">Tanggal:</label>
-        <input 
-          v-if="selectedPeriod === 'day'"
-          v-model="selectedDate" 
-          type="date" 
-          @change="updateChart"
-          class="control-input"
-        />
-        <input 
-          v-else-if="selectedPeriod === 'month'"
-          v-model="selectedMonth" 
-          type="month" 
-          @change="updateChart"
-          class="control-input"
-        />
-        <input 
-          v-else
-          v-model="selectedYear" 
-          type="number" 
-          min="2020" 
-          :max="new Date().getFullYear()"
-          @change="updateChart"
-          class="control-input"
-          placeholder="Tahun"
-        />
-      </div>
-      
-      <div class="control-group">
-        <label class="control-label">Tampilkan:</label>
-        <div class="checkbox-group">
-          <label class="checkbox-label">
-            <input 
-              v-model="showTransactions" 
-              type="checkbox" 
-              @change="updateChart"
-              class="control-checkbox"
-            />
-            Transaksi
-          </label>
-          <label class="checkbox-label">
-            <input 
-              v-model="showRevenue" 
-              type="checkbox" 
-              @change="updateChart"
-              class="control-checkbox"
-            />
-            Pendapatan
-          </label>
+        <label class="control-label">Date Range</label>
+        <div class="date-filter-container">
+          <!-- Custom Date Range Picker -->
+          <div class="custom-date-range-picker" ref="datePickerRef">
+            <button @click="showDatePicker = !showDatePicker" class="date-range-button">
+              <i class="fas fa-calendar-alt"></i>
+              <span class="date-range-text">
+                {{ formatDateRange(selectedStartDate, selectedEndDate) }}
+              </span>
+              <i class="fas fa-chevron-down" :class="{ 'rotate-180': showDatePicker }"></i>
+            </button>
+            
+            <!-- Date Picker Dropdown -->
+            <div v-if="showDatePicker" class="date-picker-dropdown">
+              <div class="date-picker-header">
+                <h4>Select Date Range</h4>
+                <button @click="showDatePicker = false" class="close-btn">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              
+              <div class="date-picker-body">
+                <div class="date-inputs">
+                  <div class="date-input-group">
+                    <label>From:</label>
+                    <input 
+                      v-model="selectedStartDate" 
+                      type="date" 
+                      @change="validateAndUpdateChart"
+                      class="date-input"
+                      :max="maxDate"
+                    />
+                  </div>
+                  
+                  <div class="date-input-group">
+                    <label>To:</label>
+                    <input 
+                      v-model="selectedEndDate" 
+                      type="date" 
+                      @change="validateAndUpdateChart"
+                      class="date-input"
+                      :max="maxDate"
+                    />
+                  </div>
+                </div>
+                
+                <div v-if="dateRangeError" class="error-message">
+                  {{ dateRangeError }}
+                </div>
+                
+                
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -69,32 +66,32 @@
     <!-- Loading Overlay -->
     <div v-if="loading" class="loading-overlay">
         <div class="loading-spinner"></div>
-        <p>Memuat data transaksi...</p>
+        <p>Loading transaction data...</p>
     </div>
     
     <!-- No Data Message -->
     <div v-if="!loading && !hasData" class="no-data-message">
-      <p>Tidak ada data transaksi untuk periode yang dipilih.</p>
+      <p>No transaction data available for the selected period.</p>
     </div>
 
-      <!-- Chart Canvas -->
-      <div class="chart-wrapper" id="chart-wrapper">
-        <canvas ref="chartCanvas" id="transaction-chart"></canvas>
-      </div>
+    <!-- Chart Canvas -->
+    <div class="chart-wrapper" id="chart-wrapper">
+      <canvas ref="chartCanvas" id="transaction-chart"></canvas>
+    </div>
     </div>
 
     <!-- Summary Stats -->
     <div class="chart-summary" v-if="!loading && hasData">
       <div class="summary-item">
-        <span class="summary-label">Total Transaksi:</span>
+        <span class="summary-label">Total Transactions:</span>
         <span class="summary-value">{{ totalTransactions }}</span>
       </div>
       <div class="summary-item">
-        <span class="summary-label">Total Pendapatan:</span>
+        <span class="summary-label">Total Revenue:</span>
         <span class="summary-value">{{ formatCurrency(totalRevenue) }}</span>
       </div>
       <div class="summary-item">
-        <span class="summary-label">Rata-rata per {{ selectedPeriod === 'day' ? 'jam' : selectedPeriod === 'month' ? 'hari' : 'bulan' }}:</span>
+        <span class="summary-label">Average per {{ averageRevenueLabel }}:</span>
         <span class="summary-value">{{ formatCurrency(averageRevenue) }}</span>
       </div>
     </div>
@@ -106,10 +103,14 @@ import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue'
 import { useFetch } from '#app';
 import { useNuxtApp } from '#app';
 
+// Define emits
+const emit = defineEmits(['dateRangeChanged']);
+
 const chartCanvas = ref(null);
 let chartInstance = null;
 const chartJsLoaded = ref(false);
 const { $Chart } = useNuxtApp();
+const datePickerRef = ref(null);
 
 // Check if Chart.js is loaded only on client-side
 if (process.client) {
@@ -118,12 +119,20 @@ if (process.client) {
 
 // Reactive data
 const loading = ref(true);
-const selectedPeriod = ref('month');
-const selectedDate = ref('');
-const selectedMonth = ref('');
-const selectedYear = ref('');
+const selectedStartDate = ref('');
+const selectedEndDate = ref('');
+const selectedPeriod = ref('day'); // Always 'day' for unified date filter
 const showTransactions = ref(true);
 const showRevenue = ref(true);
+const dateRangeError = ref('');
+const showDatePicker = ref(false);
+const isSingleDayView = computed(() => selectedStartDate.value && selectedEndDate.value && selectedStartDate.value === selectedEndDate.value);
+
+// Maximum date (today)
+const maxDate = computed(() => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+});
 
 const transactionStats = ref({
   labels: [],
@@ -135,31 +144,86 @@ const hasData = computed(() =>
   transactionStats.value.transactionData.some(d => d > 0) || transactionStats.value.revenueData.some(d => d > 0)
 );
 
-// Initialize default date
+// Initialize default date (7 days range)
 const initializeDefaultDate = () => {
   const now = new Date();
+  const sixDaysAgo = new Date(now);
+  sixDaysAgo.setDate(now.getDate() - 6);
+
+  selectedEndDate.value = now.toISOString().split('T')[0];
+  selectedStartDate.value = sixDaysAgo.toISOString().split('T')[0];
+};
+
+// Helper to get YYYY-MM-DD string from a Date object
+const toYMD = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// Helper to calculate day difference from YYYY-MM-DD strings
+const dayDiff = (dateStr1, dateStr2) => {
+  const d1 = new Date(dateStr1);
+  const d2 = new Date(dateStr2);
+  const diffTime = Math.abs(d2 - d1);
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+// Validate date range and update chart
+const validateAndUpdateChart = () => {
+  dateRangeError.value = '';
   
-  selectedDate.value = now.toISOString().split('T')[0];
-  selectedMonth.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  selectedYear.value = now.getFullYear().toString();
+  if (!selectedStartDate.value || !selectedEndDate.value) {
+    dateRangeError.value = 'Please select a start and end date';
+    return;
+  }
+  
+  const startDate = new Date(selectedStartDate.value);
+  const endDate = new Date(selectedEndDate.value);
+  
+  // Check if start date is not after end date
+  if (startDate > endDate) {
+    dateRangeError.value = 'Start date cannot be after end date';
+    return;
+  }
+  
+  const diffTime = Math.abs(endDate - startDate);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays > 30) {
+    dateRangeError.value = 'The maximum date range is 31 days';
+    return;
+  }
+  
+  // If all validations pass, update the chart
+  updateChart();
+};
+
+// Helper function to ensure dates are sent as UTC to prevent timezone shifts
+const toISODateStringUTC = (dateStr) => {
+  if (!dateStr) return dateStr;
+  
+  // Parse the date string (YYYY-MM-DD format)
+  const [year, month, day] = dateStr.split('-').map(Number);
+  
+  // Create a UTC date with the same year, month, day
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  
+  // Return as ISO date string (YYYY-MM-DD)
+  return utcDate.toISOString().split('T')[0];
 };
 
 const fetchTransactionStats = async () => {
   loading.value = true;
-  let params = {
-    period: selectedPeriod.value,
-    date: ''
-  };
+  let params = { period: 'day' }; // Always use 'day' period for unified date filter
 
-  if (selectedPeriod.value === 'day') {
-    params.date = selectedDate.value;
-  } else if (selectedPeriod.value === 'month') {
-    params.date = selectedMonth.value;
-  } else {
-    params.date = selectedYear.value;
-  }
+  // Send start and end dates with proper UTC handling to prevent timezone shifts
+  params.startDate = toISODateStringUTC(selectedStartDate.value);
+  params.endDate = toISODateStringUTC(selectedEndDate.value);
 
-  if (!params.date) {
+  // Validation for required parameters
+  if (!selectedStartDate.value || !selectedEndDate.value) {
     loading.value = false;
     return;
   }
@@ -198,17 +262,34 @@ const fetchTransactionStats = async () => {
   }
 };
 
-const handlePeriodChange = () => {
-  updateChart();
+
+const handleClickOutside = (event) => {
+  if (datePickerRef.value && !datePickerRef.value.contains(event.target)) {
+    showDatePicker.value = false;
+  }
 };
 
 // Computed properties
 const chartData = computed(() => {
+  if (!transactionStats.value || !transactionStats.value.labels || !hasData.value) {
+    return {
+      labels: [],
+      datasets: [
+        {
+          label: 'No data available',
+          data: [],
+          backgroundColor: 'transparent',
+          borderColor: 'transparent',
+        },
+      ],
+    };
+  }
+
   const datasets = [];
   
   if (showTransactions.value) {
     datasets.push({
-      label: 'Transaksi',
+      label: 'Transactions',
       data: transactionStats.value.transactionData,
       backgroundColor: 'rgba(59, 130, 246, 0.1)',
       borderColor: 'rgba(59, 130, 246, 1)',
@@ -226,7 +307,7 @@ const chartData = computed(() => {
   
   if (showRevenue.value) {
     datasets.push({
-      label: 'Pendapatan',
+      label: 'Revenue',
       data: transactionStats.value.revenueData,
       backgroundColor: 'rgba(34, 197, 94, 0.1)',
       borderColor: 'rgba(34, 197, 94, 1)',
@@ -263,6 +344,32 @@ const averageRevenue = computed(() => {
   return Math.round(total / count);
 });
 
+const averageRevenueLabel = computed(() => {
+  switch (selectedPeriod.value) {
+    case 'day':
+      return 'day';
+    case 'month':
+      return 'day';
+    case 'year':
+      return 'month';
+    default:
+      return 'data';
+  }
+});
+
+const chartTitle = computed(() => {
+  if (isSingleDayView.value) {
+    if (!selectedStartDate.value) return 'Hourly Transactions';
+    const date = new Date(selectedStartDate.value + 'T00:00:00');
+    return `Hourly Transactions for ${date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })}`;
+  }
+  return 'Daily Transaction Overview';
+});
+
 // Chart options
 const chartOptions = computed(() => ({
   responsive: true,
@@ -288,7 +395,7 @@ const chartOptions = computed(() => ({
     },
     title: {
       display: true,
-      text: `Grafik ${selectedPeriod.value === 'day' ? 'Harian' : selectedPeriod.value === 'month' ? 'Bulanan' : 'Tahunan'}`,
+      text: chartTitle.value, // Use the new dynamic title
       color: '#fff',
       font: { 
         size: 20, 
@@ -314,31 +421,24 @@ const chartOptions = computed(() => ({
         size: 13,
         weight: '500'
       },
-      callbacks: {
-        title: function(tooltipItems) {
-          const item = tooltipItems[0];
-          const label = item.label;
-          
-          if (selectedPeriod.value === 'day') {
-            const dayDate = new Date(selectedDate.value);
-            return `${dayDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}, ${label} jam`;
-          }
-          
-          if (selectedPeriod.value === 'month') {
-            const [year, month] = selectedMonth.value.split('-');
-            const fullDate = new Date(year, parseInt(month) - 1, label);
-            return fullDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-          }
-          
-          if (selectedPeriod.value === 'year') {
-            const year = selectedYear.value;
-            const monthIndex = chartData.value.labels.indexOf(label);
-            const fullDate = new Date(year, monthIndex);
-            return fullDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-          }
-          
-          return label;
-        },
+        callbacks: {
+          title: function(tooltipItems) {
+            const item = tooltipItems[0];
+            if (!item) return '';
+            const label = item.label;
+
+            if (isSingleDayView.value) {
+              return `${label.padStart(2, '0')}:00`;
+            } else {
+              const date = new Date(label + 'T00:00:00');
+              return date.toLocaleDateString('id-ID', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+              });
+            }
+          },
         label: function(context) {
           let label = context.dataset.label || '';
           if (label) {
@@ -348,7 +448,7 @@ const chartOptions = computed(() => ({
             if (context.dataset.yAxisID === 'y1') {
               label += formatCurrency(context.parsed.y);
             } else {
-              label += `${context.parsed.y.toLocaleString('id-ID')} transaksi`;
+              label += `${context.parsed.y.toLocaleString('id-ID')} transactions`;
             }
           }
           return label;
@@ -363,6 +463,14 @@ const chartOptions = computed(() => ({
         font: {
           size: 12,
           weight: '500'
+        },
+        callback: function(value) {
+          const label = this.getLabelForValue(value);
+          if (isSingleDayView.value) {
+            return `${label.padStart(2, '0')}:00`;
+          }
+          const date = new Date(label + 'T00:00:00');
+          return date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
         }
       },
       grid: { 
@@ -425,9 +533,10 @@ const chartOptions = computed(() => ({
   }
 }));
 
-// Helper function
+// Helper functions
 const formatCurrency = (amount) => {
-  if (typeof amount !== 'number') {
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (typeof numericAmount !== 'number' || isNaN(numericAmount)) {
     return 'Rp 0';
   }
   return new Intl.NumberFormat('id-ID', {
@@ -435,11 +544,30 @@ const formatCurrency = (amount) => {
     currency: 'IDR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
-  }).format(amount);
+  }).format(numericAmount);
 };
+
+// Format date range for display
+const formatDateRange = (startDate, endDate) => {
+  if (!startDate || !endDate) return 'Select date range';
+  
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const options = { day: 'numeric', month: 'short', year: 'numeric' };
+  const startFormatted = start.toLocaleDateString('en-US', options);
+  const endFormatted = end.toLocaleDateString('en-US', options);
+  
+  return `${startFormatted} - ${endFormatted}`;
+};
+
+
+
 
 // Methods
 const updateChart = async () => {
+  // Store previous data to compare
+  const previousData = { ...transactionStats.value };
+  
   await fetchTransactionStats();
   
   // Skip chart updates in SSR context
@@ -447,10 +575,17 @@ const updateChart = async () => {
   
   if (chartInstance) {
     try {
-    chartInstance.data = chartData.value;
-    chartInstance.options = chartOptions.value;
-    chartInstance.update();
-      console.log('Chart updated successfully');
+      // Only update if data actually changed
+      const dataChanged = JSON.stringify(previousData) !== JSON.stringify(transactionStats.value);
+      
+      if (dataChanged) {
+        // Update chart data more efficiently
+        chartInstance.data.labels = chartData.value.labels;
+        chartInstance.data.datasets = chartData.value.datasets;
+        chartInstance.options.plugins.title.text = chartTitle.value;
+        chartInstance.update('none'); // Use 'none' animation mode to reduce flicker
+        console.log('Chart updated successfully');
+      }
     } catch (error) {
       console.error('Error updating chart:', error);
       // If updating fails, try recreating the chart
@@ -697,7 +832,6 @@ const createChartInstance = (canvas) => {
       return;
     }
 
-    // Get Chart either from Nuxt plugin or window
     const ChartLib = $Chart || window.Chart;
     
     if (!ChartLib) {
@@ -705,15 +839,17 @@ const createChartInstance = (canvas) => {
       return;
     }
     
+    const existingChart = ChartLib.getChart(canvas);
+    if (existingChart) {
+      existingChart.destroy();
+    }
+
+    if (chartInstance) {
+        chartInstance = null;
+    }
+
     console.log('Creating new Chart instance with data:', chartData.value);
     
-    // Destroy previous chart if it exists
-    if (chartInstance) {
-      chartInstance.destroy();
-      chartInstance = null;
-    }
-    
-    // Create new chart
     chartInstance = new ChartLib(canvas, {
       type: 'line',
       data: chartData.value,
@@ -788,6 +924,7 @@ const setupCanvasWatcher = () => {
 
 // Lifecycle
 onMounted(async () => {
+  document.addEventListener('click', handleClickOutside);
   // Skip chart initialization in SSR context
   if (!process.client) return;
   
@@ -839,6 +976,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside);
   if (chartInstance) {
     try {
     chartInstance.destroy();
@@ -859,6 +997,7 @@ watch([showTransactions, showRevenue], () => {
 </script>
 
 <style scoped>
+@import '~/assets/css/pages/admin-chart.css';
 .transaction-chart-container {
   background: var(--galaxy-card-gradient);
   border-radius: var(--galaxy-radius-lg);
@@ -939,8 +1078,8 @@ watch([showTransactions, showRevenue], () => {
 .control-select,
 .control-input {
   padding: 0.75rem 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: #1e293b;
+  border: 2px solid var(--galaxy-aurora-cyan);
   border-radius: var(--galaxy-radius-md);
   color: var(--galaxy-starlight);
   font-size: 0.9rem;
@@ -950,11 +1089,16 @@ watch([showTransactions, showRevenue], () => {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.control-select option {
+  background: #0f172a;
+  color: var(--galaxy-starlight);
+}
+
 .control-select:focus,
 .control-input:focus {
   outline: none;
   border-color: var(--galaxy-aurora-cyan);
-  box-shadow: 0 0 0 2px rgba(77, 208, 225, 0.2);
+  box-shadow: 0 0 0 3px rgba(77, 208, 225, 0.3);
 }
 
 .checkbox-group {
@@ -985,9 +1129,33 @@ watch([showTransactions, showRevenue], () => {
   cursor: pointer;
 }
 
-.control-input[type="month"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  cursor: pointer;
+.date-range-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-separator {
+  color: var(--galaxy-starlight);
+  font-weight: 500;
+  padding: 0 0.5rem;
+}
+
+.date-filter-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.error-message {
+  color: var(--galaxy-plasma-orange);
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+  padding: 0.5rem;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: var(--galaxy-radius-sm);
+  border: 1px solid rgba(244, 67, 54, 0.3);
 }
 
 .chart-wrapper {
@@ -1062,6 +1230,198 @@ canvas {
   
   .chart-summary {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Custom Date Range Picker */
+.custom-date-range-picker {
+  position: relative;
+  display: inline-block;
+}
+
+.date-range-button {
+  background: var(--galaxy-card-gradient);
+  border: 1px solid var(--galaxy-aurora-cyan);
+  border-radius: var(--galaxy-radius-md);
+  color: var(--galaxy-starlight);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: var(--galaxy-transition-normal);
+  font-size: 0.9rem;
+  min-width: 250px;
+  justify-content: space-between;
+}
+
+.date-range-button:hover {
+  border-color: var(--galaxy-comet-green);
+  box-shadow: var(--galaxy-glow-cyan);
+}
+
+.date-range-text {
+  flex-grow: 1;
+  text-align: center;
+}
+
+.date-range-button .fa-chevron-down {
+  transition: transform 0.3s ease;
+}
+
+.date-range-button .fa-chevron-down.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.date-picker-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 100;
+  background: var(--galaxy-deep-space);
+  border: 1px solid var(--galaxy-aurora-cyan);
+  border-radius: var(--galaxy-radius-lg);
+  box-shadow: var(--galaxy-shadow-large);
+  width: 320px;
+  overflow: hidden;
+  animation: fadeInDown 0.3s ease-out;
+}
+
+.date-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--galaxy-card-gradient);
+  border-bottom: 1px solid var(--galaxy-aurora-cyan);
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: var(--galaxy-starlight);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+}
+
+.date-picker-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--galaxy-starlight);
+}
+
+.date-picker-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.date-inputs {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.date-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.date-input-group label {
+  font-size: 0.8rem;
+  color: var(--galaxy-cloud-gray);
+}
+
+.date-input {
+  background: #1e293b;
+  border: 1px solid var(--galaxy-asteroid-gray);
+  border-radius: var(--galaxy-radius-sm);
+  color: var(--galaxy-starlight);
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: var(--galaxy-aurora-cyan);
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.quick-btn {
+  background: transparent;
+  border: 1px solid var(--galaxy-asteroid-gray);
+  color: var(--galaxy-cloud-gray);
+  padding: 0.5rem;
+  border-radius: var(--galaxy-radius-sm);
+  cursor: pointer;
+  transition: var(--galaxy-transition-fast);
+}
+
+.quick-btn.active,
+.quick-btn:hover {
+  background: var(--galaxy-aurora-cyan);
+  color: var(--galaxy-deep-space);
+  border-color: var(--galaxy-aurora-cyan);
+}
+
+.picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid var(--galaxy-asteroid-gray);
+  padding-top: 1rem;
+}
+
+.cancel-btn,
+.apply-btn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--galaxy-radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--galaxy-transition-fast);
+}
+
+.cancel-btn {
+  background: transparent;
+  border: 1px solid var(--galaxy-asteroid-gray);
+  color: var(--galaxy-starlight);
+}
+
+.cancel-btn:hover {
+  background: var(--galaxy-asteroid-gray);
+}
+
+.apply-btn {
+  background: var(--galaxy-aurora-cyan);
+  border: 1px solid var(--galaxy-aurora-cyan);
+  color: var(--galaxy-deep-space);
+}
+
+.apply-btn:hover {
+  opacity: 0.9;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style> 

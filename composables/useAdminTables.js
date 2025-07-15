@@ -1,6 +1,7 @@
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useAdminAuth } from './useAdminAuth';
 import { useToast } from './useToast';
+import { useAuth } from './useAuth';
 
 /**
  * Admin table management composable
@@ -338,9 +339,14 @@ export function useAdminTables() {
     pagination.page = 1; // Go to first page when limit changes
   };
 
-  // Initialize tables on mount
+  // Watch auth readiness before initializing tables
+  const { isReady } = useAuth();
   onMounted(() => {
-    fetchTables();
+    watch(isReady, (ready) => {
+      if (ready) {
+        fetchTables();
+      }
+    }, { immediate: true });
   });
 
   return {

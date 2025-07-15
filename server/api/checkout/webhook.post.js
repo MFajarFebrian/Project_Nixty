@@ -48,30 +48,75 @@ export default defineEventHandler(async (event) => {
 
   try {
     const [result] = await db.execute(
-      `UPDATE transactions SET status = ?, payment_method = ?, updated_at = NOW() WHERE order_id = ?`,
-      [newStatus, body.payment_type || 'N/A', order_id]
+      `UPDATE transactions SET status = ?, payment_method = ?, payment_gateway_status = ?, payment_gateway_payload = ?, updated_at = NOW() WHERE order_id = ?`,
+      [newStatus, body.payment_type || 'midtrans', transaction_status, JSON.stringify(body), order_id]
     );
 
     if (result.affectedRows > 0) {
       console.log(`Transaction ${order_id} updated to ${newStatus}`);
       
-      // If transaction is completed, mark the license as used.
+      // If transaction is completed, assign and store license info
       if (newStatus === 'completed') {
-        const [transactionRows] = await db.execute('SELECT id, product_id, quantity FROM transactions WHERE order_id = ?', [order_id]);
+        const [transactionRows] = await db.execute('SELECT id, product_id, quantity, user_id, email FROM transactions WHERE order_id = ?', [order_id]);
         if (transactionRows.length > 0) {
           const transactionId = transactionRows[0].id;
           const productId = transactionRows[0].product_id;
           const quantity = transactionRows[0].quantity || 1;
+          const userId = transactionRows[0].user_id;
+          const customerEmail = transactionRows[0].email;
 
-          // Find available licenses for this product and reserve them based on quantity.
-          await db.execute(
-            `UPDATE product_licenses 
-             SET is_used = 1, status = 'used', used_by_transaction_id = ?, used_at = NOW() 
-             WHERE product_id = ? AND status = 'available' 
+          // Find available licenses for this product using the new system
+          const [availableLicenses] = await db.execute(
+            `SELECT id, license_type, product_key, email, password, additional_info, send_license, max_usage 
+             FROM product_licenses 
+             WHERE product_id = ? 
+             AND status = 'available' 
+             AND (send_license < max_usage OR send_license IS NULL)
+             ORDER BY created_at ASC 
              LIMIT ?`,
-            [transactionId, productId, quantity]
+            [productId, quantity]
           );
-          console.log(`${quantity} license(s) for product ${productId} marked as used for transaction ${transactionId}`);
+
+          if (availableLicenses.length >= quantity) {
+            // Prepare license info for storage
+            const licenseInfo = availableLicenses.map(license => ({
+              license_id: license.id,
+              license_type: license.license_type,
+              product_key: license.product_key,
+              email: license.email,
+              password: license.password,
+              additional_info: license.additional_info
+            }));
+
+            // Update transaction with license info
+            await db.execute(
+              `UPDATE transactions SET license_info = ? WHERE id = ?`,
+              [JSON.stringify(licenseInfo), transactionId]
+            );
+
+            // Update license usage tracking
+            for (const license of availableLicenses) {
+              const newSendLicense = (license.send_license || 0) + 1;
+              const newStatus = newSendLicense >= license.max_usage ? 'used' : 'available';
+              
+              await db.execute(
+                `UPDATE product_licenses 
+                 SET send_license = ?, status = ?, updated_at = NOW() 
+                 WHERE id = ?`,
+                [newSendLicense, newStatus, license.id]
+              );
+            }
+
+            console.log(`✅ ${quantity} license(s) assigned to transaction ${transactionId}:`);
+            licenseInfo.forEach((license, index) => {
+              console.log(`   License ${index + 1}: ${license.license_type} - ${license.product_key || license.email}`);
+            });
+
+            // TODO: Send license info via email to customer
+            // await sendLicenseEmail(customerEmail, licenseInfo, order_id);
+          } else {
+            console.warn(`⚠️  Insufficient licenses available for product ${productId}. Required: ${quantity}, Available: ${availableLicenses.length}`);
+          }
         }
       }
     } else {
@@ -84,4 +129,4 @@ export default defineEventHandler(async (event) => {
   }
 
   return { message: 'Webhook processed successfully' };
-}); 
+});

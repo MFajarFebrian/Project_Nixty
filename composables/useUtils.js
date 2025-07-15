@@ -33,10 +33,10 @@ export function useUtils() {
   };
 
   const isLongText = (text) => {
-    return text && typeof text === 'string' && text.length > 50;
+    return text && typeof text === 'string' && text.length > 25;
   };
 
-  const truncateText = (text, length = 50) => {
+  const truncateText = (text, length = 25) => {
     if (!text || typeof text !== 'string') return text;
     return text.length > length ? text.substring(0, length) + '...' : text;
   };

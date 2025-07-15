@@ -1,61 +1,100 @@
 <template>
   <div class="stock-management">
     <div class="management-header">
-      <h2 class="management-title">Stock Management</h2>
       <div class="header-actions">
-        <button @click="refreshData" class="action-btn refresh" :disabled="loading">
+        <button @click="refreshData" class="action-btn refresh" :disabled="loading" title="Refresh Data">
           <span v-if="loading" class="loading-spinner">⟳</span>
           <span v-else>⟳</span>
-          Refresh
         </button>
-        <button @click="exportData" class="action-btn export">
-          📊 Export
-        </button>
-        <button @click="closeModal" class="action-btn close">
-          ✕ Close
+        <button @click="exportData" class="action-btn export" title="Export">
+          📊
         </button>
       </div>
     </div>
 
     <div class="filters-section">
-      <div class="filter-group">
-        <label class="filter-label">Search:</label>
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="Search products..." 
-          class="filter-input"
-        />
+      <div class="filter-row">
+        <div class="filter-group search-group">
+          <label class="filter-label">Search Products</label>
+          <div class="search-input-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="Search by name, version, or category..." 
+              class="filter-input search-input"
+            />
+            <button 
+              v-if="searchQuery" 
+              @click="searchQuery = ''"
+              class="clear-search-btn"
+              title="Clear search"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Status Filter</label>
+          <div class="custom-select-wrapper">
+            <select v-model="statusFilter" class="filter-select modern-select">
+              <option value="">All Status</option>
+              <option value="in_stock">✅ In Stock</option>
+              <option value="low_stock">⚠️ Low Stock</option>
+              <option value="out_of_stock">❌ Out of Stock</option>
+            </select>
+            <i class="fas fa-chevron-down select-arrow"></i>
+          </div>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Category</label>
+          <div class="custom-select-wrapper">
+            <select v-model="categoryFilter" class="filter-select modern-select">
+              <option value="">All Categories</option>
+              <option v-for="category in categories" :key="category.id" :value="category.id">
+                {{ category.name }}
+              </option>
+            </select>
+            <i class="fas fa-chevron-down select-arrow"></i>
+          </div>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Sort By</label>
+          <div class="custom-select-wrapper">
+            <select v-model="sortBy" class="filter-select modern-select">
+              <option value="name">📝 Name</option>
+              <option value="stock">📦 Stock Level</option>
+              <option value="category">🏷️ Category</option>
+              <option value="updated_at">📅 Last Updated</option>
+            </select>
+            <i class="fas fa-chevron-down select-arrow"></i>
+          </div>
+        </div>
       </div>
       
-      <div class="filter-group">
-        <label class="filter-label">Status:</label>
-        <select v-model="statusFilter" class="filter-select">
-          <option value="">All Status</option>
-          <option value="in_stock">In Stock</option>
-          <option value="low_stock">Low Stock</option>
-          <option value="out_of_stock">Out of Stock</option>
-        </select>
-      </div>
-      
-      <div class="filter-group">
-        <label class="filter-label">Category:</label>
-        <select v-model="categoryFilter" class="filter-select">
-          <option value="">All Categories</option>
-          <option v-for="category in categories" :key="category.id" :value="category.id">
-            {{ category.name }}
-          </option>
-        </select>
-      </div>
-      
-      <div class="filter-group">
-        <label class="filter-label">Sort by:</label>
-        <select v-model="sortBy" class="filter-select">
-          <option value="name">Name</option>
-          <option value="stock">Stock Level</option>
-          <option value="category">Category</option>
-          <option value="updated_at">Last Updated</option>
-        </select>
+      <div class="filter-summary">
+        <div class="results-count">
+          <span class="count-badge">{{ filteredProducts.length }}</span>
+          <span class="count-text">products found</span>
+        </div>
+        <div class="active-filters" v-if="hasActiveFilters">
+          <span class="filter-tag" v-if="searchQuery">
+            Search: "{{ searchQuery }}"
+            <button @click="searchQuery = ''" class="remove-filter">×</button>
+          </span>
+          <span class="filter-tag" v-if="statusFilter">
+            Status: {{ getStatusLabel(statusFilter) }}
+            <button @click="statusFilter = ''" class="remove-filter">×</button>
+          </span>
+          <span class="filter-tag" v-if="categoryFilter">
+            Category: {{ getCategoryName(categoryFilter) }}
+            <button @click="categoryFilter = ''" class="remove-filter">×</button>
+          </span>
+          <button @click="clearAllFilters" class="clear-all-filters">Clear All</button>
+        </div>
       </div>
     </div>
 
@@ -64,11 +103,10 @@
         <thead>
           <tr>
             <th>Product</th>
-            <th>Category</th>
+            <th>Version</th>
             <th>Stock</th>
             <th>Status</th>
             <th>Last Updated</th>
-            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -80,7 +118,7 @@
               </div>
             </td>
             <td class="category-cell">
-              <span class="category-badge">{{ product.categoryName || 'Uncategorized' }}</span>
+              <span class="category-badge">{{ product.version || 'N/A' }}</span>
             </td>
             <td class="stock-cell">
               <div class="stock-display">
@@ -101,11 +139,6 @@
             </td>
             <td class="updated-cell">
               {{ formatDate(product.updated_at) }}
-            </td>
-            <td class="actions-cell">
-              <button @click="viewProduct(product)" class="action-btn icon-btn view" title="View">
-                <i class="fas fa-eye"></i>
-              </button>
             </td>
           </tr>
         </tbody>
@@ -206,7 +239,7 @@ export default {
       // Status filter
       if (this.statusFilter) {
         filtered = filtered.filter(product => {
-          const stock = product.available_stock || product.stock
+          const stock = product.available_stock !== undefined ? product.available_stock : product.stock
           const threshold = product.min_stock_threshold || 5
           switch (this.statusFilter) {
             case 'in_stock':
@@ -232,7 +265,7 @@ export default {
           case 'name':
             return a.name.localeCompare(b.name)
           case 'stock':
-            return (b.available_stock || b.stock) - (a.available_stock || a.stock)
+            return (b.available_stock !== undefined ? b.available_stock : b.stock) - (a.available_stock !== undefined ? a.available_stock : a.stock)
           case 'category':
             return (a.categoryName || '').localeCompare(b.categoryName || '')
           case 'updated_at':
@@ -277,6 +310,9 @@ export default {
         const stock = p.available_stock || p.stock
         return stock === 0
       }).length
+    },
+    hasActiveFilters() {
+      return this.searchQuery || this.statusFilter || this.categoryFilter
     }
   },
   methods: {
@@ -376,6 +412,23 @@ export default {
       if (this.currentPage < this.totalPages) {
         this.currentPage++
       }
+    },
+    getStatusLabel(status) {
+      const labels = {
+        'in_stock': 'In Stock',
+        'low_stock': 'Low Stock',
+        'out_of_stock': 'Out of Stock'
+      }
+      return labels[status] || status
+    },
+    getCategoryName(categoryId) {
+      const category = this.categories.find(c => c.id == categoryId)
+      return category ? category.name : 'Unknown'
+    },
+    clearAllFilters() {
+      this.searchQuery = ''
+      this.statusFilter = ''
+      this.categoryFilter = ''
     }
   },
   watch: {
@@ -396,11 +449,8 @@ export default {
 @import '~/assets/css/global/variables.css';
 
 .stock-management {
-  background: var(--galaxy-deep-space);
   color: var(--galaxy-starlight);
   font-family: var(--galaxy-font-primary);
-  min-height: 100vh;
-  padding: var(--galaxy-space-md);
 }
 
 .management-header {
@@ -408,6 +458,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--galaxy-space-md);
+  padding-top: var(--galaxy-space-lg);
   padding-bottom: var(--galaxy-space-sm);
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
@@ -486,29 +537,228 @@ export default {
 }
 
 .filters-section {
+  margin-bottom: var(--galaxy-space-lg);
+  padding: var(--galaxy-space-lg);
+  background: var(--galaxy-card-gradient);
+  border-radius: var(--galaxy-radius-lg);
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--galaxy-shadow-medium);
+}
+
+.filter-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--galaxy-space-sm);
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: var(--galaxy-space-lg);
   margin-bottom: var(--galaxy-space-md);
-  padding: var(--galaxy-space-sm) var(--galaxy-space-md);
-  background: rgba(30,32,60,0.7);
-  border-radius: var(--galaxy-radius-md);
-  border: 1px solid rgba(255,255,255,0.07);
-  backdrop-filter: blur(6px);
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--galaxy-space-xs);
+}
+
+.filter-group.search-group {
+  grid-column: 1;
 }
 
 .filter-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--galaxy-cloud-gray);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--galaxy-starlight);
+  margin-bottom: var(--galaxy-space-xs);
 }
 
+/* Search Input Styling */
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--galaxy-cloud-gray);
+  font-size: 14px;
+  z-index: 2;
+}
+
+.search-input-wrapper .search-input {
+  padding: 10px 40px 10px 50px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: var(--galaxy-radius-md);
+  background: rgba(255,255,255,0.05);
+  color: var(--galaxy-starlight);
+  font-size: 14px;
+  font-family: var(--galaxy-font-primary);
+  transition: var(--galaxy-transition-fast);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--galaxy-aurora-cyan);
+  box-shadow: 0 0 15px rgba(77, 208, 225, 0.3);
+  background: rgba(255,255,255,0.08);
+}
+
+.search-input::placeholder {
+  color: var(--galaxy-cloud-gray);
+  font-style: italic;
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--galaxy-cloud-gray);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--galaxy-radius-sm);
+  transition: var(--galaxy-transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-search-btn:hover {
+  color: var(--galaxy-pulsar-pink);
+  background: rgba(255,255,255,0.1);
+}
+
+/* Modern Select Styling */
+.custom-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.modern-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 10px 40px 10px 12px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: var(--galaxy-radius-md);
+  background: rgba(255,255,255,0.05);
+  color: var(--galaxy-starlight);
+  font-size: 14px;
+  font-family: var(--galaxy-font-primary);
+  transition: var(--galaxy-transition-fast);
+  width: 100%;
+  cursor: pointer;
+}
+
+.modern-select:focus {
+  outline: none;
+  border-color: var(--galaxy-aurora-cyan);
+  box-shadow: 0 0 15px rgba(77, 208, 225, 0.3);
+  background: rgba(255,255,255,0.08);
+}
+
+.modern-select option {
+  background: var(--galaxy-dark-matter);
+  color: var(--galaxy-starlight);
+  padding: 8px 12px;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 12px;
+  color: var(--galaxy-cloud-gray);
+  font-size: 12px;
+  pointer-events: none;
+  transition: var(--galaxy-transition-fast);
+}
+
+.custom-select-wrapper:hover .select-arrow {
+  color: var(--galaxy-aurora-cyan);
+}
+
+/* Filter Summary */
+.filter-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--galaxy-space-md);
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.results-count {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-sm);
+}
+
+.count-badge {
+  background: var(--galaxy-primary-gradient);
+  color: var(--galaxy-starlight);
+  padding: 4px 12px;
+  border-radius: var(--galaxy-radius-full);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.count-text {
+  color: var(--galaxy-cloud-gray);
+  font-size: 14px;
+}
+
+.active-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-sm);
+  flex-wrap: wrap;
+}
+
+.filter-tag {
+  background: rgba(77, 208, 225, 0.2);
+  color: var(--galaxy-aurora-cyan);
+  padding: 4px 8px;
+  border-radius: var(--galaxy-radius-sm);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-xs);
+  border: 1px solid rgba(77, 208, 225, 0.3);
+}
+
+.remove-filter {
+  background: none;
+  border: none;
+  color: var(--galaxy-aurora-cyan);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  margin-left: var(--galaxy-space-xs);
+  transition: var(--galaxy-transition-fast);
+}
+
+.remove-filter:hover {
+  color: var(--galaxy-pulsar-pink);
+}
+
+.clear-all-filters {
+  background: linear-gradient(135deg, var(--galaxy-pulsar-pink), #e91e63);
+  color: var(--galaxy-starlight);
+  border: none;
+  padding: 4px 12px;
+  border-radius: var(--galaxy-radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--galaxy-transition-fast);
+}
+
+.clear-all-filters:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 10px rgba(255, 107, 157, 0.3);
+}
+
+/* Legacy support */
 .filter-input,
 .filter-select {
   padding: 4px 8px;
@@ -655,21 +905,66 @@ export default {
 .summary-number.out-of-stock { color: var(--galaxy-pulsar-pink); }
 
 /* Responsive Design */
+@media (max-width: 1200px) {
+  .filter-row {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--galaxy-space-md);
+  }
+  .filter-group.search-group {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 1024px) {
   .stock-management { padding: var(--galaxy-space-sm); }
   .management-header { flex-direction: column; gap: var(--galaxy-space-sm); align-items: flex-start; }
   .header-actions { width: 100%; justify-content: flex-end; }
-  .filters-section { grid-template-columns: 1fr; }
+  .filters-section { padding: var(--galaxy-space-md); }
+  .filter-row {
+    grid-template-columns: 1fr;
+    gap: var(--galaxy-space-md);
+  }
+  .filter-group.search-group {
+    grid-column: 1;
+  }
+  .filter-summary {
+    flex-direction: column;
+    gap: var(--galaxy-space-sm);
+    align-items: flex-start;
+  }
+  .active-filters {
+    width: 100%;
+  }
   .table-container { overflow-x: auto; }
   .stock-table { min-width: 600px; }
   .pagination-section { flex-direction: column; gap: 2px; }
 }
+
 @media (max-width: 768px) {
   .management-title { font-size: 1.1rem; }
+  .filters-section { padding: var(--galaxy-space-sm); }
+  .filter-row { gap: var(--galaxy-space-sm); }
+  .search-input, .modern-select {
+    padding: 8px 12px 8px 36px;
+    font-size: 13px;
+  }
+  .search-input {
+    padding-left: 36px;
+  }
+  .modern-select {
+    padding-right: 36px;
+  }
   .summary-section { grid-template-columns: repeat(2, 1fr); }
 }
+
 @media (max-width: 480px) {
   .summary-section { grid-template-columns: 1fr; }
   .stock-table th, .stock-table td { padding: 4px; }
+  .filter-summary {
+    text-align: center;
+  }
+  .active-filters {
+    justify-content: center;
+  }
 }
 </style> 

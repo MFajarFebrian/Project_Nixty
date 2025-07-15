@@ -46,15 +46,15 @@
             <div class="product-info galaxy-card">
               <div class="product-image-container">
                 <img 
-                  :src="product.image_url || '/placeholder-grey.svg'" 
-                  :alt="product.name" 
+                  :src="selectedVersionImage" 
+                  :alt="selectedVersionName" 
                   class="product-image" 
                   @error="e => e.target.src = '/placeholder-grey.svg'"
                 />
               </div>
               
-              <div class="product-details">
-                <div class="product-description" v-html="product.description"></div>
+            <div class="product-details">
+                <div class="product-description" v-html="selectedVersionDescription"></div>
                 
                 <div class="product-features" v-if="product.features">
                   <h3>Features</h3>
@@ -135,17 +135,26 @@
               </div>
               
               <div class="price-summary">
-                <div class="summary-row">
-                  <span>Product Price</span>
-                  <span>{{ formatCurrency(selectedVersionPrice) }}</span>
+                <div class="summary-header">
+                  <i class="fas fa-calculator"></i>
+                  <h3>Price Breakdown</h3>
                 </div>
                 <div class="summary-row">
-                  <span>Quantity</span>
-                  <span>{{ displayQuantity }}</span>
+                  <span><i class="fas fa-tag"></i> Product Price</span>
+                  <span class="price-value">{{ formatCurrency(selectedVersionPrice) }}</span>
                 </div>
+                <div class="summary-row">
+                  <span><i class="fas fa-boxes"></i> Quantity</span>
+                  <span class="quantity-value">{{ displayQuantity }} {{ displayQuantity > 1 ? 'licenses' : 'license' }}</span>
+                </div>
+                <div class="summary-divider"></div>
                 <div class="summary-row total">
-                  <span>Total Price</span>
-                  <span>{{ formatCurrency(totalPrice) }}</span>
+                  <span><i class="fas fa-wallet"></i> <strong>Total Amount</strong></span>
+                  <span class="total-amount">{{ formatCurrency(totalPrice) }}</span>
+                </div>
+                <div class="savings-indicator" v-if="displayQuantity > 1">
+                  <i class="fas fa-piggy-bank"></i>
+                  <span>{{ displayQuantity }} licenses for {{ formatCurrency(totalPrice) }}</span>
                 </div>
               </div>
               
@@ -157,10 +166,10 @@
               <div class="payment-info">
                 <p>Secure payment processing by Midtrans</p>
                 <div class="payment-icons">
-                  <img src="/placeholder-icon.png" alt="Visa" class="payment-icon" />
-                  <img src="/placeholder-icon.png" alt="Mastercard" class="payment-icon" />
-                  <img src="/placeholder-icon.png" alt="Bank Transfer" class="payment-icon" />
+                  <img src="/qris-logo.png" alt="QRIS" class="payment-icon qris-logo" />
+                  <!-- Add more payment icons -->
                 </div>
+                <p class="payment-note">Pay via QRIS, e-wallet, virtual account, or credit card</p>
               </div>
             </div>
           </div>
@@ -253,6 +262,7 @@ async function fetchProductDetails() {
           id: product.value.id,
           name: product.value.name,
           version: product.value.version,
+          description: product.value.description, // Add description for fallback version
           price: product.value.price,
           image_url: product.value.image_url
         }];
@@ -288,6 +298,33 @@ const selectedVersionPrice = computed(() => {
   }
   const selectedVersion = availableVersions.value.find(v => v.id === selectedVersionId.value);
   return selectedVersion ? selectedVersion.price : 0;
+});
+
+// Computed property for selected version description
+const selectedVersionDescription = computed(() => {
+  if (!selectedVersionId.value || !availableVersions.value.length) {
+    return product.value?.description || '';
+  }
+  const selectedVersion = availableVersions.value.find(v => v.id === selectedVersionId.value);
+  return selectedVersion ? selectedVersion.description || product.value?.description || '' : product.value?.description || '';
+});
+
+// Computed property for selected version image
+const selectedVersionImage = computed(() => {
+  if (!selectedVersionId.value || !availableVersions.value.length) {
+    return product.value?.image_url || '/placeholder-grey.svg';
+  }
+  const selectedVersion = availableVersions.value.find(v => v.id === selectedVersionId.value);
+  return selectedVersion ? selectedVersion.image_url || product.value?.image_url || '/placeholder-grey.svg' : product.value?.image_url || '/placeholder-grey.svg';
+});
+
+// Computed property for selected version name
+const selectedVersionName = computed(() => {
+  if (!selectedVersionId.value || !availableVersions.value.length) {
+    return product.value?.name || '';
+  }
+  const selectedVersion = availableVersions.value.find(v => v.id === selectedVersionId.value);
+  return selectedVersion ? `${product.value?.name} ${selectedVersion.version || ''}`.trim() : product.value?.name || '';
 });
 
 const totalPrice = ref(0);
@@ -384,30 +421,51 @@ const validateForm = () => {
 };
 
 const initiatePayment = async () => {
+  console.log('🚀 Starting payment initiation...');
+  
+  // Check if user is authenticated
+  if (!user.value) {
+    console.error('❌ No user data found - authentication required');
+    alert('You must be logged in to complete a purchase. Please log in first.');
+    showLoginWarning.value = true;
+    return;
+  }
+  
+  console.log('👤 User authenticated:', {
+    id: user.value.id,
+    name: user.value.name,
+    email: user.value.email
+  });
+  
   if (!product.value || quantity.value < 1) {
+    console.error('❌ Invalid product or quantity');
     alert('Please select a valid quantity.');
     return;
   }
   
   // Check stock availability
   if (currentStock.value <= 0) {
+    console.error('❌ Product out of stock');
     alert('This product is currently out of stock.');
     return;
   }
   
   if (quantity.value > currentStock.value) {
+    console.error('❌ Insufficient stock');
     alert(`Only ${currentStock.value} licenses available. Please reduce quantity.`);
     return;
   }
   
   // Validate form including email
   if (!validateForm()) {
+    console.error('❌ Form validation failed');
     return;
   }
   
   // Get the selected version details
   const selectedVersion = availableVersions.value.find(v => v.id === selectedVersionId.value);
   if (!selectedVersion) {
+    console.error('❌ No valid product version selected');
     alert('Please select a valid product version.');
     return;
   }
@@ -422,15 +480,22 @@ const initiatePayment = async () => {
         category: product.value.category
       },
       customer: {
-        name: user.value ? user.value.name : 'Guest',
-        email: user.value ? user.value.email : customEmail.value.trim()
+        name: user.value.name,
+        email: user.value.email
       },
       quantity: quantity.value,
       custom_email: customEmail.value.trim()
     };
+    
+    console.log('📦 Request body prepared:', requestBody);
+    console.log('🔐 Sending authentication headers with user session');
 
     const response = await $fetch('/api/checkout/initiate', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-session': JSON.stringify(user.value)
+      },
       body: requestBody,
     });
 
@@ -443,23 +508,48 @@ const initiatePayment = async () => {
       
       window.snap.pay(response.token, {
         onSuccess: function(result){
-          alert("Payment successful!");
-          console.log(result);
-          // Clear stored order ID on success
-          localStorage.removeItem('currentOrderId');
-          sessionStorage.removeItem('currentOrderId');
-          router.push('/');
+          console.log("Payment successful!", result);
+          router.push({
+            path: '/payment/finish',
+            query: {
+              order_id: result.order_id,
+              status_code: result.status_code,
+              transaction_status: result.transaction_status
+            }
+          });
         },
         onPending: function(result){
-          alert("Payment pending. Please complete your payment.");
-          console.log(result);
+          console.log("Payment pending", result);
+          router.push({
+            path: '/payment/unfinish',
+            query: {
+              order_id: result.order_id,
+              status_code: result.status_code,
+              transaction_status: result.transaction_status
+            }
+          });
         },
         onError: function(result){
-          alert("Payment failed. Please try again.");
-          console.log(result);
+          console.error("Payment failed", result);
+          router.push({
+            path: '/payment/error',
+            query: {
+              order_id: result.order_id,
+              status_code: result.status_code,
+              transaction_status: result.transaction_status
+            }
+          });
         },
         onClose: function(){
-          alert('Payment window closed. Your order is not complete.');
+          console.log('Payment window closed by user.');
+          const orderId = localStorage.getItem('currentOrderId');
+          router.push({
+            path: '/payment/unfinish',
+            query: {
+              order_id: orderId || '',
+              reason: 'user_closed_popup'
+            }
+          });
         }
       });
     } else {
@@ -484,6 +574,11 @@ const closeAuthModal = () => {
   if (user.value) showLoginWarning.value = false
 }
 
+// Set page title
+useHead({
+  title: 'Checkout'
+});
+
 onMounted(() => {
   initUser()
   if (!user.value) {
@@ -494,21 +589,27 @@ onMounted(() => {
   }
   fetchProductDetails();
 
-  // Load Midtrans Snap.js
-  const midtransScriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
-const config = useRuntimeConfig();
-  const clientKey = config.public.midtransClientKey || 'SB-Mid-client-XZVBXJmESkGTZlFP'; // Use runtime config
+  // Load Midtrans Snap.js only once
+  if (!document.getElementById('midtrans-snap-script')) {
+    const midtransScriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    const config = useRuntimeConfig();
+    const clientKey = config.public.midtransClientKey || 'SB-Mid-client-XZVBXJmESkGTZlFP';
 
-  let script = document.createElement('script');
-  script.src = midtransScriptUrl;
-  script.setAttribute('data-client-key', clientKey);
-  document.body.appendChild(script);
+    let script = document.createElement('script');
+    script.id = 'midtrans-snap-script';
+    script.src = midtransScriptUrl;
+    script.setAttribute('data-client-key', clientKey);
+    document.body.appendChild(script);
+  }
   
-  // Load official Midtrans enhancement script
-  const customScript = document.createElement('script');
-  customScript.src = '/midtrans-official.js';
-  customScript.async = true;
-  document.body.appendChild(customScript);
+  // Load official Midtrans enhancement script only once
+  if (!document.getElementById('midtrans-official-script')) {
+    const customScript = document.createElement('script');
+    customScript.id = 'midtrans-official-script';
+    customScript.src = '/midtrans-official.js';
+    customScript.async = true;
+    document.body.appendChild(customScript);
+  }
 });
 </script>
 
@@ -902,25 +1003,113 @@ const config = useRuntimeConfig();
 /* Price Summary */
 .price-summary {
   margin-bottom: var(--galaxy-space-xl);
-  padding: var(--galaxy-space-md);
-  background: rgba(26, 26, 46, 0.7);
-  border-radius: var(--galaxy-radius-md);
+  padding: var(--galaxy-space-lg);
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.9) 0%, rgba(77, 208, 225, 0.1) 100%);
+  border-radius: var(--galaxy-radius-lg);
+  border: 1px solid var(--galaxy-aurora-cyan);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-sm);
+  margin-bottom: var(--galaxy-space-md);
+  padding-bottom: var(--galaxy-space-sm);
+  border-bottom: 1px solid rgba(77, 208, 225, 0.3);
+}
+
+.summary-header i {
+  color: var(--galaxy-aurora-cyan);
+  font-size: 1.2rem;
+}
+
+.summary-header h3 {
+  margin: 0;
+  color: var(--galaxy-aurora-cyan);
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
-  padding: var(--galaxy-space-xs) 0;
+  align-items: center;
+  padding: var(--galaxy-space-sm) 0;
   color: var(--galaxy-light-gray);
+  font-size: 0.95rem;
+}
+
+.summary-row span:first-child {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-xs);
+}
+
+.summary-row i {
+  color: var(--galaxy-aurora-cyan);
+  font-size: 0.9rem;
+  width: 16px;
+  text-align: center;
+}
+
+.price-value {
+  font-weight: 600;
+  color: var(--galaxy-starlight);
+}
+
+.quantity-value {
+  font-weight: 600;
+  color: var(--galaxy-starlight);
+  background: rgba(77, 208, 225, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--galaxy-radius-sm);
+  font-size: 0.9rem;
+}
+
+.summary-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--galaxy-aurora-cyan), transparent);
+  margin: var(--galaxy-space-sm) 0;
 }
 
 .summary-row.total {
   margin-top: var(--galaxy-space-sm);
-  padding-top: var(--galaxy-space-sm);
-  border-top: 1px solid var(--galaxy-aurora-cyan);
-  font-size: 1.2rem;
+  padding: var(--galaxy-space-md) 0;
+  background: rgba(77, 208, 225, 0.05);
+  border-radius: var(--galaxy-radius-md);
+  padding-left: var(--galaxy-space-md);
+  padding-right: var(--galaxy-space-md);
+  font-size: 1.3rem;
   font-weight: bold;
   color: var(--galaxy-starlight);
+  border: 1px solid rgba(77, 208, 225, 0.3);
+}
+
+.total-amount {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--galaxy-nova-gold);
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.savings-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-xs);
+  margin-top: var(--galaxy-space-sm);
+  padding: var(--galaxy-space-sm);
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: var(--galaxy-radius-sm);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: var(--galaxy-comet-green);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.savings-indicator i {
+  color: var(--galaxy-comet-green);
+  font-size: 1rem;
 }
 
 /* Pay Button */
@@ -961,6 +1150,18 @@ const config = useRuntimeConfig();
 .payment-icon {
   height: 30px;
   opacity: 0.7;
+}
+
+.qris-logo {
+  height: 40px;
+  opacity: 1;
+}
+
+.payment-note {
+  margin-top: var(--galaxy-space-sm);
+  color: var(--galaxy-light-gray);
+  font-size: 0.85rem;
+  opacity: 0.9;
 }
 
 .modal-overlay {

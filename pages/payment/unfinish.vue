@@ -21,11 +21,13 @@
         </div>
       </div>
       <div class="action-buttons">
-        <NuxtLink to="/products" class="galaxy-button-primary">
-          <i class="fas fa-shopping-cart"></i> Continue Shopping
-        </NuxtLink>
-        <NuxtLink to="/profile/transactions" class="galaxy-button-secondary">
-          <i class="fas fa-history"></i> View My Transactions
+        <button @click="retryPayment" class="galaxy-button-primary">
+          <i class="fas fa-redo"></i>
+          Coba Bayar Lagi
+        </button>
+        <NuxtLink to="/profile/history_order" class="galaxy-button-secondary">
+          <i class="fas fa-history"></i>
+          Lihat Riwayat Pesanan
         </NuxtLink>
       </div>
     </div>

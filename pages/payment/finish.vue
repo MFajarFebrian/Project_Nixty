@@ -1,6 +1,16 @@
 <template>
   <div class="payment-status-container">
-    <div class="status-card" :class="statusClass">
+    <!-- Loading Overlay -->
+    <div v-if="isProcessingLicense" class="loading-overlay">
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <h2 class="loading-title">Processing License...</h2>
+        <p class="loading-message">Please wait while we activate your license</p>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="status-card" :class="statusClass" v-show="!isProcessingLicense">
       <div class="icon-wrapper">
         <i :class="statusIcon"></i>
       </div>
@@ -25,15 +35,12 @@
         </div>
       </div>
       
-      <div class="action-buttons">
-        <NuxtLink to="/profile/transactions" class="galaxy-button-primary" v-if="isSuccess">
-          <i class="fas fa-receipt"></i> View Order Details
-        </NuxtLink>
+      <div class="finish-actions">
         <NuxtLink to="/products" class="galaxy-button-secondary">
-          <i class="fas fa-shopping-cart"></i> Continue Shopping
+          <i class="fas fa-shopping-cart"></i> Lanjut Belanja
         </NuxtLink>
-        <NuxtLink to="/" class="galaxy-button-tertiary" v-if="!isSuccess">
-          <i class="fas fa-home"></i> Back to Home
+        <NuxtLink to="/profile/history_order" class="galaxy-button-primary" v-if="isSuccess">
+          <i class="fas fa-receipt"></i> Lihat Pesanan Saya
         </NuxtLink>
       </div>
     </div>
@@ -41,6 +48,7 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 const route = useRoute()
 
 // Get URL parameters from Midtrans callback
@@ -49,6 +57,9 @@ const orderData = reactive({
   status_code: route.query.status_code || '',
   transaction_status: route.query.transaction_status || 'unknown'
 })
+
+// Loading state for license processing
+const isProcessingLicense = ref(false)
 
 // Determine status based on transaction_status
 const statusInfo = computed(() => {
@@ -130,6 +141,50 @@ const isSuccess = computed(() => statusInfo.value.isSuccess)
 
 // Log the received data for debugging
 console.log('Payment finish page - Received data:', orderData)
+
+// Auto-process license for successful payments
+const autoProcessLicense = async () => {
+  if (orderData.transaction_status === 'settlement' || orderData.transaction_status === 'capture') {
+    console.log('🎯 Auto-processing license for successful payment...')
+    
+    // Show loading state
+    isProcessingLicense.value = true
+    
+    try {
+      const response = await $fetch('/api/payment/auto-process-license', {
+        method: 'POST',
+        body: {
+          order_id: orderData.order_id,
+          transaction_status: orderData.transaction_status
+        }
+      })
+      
+      if (response.success) {
+        console.log('✅ License auto-processing completed:', response)
+        if (response.already_processed) {
+          console.log(`📝 License already processed (${response.licenses_count} license(s))`)
+        } else {
+          console.log(`🎉 Successfully processed ${response.licenses_processed} license(s)`)
+        }
+      } else {
+        console.log('⚠️ License auto-processing skipped:', response.message)
+      }
+    } catch (error) {
+      console.error('❌ License auto-processing failed:', error)
+      // Don't show error to user as payment was successful
+    } finally {
+      // Hide loading state
+      isProcessingLicense.value = false
+    }
+  }
+}
+
+// Run auto-processing on page load
+onMounted(() => {
+  if (orderData.order_id && orderData.transaction_status) {
+    autoProcessLicense()
+  }
+})
 </script>
 
 <style scoped>

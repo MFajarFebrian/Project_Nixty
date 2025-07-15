@@ -1,5 +1,5 @@
-import pool from '../../utils/db';
-import { getQuery, createError } from 'h3';
+import db from '../../utils/db.js';
+import { createError } from 'h3';
 
 /**
  * POST /api/admin/update-stock
@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Get current product and stock information
-    const [productRows] = await pool.execute(`
+    const [productRows] = await db.query(`
       SELECT 
         p.id, p.name, p.version, p.license_type_default,
         COALESCE(psv.available_stock, 0) as current_stock
@@ -79,30 +79,34 @@ export default defineEventHandler(async (event) => {
       });
     }
     
-    // Add new licenses
+    // Add new licenses directly to product_licenses table (PostgreSQL compatible)
     const licenseAddPromises = [];
     for (let i = 0; i < stockDifference; i++) {
       // Generate a unique product key for each license
       const productKey = `${product.name.substring(0, 3).toUpperCase()}-${product.version}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
       
-      licenseAddPromises.push(
-        pool.execute(
-          `CALL add_product_license(?, ?, ?, NULL, NULL, NULL, NULL, ?, NULL, ?)`,
-          [
-            productId,
-            licenseTypeToUse,
-            productKey,
-            JSON.stringify({ generated_by: userEmail, generated_at: new Date().toISOString() }),
-            `Auto-generated license by stock management system`
-          ]
-        )
-      );
+      const licenseData = {
+        product_id: productId,
+        license_type: licenseTypeToUse,
+        product_key: licenseTypeToUse === 'product_key' ? productKey : null,
+        email: licenseTypeToUse === 'email_password' ? `auto-gen-${productId}-${i}@example.com` : null,
+        password: licenseTypeToUse === 'email_password' ? `auto-pass-${Math.random().toString(36).substring(2, 10)}` : null,
+        additional_info: JSON.stringify({ generated_by: userEmail, generated_at: new Date().toISOString() }),
+        status: 'available',
+        notes: 'Auto-generated license by stock management system',
+        send_license: 0,
+        max_usage: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      licenseAddPromises.push(db.insert('product_licenses', licenseData));
     }
     
     await Promise.all(licenseAddPromises);
     
     // Fetch updated stock information
-    const [updatedStockView] = await pool.execute(`
+    const [updatedStockView] = await db.query(`
       SELECT * FROM product_stock_view WHERE product_id = ?
     `, [productId]);
     
@@ -146,4 +150,4 @@ export default defineEventHandler(async (event) => {
       statusMessage: error.message || 'An error occurred while updating stock'
     });
   }
-}); 
+});

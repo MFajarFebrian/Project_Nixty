@@ -1,60 +1,59 @@
-import { toRefs } from 'vue';
 import { debounce } from 'lodash-es';
 
-export const useHomePageInteractions = (homePageState) => {
-  // Destructure reactive state from the homePageState object
+export const useHomePageInteractions = (stateAndData) => {
+  // Extract reactive state object and data
+  const { homePageState, heroSlides, announcements } = stateAndData;
+  
+  // Destructure the reactive state
   const { 
     currentSlide, 
     currentAnnouncementSlide, 
     activeRecommendationTab, 
-    recommendedProductsCurrentPage 
-  } = toRefs(homePageState);
-
-  // Get static data from the homePageState object for use in logic
-  const { heroSlides, announcements } = homePageState;
+    recommendedProductsCurrentPage
+  } = homePageState;
 
   // Carousel methods
   const nextSlide = () => {
     if (heroSlides.value.length > 0) {
-      currentSlide.value = (currentSlide.value + 1) % heroSlides.value.length;
+      homePageState.currentSlide = (homePageState.currentSlide + 1) % heroSlides.value.length;
     }
   };
 
   const previousSlide = () => {
     if (heroSlides.value.length > 0) {
-      currentSlide.value = (currentSlide.value - 1 + heroSlides.value.length) % heroSlides.value.length;
+      homePageState.currentSlide = (homePageState.currentSlide - 1 + heroSlides.value.length) % heroSlides.value.length;
     }
   };
 
   const goToSlide = (index) => {
-    currentSlide.value = index;
+    homePageState.currentSlide = index;
   };
 
   const nextAnnouncement = () => {
     if (announcements.value.length > 0) {
-      currentAnnouncementSlide.value = (currentAnnouncementSlide.value + 1) % announcements.value.length;
+      homePageState.currentAnnouncementSlide = (homePageState.currentAnnouncementSlide + 1) % announcements.value.length;
     }
   };
 
   const previousAnnouncement = () => {
     if (announcements.value.length > 0) {
-      currentAnnouncementSlide.value = (currentAnnouncementSlide.value - 1 + announcements.value.length) % announcements.value.length;
+      homePageState.currentAnnouncementSlide = (homePageState.currentAnnouncementSlide - 1 + announcements.value.length) % announcements.value.length;
     }
   };
 
   const goToAnnouncement = (index) => {
-    currentAnnouncementSlide.value = index;
+    homePageState.currentAnnouncementSlide = index;
   };
 
   // Debounced Recommendation Tab Method
   const setActiveRecommendationTab = debounce((tabId) => {
-    activeRecommendationTab.value = tabId;
-    recommendedProductsCurrentPage.value = 1; // Reset page
+    homePageState.activeRecommendationTab = tabId;
+    homePageState.recommendedProductsCurrentPage = 1; // Reset page
   }, 300);
 
   // Debounced Pagination Method
   const setRecommendedProductsPage = debounce((page) => {
-    recommendedProductsCurrentPage.value = page;
+    homePageState.recommendedProductsCurrentPage = page;
   }, 300);
   
   const formatCurrency = (value) => {

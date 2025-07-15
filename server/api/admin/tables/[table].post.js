@@ -1,6 +1,7 @@
-import pool from '../../../utils/db';
+import db from '../../../utils/db';
 import bcrypt from 'bcryptjs';
 import { validateTableName, validateRecordData } from '../../../utils/admin-validation';
+import { useSupabase } from '../../../utils/config.js';
 
 /**
  * POST /api/admin/tables/[table]
@@ -40,7 +41,7 @@ export default defineEventHandler(async (event) => {
     if (tableName === 'users') {
       // Check email uniqueness
       if (validData.email) {
-        const [existingUser] = await pool.execute(
+        const [existingUser] = await db.execute(
           'SELECT id FROM users WHERE email = ?',
           [validData.email]
         );
@@ -59,20 +60,23 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Convert boolean fields for database
-    const [columns] = await pool.execute(`DESCRIBE ${tableName}`);
-    const columnInfo = columns.reduce((acc, col) => {
-      acc[col.Field] = col;
-      return acc;
-    }, {});
-
-    // Convert boolean values to tinyint for database
-    Object.keys(validData).forEach(key => {
-      const column = columnInfo[key];
-      if (column && column.Type.includes('tinyint(1)') && typeof validData[key] === 'boolean') {
-        validData[key] = validData[key] ? 1 : 0;
-      }
-    });
+    // Get column information for boolean conversion (only for MySQL)
+    if (!useSupabase) {
+      const [columns] = await db.execute(`DESCRIBE ${tableName}`);
+      const columnInfo = columns.reduce((acc, col) => {
+        acc[col.Field] = col;
+        return acc;
+      }, {});
+      
+      // Convert boolean values for MySQL (tinyint)
+      Object.keys(validData).forEach(key => {
+        const column = columnInfo[key];
+        if (column && typeof validData[key] === 'boolean' && column.Type.includes('tinyint(1)')) {
+          validData[key] = validData[key] ? 1 : 0;
+        }
+      });
+    }
+    // Note: For PostgreSQL/Supabase, boolean values are handled natively
 
     if (Object.keys(validData).length === 0) {
       throw createError({
@@ -81,25 +85,13 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Build INSERT query
-    const fields = Object.keys(validData);
-    const placeholders = fields.map(() => '?').join(', ');
-    const values = Object.values(validData);
-
-    const query = `INSERT INTO ${tableName} (${fields.join(', ')}) VALUES (${placeholders})`;
-    
-    const [result] = await pool.execute(query, values);
-
-    // Fetch the created record
-    const [newRecord] = await pool.execute(
-      `SELECT * FROM ${tableName} WHERE id = ?`,
-      [result.insertId]
-    );
+    // Use optimized db.insert method (handles both MySQL and PostgreSQL)
+    const newRecord = await db.insert(tableName, validData);
 
     return {
       success: true,
       message: 'Record created successfully',
-      data: newRecord[0]
+      data: newRecord
     };
 
   } catch (error) {

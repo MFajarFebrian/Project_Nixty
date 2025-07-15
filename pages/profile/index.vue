@@ -9,7 +9,7 @@
 
     <div v-else-if="error" class="state-container">
       <p class="error-text">&#10060; {{ error }}</p>
-      <button @click="fetchProfileData" class="galaxy-button-secondary">Try Again</button>
+        <button @click="fetchProfileData" class="galaxy-button-secondary">Try Again</button>
     </div>
 
     <div v-else-if="!user" class="state-container">
@@ -55,8 +55,9 @@
       </div>
 
       <div class="profile-actions">
-        <NuxtLink to="/profile/transactions" class="galaxy-button-primary">
-          <i class="fas fa-shopping-bag"></i> My Orders
+        <NuxtLink to="/profile/history_order" class="galaxy-button-primary">
+          <i class="fas fa-history"></i>
+          Order History
         </NuxtLink>
         <button @click="handleLogout" class="galaxy-button-secondary">
           <i class="fas fa-sign-out-alt"></i> Logout
@@ -122,6 +123,11 @@ const closeAuthModal = () => {
   // Re-fetch profile data in case user logged in
   fetchProfileData();
 };
+
+// Set page title
+useHead({
+  title: 'Profile'
+});
 
 onMounted(() => {
   fetchProfileData();

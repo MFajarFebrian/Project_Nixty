@@ -1,4 +1,5 @@
-import pool from '../../../utils/db';
+import db from '../../../utils/db.js';
+import { useSupabase } from '../../../utils/config.js';
 
 /**
  * GET /api/admin/tables/[table]
@@ -19,7 +20,7 @@ export default defineEventHandler(async (event) => {
     // Check for allowed tables
     const allowedTables = [
       'users', 'products', 'categories', 'transactions', 
-      'product_licenses', 'announcements', 'deals', 'hero_slides'
+      'product_licenses', 'announcements', 'hero_slides'
     ];
     
     if (!allowedTables.includes(tableName)) {
@@ -30,8 +31,8 @@ export default defineEventHandler(async (event) => {
     }
     
     // Count total records
-    const [countResult] = await pool.execute(`SELECT COUNT(*) as total FROM ${tableName}`);
-    const total = countResult[0].total;
+    const [countResult] = await db.query(`SELECT COUNT(*) as total FROM ${tableName}`);
+    const total = useSupabase ? parseInt(countResult[0].total) : countResult[0].total;
     console.log(`Total records found: ${total}`);
 
     // Setup for joins and additional fields
@@ -41,28 +42,25 @@ export default defineEventHandler(async (event) => {
 
     // Special handling for specific tables
     if (tableName === 'products') {
-      // Join with categories
+      // Join with categories and stock view
       joinClauses.push('LEFT JOIN categories c ON t.category_id = c.id');
-      joinFields.push('c.name AS categoryName');
-
-      // Join with product_stock_view untuk mendapatkan data stok
       joinClauses.push('LEFT JOIN product_stock_view psv ON t.id = psv.product_id');
+      joinFields.push('c.name AS categoryName');
       joinFields.push('psv.available_stock');
-      joinFields.push('psv.used_licenses');
-      joinFields.push('psv.expired_licenses');
-      joinFields.push('psv.reserved_licenses');
       joinFields.push('psv.total_licenses');
-      
-      // Group by untuk menghindari duplikasi
-      groupByFields = ['t.id'];
+      joinFields.push('psv.stock_status');
+      joinFields.push('psv.version');
     } else if (tableName === 'product_licenses') {
       // Join with products
       joinClauses.push('LEFT JOIN products p ON t.product_id = p.id');
       joinFields.push('p.name AS product_name');
       joinFields.push('p.version AS product_version');
     } else if (tableName === 'transactions') {
-      // Transactions tidak memiliki user_id, sehingga tidak perlu join dengan users
-      // Kita bisa menggunakan email yang sudah ada di tabel transactions
+      // Transactions doesn't have user_id, we use email from transactions table
+      // Add product info if needed
+      joinClauses.push('LEFT JOIN products p ON t.product_id = p.id');
+      joinFields.push('p.name AS product_name');
+      joinFields.push('p.version AS product_version');
     }
 
     // Get records with pagination, search, and sorting
@@ -73,13 +71,28 @@ export default defineEventHandler(async (event) => {
     const orderBy = getQuery(event).orderBy || 'id';
     const orderDir = getQuery(event).orderDir || 'desc';
     
-    // Get column info for search
-    const [columns] = await pool.execute(`DESCRIBE ${tableName}`);
+    // Get column info for search (database-specific)
+    let columns;
+    if (useSupabase) {
+      // PostgreSQL: Get column info from information_schema
+      [columns] = await db.query(`
+        SELECT column_name as "Field", data_type as "Type", 
+               is_nullable as "Null", column_default as "Default",
+               '' as "Key", '' as "Extra"
+        FROM information_schema.columns 
+        WHERE table_name = ? AND table_schema = 'public'
+        ORDER BY ordinal_position
+      `, [tableName]);
+    } else {
+      // MySQL: Use DESCRIBE
+      [columns] = await db.query(`DESCRIBE ${tableName}`);
+    }
+    
     const searchableColumns = columns.map(col => col.Field);
     console.log('Searchable columns:', searchableColumns);
     
     // Build search conditions
-    let searchConditions = '';
+let searchConditions = 'WHERE 1=1';
     const searchParams = [];
     
     if (search) {
@@ -96,7 +109,7 @@ export default defineEventHandler(async (event) => {
           });
         });
         
-        searchConditions = `WHERE (${searchQueries.join(' AND ')})`;
+searchConditions += ` AND (${searchQueries.join(' AND ')})`;
       }
     } else {
       searchConditions = 'WHERE 1=1';
@@ -119,7 +132,10 @@ export default defineEventHandler(async (event) => {
     
     // Add grouping if needed
     if (groupByFields.length > 0) {
-      query += ` GROUP BY ${groupByFields.join(', ')}`;
+      // For PostgreSQL, we need to include all non-aggregate columns in GROUP BY
+      // Get all column names from the main table
+      const mainTableColumns = columns.map(col => `t.${col.Field}`).join(', ');
+      query += ` GROUP BY ${mainTableColumns}, ${groupByFields.join(', ')}`;
     }
 
     // Add sorting and pagination
@@ -129,7 +145,7 @@ export default defineEventHandler(async (event) => {
     console.log('SQL Params:', searchParams);
     
     // Execute the query
-    const [records] = await pool.execute(query, searchParams);
+    const [records] = await db.query(query, searchParams);
     
     console.log(`Retrieved ${records.length} records`);
     
@@ -146,7 +162,7 @@ export default defineEventHandler(async (event) => {
     // If table is products, fetch categories for the dropdown
     let categories = [];
     if (tableName === 'products') {
-      const [categoryRows] = await pool.execute('SELECT id, name, slug FROM categories ORDER BY name ASC');
+      const [categoryRows] = await db.query('SELECT id, name, slug FROM categories ORDER BY name ASC');
       categories = categoryRows;
     }
 
