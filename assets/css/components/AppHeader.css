@@ -32,7 +32,7 @@
 
 .nav-links > div {
   display: flex;
-  gap: var(--galaxy-space-xl);
+  gap: var(--galaxy-space-xxl);
 }
 
 .nav-links.nav-slide {

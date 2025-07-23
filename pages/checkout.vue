@@ -36,11 +36,6 @@
         
         <!-- Product Content -->
         <div v-else-if="product" class="product-checkout-container">
-          <div class="checkout-header">
-            <h1>Checkout</h1>
-<p class="product-name">{{ selectedVersionName }}</p>
-          </div>
-          
           <div class="checkout-grid">
             <!-- Product Info Section -->
             <div class="product-info galaxy-card">
@@ -191,7 +186,6 @@
                   <img src="https://images.seeklogo.com/logo-png/39/1/quick-response-code-indonesia-standard-qris-logo-png_seeklogo-391791.png" alt="QRIS" class="payment-icon qris-logo" />
                   <!-- Add more payment icons -->
                 </div>
-                <p class="payment-note">Pay via QRIS, e-wallet, virtual account, or credit card</p>
               </div>
               
             </div>
