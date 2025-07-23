@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
     
     // Add product status filter for products table count
     if (tableName === 'products') {
-      countQuery += ` WHERE status = ?`;
+      countQuery += ` WHERE status = $1`;
       countParams.push('active');
     }
     
@@ -89,7 +89,7 @@ export default defineEventHandler(async (event) => {
                is_nullable as "Null", column_default as "Default",
                '' as "Key", '' as "Extra"
         FROM information_schema.columns 
-        WHERE table_name = ? AND table_schema = 'nixty'
+        WHERE table_name = $1 AND table_schema = 'nixty'
         ORDER BY ordinal_position
       `, [tableName]);
     } else {
@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
     
     // Add product status filter for products table
     if (tableName === 'products') {
-      searchConditions += ` AND t.status = ?`;
+      searchConditions += ` AND t.status = $${searchParams.length + 1}`;
       searchParams.push('active');
     }
     
@@ -116,18 +116,16 @@ export default defineEventHandler(async (event) => {
         const searchQueries = [];
         
         searchTerms.forEach(term => {
-          const columnConditions = searchableColumns.map(col => `${col} LIKE ?`);
-          searchQueries.push(`(${columnConditions.join(' OR ')})`);
-          
-          searchableColumns.forEach(() => {
+          const columnConditions = searchableColumns.map(col => {
+            const paramIndex = searchParams.length + 1;
             searchParams.push(`%${term}%`);
+            return `${col} LIKE $${paramIndex}`;
           });
+          searchQueries.push(`(${columnConditions.join(' OR ')})`);
         });
         
-searchConditions += ` AND (${searchQueries.join(' AND ')})`;
+        searchConditions += ` AND (${searchQueries.join(' AND ')})`;
       }
-    } else {
-      searchConditions = 'WHERE 1=1';
     }
     
     // Add filters if provided
@@ -136,7 +134,7 @@ searchConditions += ` AND (${searchQueries.join(' AND ')})`;
     Object.keys(filterParams).forEach(key => {
       const value = filterParams[key];
       if (value !== undefined && value !== '') {
-        searchConditions += ` AND t.${key} = ?`;
+        searchConditions += ` AND t.${key} = $${searchParams.length + 1}`;
         searchParams.push(value);
       }
     });
