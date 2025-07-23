@@ -155,6 +155,11 @@ const formatCurrency = (value) => {
   transform: scale(1.05);
 }
 
+.product-card:hover .checkout-button {
+  opacity: 1;
+  transform: scale(1);
+}
+
 .product-badges {
   position: absolute;
   top: var(--galaxy-space-md, 1rem);
@@ -247,8 +252,11 @@ const formatCurrency = (value) => {
 }
 
 .checkout-button {
-  width: 36px;
-  height: 36px;
+  position: absolute;
+  bottom: var(--galaxy-space-md, 1rem);
+  right: var(--galaxy-space-md, 1rem);
+  width: 40px;
+  height: 40px;
   background: var(--galaxy-primary-gradient, linear-gradient(135deg, #1976d2, #42a5f5));
   border: none;
   border-radius: 50%;
@@ -261,10 +269,12 @@ const formatCurrency = (value) => {
   transition: all var(--galaxy-transition-fast, 0.2s ease);
   box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
   z-index: 10;
+  opacity: 0;
+  transform: scale(0.8);
 }
 
 .checkout-button:hover {
-  transform: scale(1.1);
+  transform: scale(1.1) !important;
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.5);
   background: linear-gradient(135deg, #1565c0, #2196f3);
 }

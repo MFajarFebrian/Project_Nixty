@@ -347,6 +347,11 @@
   pointer-events: none;
 }
 
+/* Hide navigation header (close button and title) on desktop */
+.nav-header {
+  display: none;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .app-header {
@@ -406,7 +411,7 @@
   }
   
   .nav-header {
-    display: flex;
+    display: flex !important; /* Override desktop hidden rule */
     justify-content: space-between;
     align-items: center;
     padding: var(--galaxy-space-lg);
