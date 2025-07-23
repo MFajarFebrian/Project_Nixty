@@ -59,13 +59,9 @@ export default defineEventHandler(async (event) => {
     const [stockResult] = await db.query(
       `SELECT 
         COUNT(*) as total_licenses,
-        SUM(CASE 
-          WHEN status = 'available' AND (COALESCE(send_license, 0) < max_usage)
-          THEN (max_usage - COALESCE(send_license, 0))
-          ELSE 0 
-        END) as available_stock
+        COUNT(CASE WHEN status = 'available' THEN 1 END) as available_stock
       FROM nixty.product_license_base 
-      WHERE product_id = ?`,
+      WHERE product_id = $1`,
       [product.id]
     );
     
@@ -176,7 +172,7 @@ export default defineEventHandler(async (event) => {
   try {
     const [result] = await db.query(
       `INSERT INTO nixty.orders (user_id, product_id, quantity, total, status, order_id) 
-       VALUES (?, ?, ?, ?, 'pending', ?) RETURNING id`,
+       VALUES ($1, $2, $3, $4, 'pending', $5) RETURNING id`,
       [
         user.id, 
         product.id, 
@@ -192,22 +188,22 @@ export default defineEventHandler(async (event) => {
     // Store payment gateway logs
     if (transactionId) {
       await db.query(
-        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
+        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES ($1, $2, $3)`,
         [transactionId, 'midtrans_order_id', order_id]
       );
       
       await db.query(
-        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
+        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES ($1, $2, $3)`,
         [transactionId, 'midtrans_response', JSON.stringify(midtransResponse)]
       );
       
       await db.query(
-        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
+        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES ($1, $2, $3)`,
         [transactionId, 'customer_email', customer.email]
       );
       
       await db.query(
-        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
+        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES ($1, $2, $3)`,
         [transactionId, 'custom_email', body.custom_email || customer.email]
       );
     }
