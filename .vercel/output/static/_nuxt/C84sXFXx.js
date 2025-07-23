@@ -1,1 +1,0 @@
-import{f as o,g as n,h as t,c as r,o as a}from"./BWSXKlgt.js";const i=o({__name:"index",setup(u){const e=n();return t(()=>{sessionStorage.getItem("currentUser")?e.push("/dashboard"):e.push("/login")}),(s,c)=>(a(),r("div"))}});export{i as default};
