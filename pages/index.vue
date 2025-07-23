@@ -2,7 +2,7 @@
   <div class="loading-container">
     <div class="loading-content">
       <h1>Welcome to Nixty</h1>
-      <p>Redirecting to home page...</p>
+      <p>{{ user?.account_type === 'admin' ? 'Redirecting to dashboard...' : 'Redirecting to home page...' }}</p>
       <div class="loading-spinner">
         <div class="spinner"></div>
       </div>
@@ -11,8 +11,19 @@
 </template>
 
 <script setup>
-// Use server-side redirect for better performance
-await navigateTo('/home', { redirectCode: 301 })
+import { useAuth } from '~/composables/useAuth';
+
+const { user, initUser } = useAuth();
+
+// Initialize user data first
+await initUser();
+
+// Check if user is admin and redirect accordingly
+if (user.value && user.value.account_type === 'admin') {
+  await navigateTo('/dashboard', { redirectCode: 301 });
+} else {
+  await navigateTo('/home', { redirectCode: 301 });
+}
 </script>
 
 <style scoped>

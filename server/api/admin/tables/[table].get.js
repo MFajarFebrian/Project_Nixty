@@ -33,9 +33,18 @@ export default defineEventHandler(async (event) => {
     
     // Count total records (use nixty schema for Supabase)
     const schemaPrefix = useSupabase ? 'nixty.' : '';
-    const [countResult] = await db.query(`SELECT COUNT(*) as total FROM ${schemaPrefix}${tableName}`);
+    let countQuery = `SELECT COUNT(*) as total FROM ${schemaPrefix}${tableName}`;
+    const countParams = [];
+    
+    // Add product status filter for products table count
+    if (tableName === 'products') {
+      countQuery += ` WHERE status = ?`;
+      countParams.push('active');
+    }
+    
+    const [countResult] = await db.query(countQuery, countParams);
     const total = useSupabase ? parseInt(countResult[0].total) : countResult[0].total;
-    console.log(`Total records found: ${total}`);
+    console.log(`Total ${tableName === 'products' ? 'active ' : ''}records found: ${total}`);
 
     // Setup for joins and additional fields
     let joinClauses = [];
@@ -46,7 +55,7 @@ export default defineEventHandler(async (event) => {
     if (tableName === 'products') {
       // Join with categories and calculate stock from license tables
       joinClauses.push(`LEFT JOIN ${schemaPrefix}categories c ON t.category_id = c.id`);
-      joinClauses.push(`LEFT JOIN (SELECT product_id, COUNT(*) as total_licenses, COUNT(CASE WHEN status = 'available' THEN 1 END) as available_stock FROM ${schemaPrefix}product_license_base GROUP BY product_id) plb ON t.id = plb.product_id`);
+      joinClauses.push(`LEFT JOIN (SELECT plb.product_id, COUNT(*) as total_licenses, COUNT(CASE WHEN plb.status = 'available' THEN 1 END) as available_stock FROM ${schemaPrefix}product_license_base plb INNER JOIN ${schemaPrefix}products p ON plb.product_id = p.id WHERE p.status = 'active' GROUP BY plb.product_id) plb ON t.id = plb.product_id`);
       joinFields.push('c.name AS categoryName');
       joinFields.push('COALESCE(plb.available_stock, 0) as stock');
       joinFields.push('COALESCE(plb.total_licenses, 0) as total_licenses');
@@ -92,8 +101,14 @@ export default defineEventHandler(async (event) => {
     console.log('Searchable columns:', searchableColumns);
     
     // Build search conditions
-let searchConditions = 'WHERE 1=1';
+    let searchConditions = 'WHERE 1=1';
     const searchParams = [];
+    
+    // Add product status filter for products table
+    if (tableName === 'products') {
+      searchConditions += ` AND t.status = ?`;
+      searchParams.push('active');
+    }
     
     if (search) {
       const searchTerms = search.split(' ').filter(term => term);
