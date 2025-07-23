@@ -67,6 +67,11 @@ function getValidImageUrl(url) {
     return '/placeholder-grey.svg';
   }
   
+  // Allow Vercel Blob URLs
+  if (url.includes('vercel-storage.com') || url.startsWith('https://')) {
+    return url;
+  }
+  
   return url;
 }
 

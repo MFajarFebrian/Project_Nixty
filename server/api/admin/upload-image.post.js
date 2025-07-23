@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import { join, extname } from 'path';
 import { createHash } from 'crypto';
+import { put } from '@vercel/blob';
 
 /**
  * Get file extension from MIME type
@@ -102,28 +103,44 @@ export default defineEventHandler(async (event) => {
     // Check if we're in a serverless environment (like Vercel)
     const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
     
+    let publicUrl;
+    
     if (isServerless) {
-      // In serverless environment, we can't save files to filesystem
-      throw createError({
-        statusCode: 501,
-        statusMessage: 'File upload not supported in serverless environment. Please use external image hosting services like Imgur, Cloudinary, or GitHub for product images.'
-      });
+      // Use Vercel Blob storage for serverless environment
+      try {
+        const blobPath = `admin/images/${filename}`;
+        console.log(`Uploading to Vercel Blob: ${blobPath}`);
+        
+        const blob = await put(blobPath, file.data, {
+          access: 'public',
+          contentType: fileType
+        });
+        
+        publicUrl = blob.url;
+        console.log(`Blob uploaded successfully: ${publicUrl}`);
+        
+      } catch (blobError) {
+        console.error('Vercel Blob upload error:', blobError);
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to upload image to blob storage'
+        });
+      }
+    } else {
+      // Use local filesystem for development
+      const uploadDir = join(process.cwd(), 'public', 'uploads', 'admin');
+      try {
+        await fs.access(uploadDir);
+      } catch {
+        await fs.mkdir(uploadDir, { recursive: true });
+      }
+
+      // Save file
+      const filePath = join(uploadDir, filename);
+      await fs.writeFile(filePath, file.data);
+      
+      publicUrl = `/uploads/admin/${filename}`;
     }
-
-    // Create upload directory if it doesn't exist (only for local development)
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'admin');
-    try {
-      await fs.access(uploadDir);
-    } catch {
-      await fs.mkdir(uploadDir, { recursive: true });
-    }
-
-    // Save file
-    const filePath = join(uploadDir, filename);
-    await fs.writeFile(filePath, file.data);
-
-    // Return the public URL
-    const publicUrl = `/uploads/admin/${filename}`;
 
     return {
       success: true,

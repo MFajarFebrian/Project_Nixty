@@ -8,6 +8,7 @@ import { escapeHtml } from 'file://C:/Users/E31/Downloads/project_nixty/node_mod
 import { promises } from 'node:fs';
 import bcrypt from 'file://C:/Users/E31/Downloads/project_nixty/node_modules/bcryptjs/index.js';
 import midtransClient from 'file://C:/Users/E31/Downloads/project_nixty/node_modules/midtrans-client/index.js';
+import { put } from 'file://C:/Users/E31/Downloads/project_nixty/node_modules/@vercel/blob/dist/index.js';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'file://C:/Users/E31/Downloads/project_nixty/node_modules/dotenv/lib/main.js';
 import { createStorage, prefixStorage } from 'file://C:/Users/E31/Downloads/project_nixty/node_modules/unstorage/dist/index.mjs';
@@ -7221,21 +7222,35 @@ const uploadImage_post = defineEventHandler(async (event) => {
     const extension = extname(file.filename || "") || getExtensionFromMimeType(fileType);
     const filename = `${timestamp}-${hash}${extension}`;
     const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+    let publicUrl;
     if (isServerless) {
-      throw createError({
-        statusCode: 501,
-        statusMessage: "File upload not supported in serverless environment. Please use external image hosting services like Imgur, Cloudinary, or GitHub for product images."
-      });
+      try {
+        const blobPath = `admin/images/${filename}`;
+        console.log(`Uploading to Vercel Blob: ${blobPath}`);
+        const blob = await put(blobPath, file.data, {
+          access: "public",
+          contentType: fileType
+        });
+        publicUrl = blob.url;
+        console.log(`Blob uploaded successfully: ${publicUrl}`);
+      } catch (blobError) {
+        console.error("Vercel Blob upload error:", blobError);
+        throw createError({
+          statusCode: 500,
+          statusMessage: "Failed to upload image to blob storage"
+        });
+      }
+    } else {
+      const uploadDir = join(process.cwd(), "public", "uploads", "admin");
+      try {
+        await promises.access(uploadDir);
+      } catch {
+        await promises.mkdir(uploadDir, { recursive: true });
+      }
+      const filePath = join(uploadDir, filename);
+      await promises.writeFile(filePath, file.data);
+      publicUrl = `/uploads/admin/${filename}`;
     }
-    const uploadDir = join(process.cwd(), "public", "uploads", "admin");
-    try {
-      await promises.access(uploadDir);
-    } catch {
-      await promises.mkdir(uploadDir, { recursive: true });
-    }
-    const filePath = join(uploadDir, filename);
-    await promises.writeFile(filePath, file.data);
-    const publicUrl = `/uploads/admin/${filename}`;
     return {
       success: true,
       message: "Image uploaded successfully",
