@@ -29,8 +29,8 @@ export default defineEventHandler(async (event) => {
     }
     
     // Get transaction details directly from orders table using order_id
-    const [orderResults] = await db.execute(
-      'SELECT id FROM nixty.orders WHERE order_id = ?',
+    const [orderResults] = await db.query(
+      'SELECT id FROM nixty.orders WHERE order_id = $1',
       [order_id]
     );
     
@@ -44,12 +44,12 @@ export default defineEventHandler(async (event) => {
     const transactionId = orderResults[0].id;
     
     // Get order details with user and product information
-    const [orders] = await db.execute(
+    const [orders] = await db.query(
       `SELECT o.*, u.email as user_email, u.name as user_name, p.name as product_name
        FROM nixty.orders o
        LEFT JOIN nixty.users u ON o.user_id = u.id
        LEFT JOIN nixty.products p ON o.product_id = p.id
-       WHERE o.id = ?`,
+       WHERE o.id = $1`,
       [transactionId]
     );
     
@@ -63,8 +63,8 @@ export default defineEventHandler(async (event) => {
     const transaction = orders[0];
     
     // Check if license already processed
-    const [existingLicenses] = await db.execute(
-      'SELECT COUNT(*) as count FROM nixty.orders_license WHERE transaction_id = ?',
+    const [existingLicenses] = await db.query(
+      'SELECT COUNT(*) as count FROM nixty.orders_license WHERE transaction_id = $1',
       [transactionId]
     );
     
@@ -81,8 +81,8 @@ export default defineEventHandler(async (event) => {
     
     // Update order status if needed
     if (transaction.status !== 'completed') {
-      await db.execute(
-        `UPDATE nixty.orders SET status = 'completed' WHERE id = ?`,
+      await db.query(
+        `UPDATE nixty.orders SET status = 'completed' WHERE id = $1`,
         [transactionId]
       );
       console.log(`Order status updated to completed for order ${order_id}`);
@@ -96,16 +96,12 @@ export default defineEventHandler(async (event) => {
     console.log(`Processing ${quantity} license(s) for order ${order_id}`);
     
     // Check stock before processing
-    const [stockCheck] = await db.execute(
+    const [stockCheck] = await db.query(
       `SELECT 
         COUNT(*) as total_licenses,
-        SUM(CASE 
-          WHEN status = 'available' AND (COALESCE(send_license, 0) < max_usage)
-          THEN (max_usage - COALESCE(send_license, 0))
-          ELSE 0 
-        END) as available_stock
+        COUNT(CASE WHEN status = 'available' THEN 1 END) as available_stock
       FROM nixty.product_license_base 
-      WHERE product_id = ?`,
+      WHERE product_id = $1`,
       [transaction.product_id]
     );
     
