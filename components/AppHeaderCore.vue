@@ -8,7 +8,7 @@
     <button 
       class="mobile-menu-toggle" 
       @click="toggleMobileMenu"
-      :class="{ 'active': isMobileMenuOpen }"
+      :class="{ 'active': isMobileMenuOpen, 'menu-open': isMobileMenuOpen }"
       v-if="!user || user.account_type !== 'admin'"
     >
       <span class="hamburger-line"></span>

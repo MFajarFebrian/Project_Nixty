@@ -341,6 +341,12 @@
   transform: rotate(-45deg) translate(7px, -6px);
 }
 
+/* Hide hamburger button when mobile menu is open */
+.mobile-menu-toggle.menu-open {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .app-header {
@@ -368,8 +374,8 @@
     transition: transform var(--galaxy-transition-normal);
     z-index: 1000;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-start;
+    justify-content: flex-start;
   }
   
   .nav-links.mobile-open {
@@ -396,6 +402,7 @@
     display: flex;
     flex-direction: column;
     z-index: 1001;
+    transform: translateX(0);
   }
   
   .nav-header {
