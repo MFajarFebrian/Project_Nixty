@@ -6,6 +6,13 @@ import { getHeaders, createError } from 'h3';
  * Verifies that the user is authenticated and has admin privileges
  */
 export default defineEventHandler(async (event) => {
+  const url = getRequestURL(event);
+  
+  // Only apply admin auth to admin API routes
+  if (!url.pathname.startsWith('/api/admin/')) {
+    return;
+  }
+  
   const config = useRuntimeConfig();
   
   // Skip authentication for development mode
