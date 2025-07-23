@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@nuxtjs/supabase": "^1.5.3",
     "@prisma/client": "^6.12.0",
     "@supabase/supabase-js": "^2.50.0",
     "@types/lodash-es": "^4.17.12",
@@ -17,6 +18,7 @@
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
     "dotenv": "^17.2.0",
+    "h3": "^1.15.3",
     "jspdf": "^3.0.1",
     "lodash-es": "^4.17.21",
     "midtrans-client": "^1.4.3",
@@ -26,6 +28,7 @@
     "nuxt": "^3.17.4",
     "pg": "^8.16.2",
     "postgres": "^3.4.7",
+    "supabase": "^2.26.9",
     "uuid": "^11.1.0",
     "vue": "^3.5.14",
     "vue-router": "^4.5.1",
@@ -34,13 +37,10 @@
   },
   "devDependencies": {
     "@nuxt/types": "^2.18.1",
-    "@nuxtjs/supabase": "^1.5.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/mysql": "^2.15.27",
     "@types/node": "^18.19.103",
     "@types/nodemailer": "^6.4.14",
-    "h3": "^1.15.3",
-    "supabase": "^2.26.9",
     "typescript": "^5.8.3"
   }
 }
