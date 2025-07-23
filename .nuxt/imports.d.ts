@@ -48,6 +48,7 @@ export { useTransactionDetails } from '../composables/useTransactionDetails';
 export { useUtils } from '../composables/useUtils';
 export { adminFetch, adminApi } from '../utils/adminApi';
 export { createMockAdminUser, setAdminUser, isAdmin, getAdminHeaders } from '../utils/adminAuth';
+export { cleanupAuthData, hasCorruptedAuthData } from '../utils/authCleanup';
 export { profilePictureCache, getProfilePictureUrl } from '../utils/profilePictureCache';
 export { supabase } from '../utils/supabase';
 export { useSupabaseClient } from '../node_modules/@nuxtjs/supabase/dist/runtime/composables/useSupabaseClient';

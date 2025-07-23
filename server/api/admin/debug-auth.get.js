@@ -13,8 +13,8 @@ export default defineEventHandler(async (event) => {
     headers: {
       hasUserId: !!headers['x-user-id'],
       hasUserEmail: !!headers['x-user-email'],
-      userId: headers['x-user-id'] ? headers['x-user-id'].substring(0, 8) + '***' : 'none',
-      userEmail: headers['x-user-email'] ? headers['x-user-email'].substring(0, 5) + '***' : 'none',
+      userId: headers['x-user-id'] ? String(headers['x-user-id']).substring(0, 8) + '***' : 'none',
+      userEmail: headers['x-user-email'] ? String(headers['x-user-email']).substring(0, 5) + '***' : 'none',
       allHeaders: Object.keys(headers)
     },
     timestamp: new Date().toISOString()

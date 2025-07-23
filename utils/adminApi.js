@@ -11,8 +11,8 @@ export const adminFetch = async (url, options = {}) => {
     hasUser: !!user.value,
     userKeys: user.value ? Object.keys(user.value) : [],
     accountType: user.value?.account_type,
-    userId: user.value?.id ? user.value.id.substring(0, 8) + '***' : 'none',
-    userEmail: user.value?.email ? user.value.email.substring(0, 5) + '***' : 'none'
+    userId: user.value?.id ? String(user.value.id).substring(0, 8) + '***' : 'none',
+    userEmail: user.value?.email ? String(user.value.email).substring(0, 5) + '***' : 'none'
   })
   
   if (!user.value) {
@@ -27,14 +27,14 @@ export const adminFetch = async (url, options = {}) => {
   
   // Prepare headers with authentication
   const headers = {
-    'x-user-id': user.value.id,
-    'x-user-email': user.value.email,
+    'x-user-id': String(user.value.id),
+    'x-user-email': String(user.value.email),
     ...options.headers
   }
   
   console.log('AdminFetch - Sending headers:', {
-    'x-user-id': headers['x-user-id'] ? headers['x-user-id'].substring(0, 8) + '***' : 'none',
-    'x-user-email': headers['x-user-email'] ? headers['x-user-email'].substring(0, 5) + '***' : 'none'
+    'x-user-id': headers['x-user-id'] ? String(headers['x-user-id']).substring(0, 8) + '***' : 'none',
+    'x-user-email': headers['x-user-email'] ? String(headers['x-user-email']).substring(0, 5) + '***' : 'none'
   })
   
   // Make the request with authentication headers

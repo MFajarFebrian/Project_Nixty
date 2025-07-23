@@ -7,6 +7,7 @@ declare global {
   const adminFetch: typeof import('../../utils/adminApi')['adminFetch']
   const callOnce: typeof import('../../node_modules/nuxt/dist/app/composables/once')['callOnce']
   const cancelIdleCallback: typeof import('../../node_modules/nuxt/dist/app/compat/idle-callback')['cancelIdleCallback']
+  const cleanupAuthData: typeof import('../../utils/authCleanup')['cleanupAuthData']
   const clearError: typeof import('../../node_modules/nuxt/dist/app/composables/error')['clearError']
   const clearNuxtData: typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['clearNuxtData']
   const clearNuxtState: typeof import('../../node_modules/nuxt/dist/app/composables/state')['clearNuxtState']
@@ -35,6 +36,7 @@ declare global {
   const getRouteRules: typeof import('../../node_modules/nuxt/dist/app/composables/manifest')['getRouteRules']
   const globalCache: typeof import('../../composables/useCache')['globalCache']
   const h: typeof import('vue')['h']
+  const hasCorruptedAuthData: typeof import('../../utils/authCleanup')['hasCorruptedAuthData']
   const hasInjectionContext: typeof import('vue')['hasInjectionContext']
   const inject: typeof import('vue')['inject']
   const injectHead: typeof import('../../node_modules/nuxt/dist/app/composables/head')['injectHead']
@@ -221,6 +223,7 @@ declare module 'vue' {
     readonly adminFetch: UnwrapRef<typeof import('../../utils/adminApi')['adminFetch']>
     readonly callOnce: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/once')['callOnce']>
     readonly cancelIdleCallback: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/compat/idle-callback')['cancelIdleCallback']>
+    readonly cleanupAuthData: UnwrapRef<typeof import('../../utils/authCleanup')['cleanupAuthData']>
     readonly clearError: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/error')['clearError']>
     readonly clearNuxtData: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/asyncData')['clearNuxtData']>
     readonly clearNuxtState: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/state')['clearNuxtState']>
@@ -249,6 +252,7 @@ declare module 'vue' {
     readonly getRouteRules: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/manifest')['getRouteRules']>
     readonly globalCache: UnwrapRef<typeof import('../../composables/useCache')['globalCache']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
+    readonly hasCorruptedAuthData: UnwrapRef<typeof import('../../utils/authCleanup')['hasCorruptedAuthData']>
     readonly hasInjectionContext: UnwrapRef<typeof import('vue')['hasInjectionContext']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectHead: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/head')['injectHead']>

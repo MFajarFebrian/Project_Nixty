@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { cleanupAuthData, hasCorruptedAuthData } from '~/utils/authCleanup';
 
 const user = ref(null);
 const isReady = ref(false);
@@ -8,19 +9,36 @@ export function useAuth() {
     if (process.client && !isReady.value) {
       console.log('InitUser - Starting user initialization');
       
+      // Check for corrupted auth data and clean it up
+      if (hasCorruptedAuthData()) {
+        console.warn('InitUser - Detected corrupted auth data, cleaning up');
+        cleanupAuthData();
+      }
+      
       // First try to get user from localStorage
       const userJson = localStorage.getItem('currentUser');
       if (userJson) {
         try {
-          user.value = JSON.parse(userJson);
-          console.log('InitUser - User loaded from localStorage:', {
-            hasUser: !!user.value,
-            accountType: user.value?.account_type,
-            userId: user.value?.id ? user.value.id.substring(0, 8) + '***' : 'none',
-            userEmail: user.value?.email ? user.value.email.substring(0, 5) + '***' : 'none'
-          });
+          const parsedUser = JSON.parse(userJson);
+          
+          // Validate that the user object has required properties
+          if (parsedUser && typeof parsedUser === 'object' && parsedUser.id && parsedUser.email) {
+            user.value = parsedUser;
+            console.log('InitUser - User loaded from localStorage:', {
+              hasUser: !!user.value,
+              accountType: user.value?.account_type,
+              userId: user.value?.id ? String(user.value.id).substring(0, 8) + '***' : 'none',
+              userEmail: user.value?.email ? String(user.value.email).substring(0, 5) + '***' : 'none'
+            });
+          } else {
+            console.warn('InitUser - Invalid user data in localStorage, clearing it');
+            localStorage.removeItem('currentUser');
+            user.value = null;
+          }
         } catch (error) {
-          console.error('Error parsing user data:', error);
+          console.error('Error parsing user data from localStorage:', error);
+          // Clear corrupted localStorage data
+          localStorage.removeItem('currentUser');
           user.value = null;
         }
       }
@@ -54,8 +72,8 @@ export function useAuth() {
               localStorage.setItem('currentUser', JSON.stringify(profile));
               console.log('InitUser - Profile loaded from database:', {
                 accountType: profile.account_type,
-                userId: profile.id ? profile.id.substring(0, 8) + '***' : 'none',
-                userEmail: profile.email ? profile.email.substring(0, 5) + '***' : 'none'
+                userId: profile.id ? String(profile.id).substring(0, 8) + '***' : 'none',
+                userEmail: profile.email ? String(profile.email).substring(0, 5) + '***' : 'none'
               });
             }
           }
@@ -76,10 +94,20 @@ export function useAuth() {
   const setUser = (newUser) => {
     if (process.client) {
       user.value = newUser;
-      if (newUser) {
-        localStorage.setItem('currentUser', JSON.stringify(newUser));
+      if (newUser && typeof newUser === 'object' && newUser.id && newUser.email) {
+        try {
+          localStorage.setItem('currentUser', JSON.stringify(newUser));
+          console.log('SetUser - User saved to localStorage:', {
+            accountType: newUser.account_type,
+            userId: String(newUser.id).substring(0, 8) + '***',
+            userEmail: String(newUser.email).substring(0, 5) + '***'
+          });
+        } catch (error) {
+          console.error('Error saving user to localStorage:', error);
+        }
       } else {
         localStorage.removeItem('currentUser');
+        console.log('SetUser - User removed from localStorage');
       }
     }
   };
