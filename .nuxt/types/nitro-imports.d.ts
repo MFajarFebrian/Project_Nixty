@@ -23,7 +23,6 @@ declare global {
   const createError: typeof import('../../node_modules/h3')['createError']
   const createEvent: typeof import('../../node_modules/h3')['createEvent']
   const createEventStream: typeof import('../../node_modules/h3')['createEventStream']
-  const createMissingTables: typeof import('../../server/utils/setup-database-integration.js')['createMissingTables']
   const createRouter: typeof import('../../node_modules/h3')['createRouter']
   const db: typeof import('../../server/utils/db')['default']
   const defaultContentType: typeof import('../../node_modules/h3')['defaultContentType']
@@ -104,7 +103,6 @@ declare global {
   const nitroPlugin: typeof import('../../node_modules/nitropack/dist/runtime/internal/plugin')['nitroPlugin']
   const parseCookies: typeof import('../../node_modules/h3')['parseCookies']
   const parseOrderId: typeof import('../../server/utils/order-id-generator')['parseOrderId']
-  const populateSampleData: typeof import('../../server/utils/setup-database-integration.js')['populateSampleData']
   const processLicenseDelivery: typeof import('../../server/utils/licenseService')['processLicenseDelivery']
   const processMultipleLicenses: typeof import('../../server/utils/licenseService')['processMultipleLicenses']
   const promisifyNodeListener: typeof import('../../node_modules/h3')['promisifyNodeListener']
@@ -144,9 +142,7 @@ declare global {
   const setResponseHeaders: typeof import('../../node_modules/h3')['setResponseHeaders']
   const setResponseStatus: typeof import('../../node_modules/h3')['setResponseStatus']
   const setSecurityHeaders: typeof import('../../server/utils/admin-security')['setSecurityHeaders']
-  const setupDatabaseIntegration: typeof import('../../server/utils/setup-database-integration.js')['setupDatabaseIntegration']
   const splitCookiesString: typeof import('../../node_modules/h3')['splitCookiesString']
-  const tableDefinitions: typeof import('../../server/utils/setup-database-integration.js')['tableDefinitions']
   const testEmailConnection: typeof import('../../server/utils/emailService')['testEmailConnection']
   const toEventHandler: typeof import('../../node_modules/h3')['toEventHandler']
   const toNodeListener: typeof import('../../node_modules/h3')['toNodeListener']
@@ -168,7 +164,6 @@ declare global {
   const useSupabase: typeof import('../../server/utils/config')['useSupabase']
   const validateAdminSession: typeof import('../../server/utils/admin-security')['validateAdminSession']
   const validateColumnName: typeof import('../../server/utils/admin-security')['validateColumnName']
-  const validateDatabaseSchema: typeof import('../../server/utils/setup-database-integration.js')['validateDatabaseSchema']
   const validateEmail: typeof import('../../server/utils/admin-validation')['validateEmail']
   const validateFileUpload: typeof import('../../server/utils/admin-validation')['validateFileUpload']
   const validateImageUrl: typeof import('../../server/utils/admin-validation')['validateImageUrl']
@@ -207,7 +202,6 @@ export { defineNitroErrorHandler } from 'nitropack/runtime/internal/error/utils'
 export { appendCorsHeaders, appendCorsPreflightHeaders, appendHeader, appendHeaders, appendResponseHeader, appendResponseHeaders, assertMethod, callNodeListener, clearResponseHeaders, clearSession, createApp, createAppEventHandler, createError, createEvent, createEventStream, createRouter, defaultContentType, defineEventHandler, defineLazyEventHandler, defineNodeListener, defineNodeMiddleware, defineRequestMiddleware, defineResponseMiddleware, defineWebSocket, defineWebSocketHandler, deleteCookie, dynamicEventHandler, eventHandler, fetchWithEvent, fromNodeMiddleware, fromPlainHandler, fromWebHandler, getCookie, getHeader, getHeaders, getMethod, getProxyRequestHeaders, getQuery, getRequestFingerprint, getRequestHeader, getRequestHeaders, getRequestHost, getRequestIP, getRequestPath, getRequestProtocol, getRequestURL, getRequestWebStream, getResponseHeader, getResponseHeaders, getResponseStatus, getResponseStatusText, getRouterParam, getRouterParams, getSession, getValidatedQuery, getValidatedRouterParams, handleCacheHeaders, handleCors, isCorsOriginAllowed, isError, isEvent, isEventHandler, isMethod, isPreflightRequest, isStream, isWebResponse, lazyEventHandler, parseCookies, promisifyNodeListener, proxyRequest, readBody, readFormData, readMultipartFormData, readRawBody, readValidatedBody, removeResponseHeader, sanitizeStatusCode, sanitizeStatusMessage, sealSession, send, sendError, sendIterable, sendNoContent, sendProxy, sendRedirect, sendStream, sendWebResponse, serveStatic, setCookie, setHeader, setHeaders, setResponseHeader, setResponseHeaders, setResponseStatus, splitCookiesString, toEventHandler, toNodeListener, toPlainHandler, toWebHandler, toWebRequest, unsealSession, updateSession, useBase, useSession, writeEarlyHints } from 'h3';
 export { buildAssetsURL as __buildAssetsURL, publicAssetsURL as __publicAssetsURL } from 'C:/Users/E31/Downloads/project_nixty/node_modules/nuxt/dist/core/runtime/nitro/utils/paths';
 export { defineAppConfig } from 'C:/Users/E31/Downloads/project_nixty/node_modules/nuxt/dist/core/runtime/nitro/utils/config';
-export { validateDatabaseSchema, createMissingTables, populateSampleData, setupDatabaseIntegration, tableDefinitions } from 'C:/Users/E31/Downloads/project_nixty/server/utils/setup-database-integration';
 export { validateColumnName, validateSortOrder, sanitizeSearchQuery, detectSuspiciousPatterns, generateSecureToken, hashSensitiveData, createAuditLogEntry, logAdminAction, requiresConfirmation, validateAdminSession, setSecurityHeaders, validateRequestOrigin } from 'C:/Users/E31/Downloads/project_nixty/server/utils/admin-security';
 export { ALLOWED_TABLES, TABLE_VALIDATION_RULES, validateTableName, sanitizeString, validateEmail, validateUrl, validateSlug, generateProductSlug, validateProductSlug, validateRecordData, validateRecordId, validatePaginationParams, validateFileUpload, validateImageUrl } from 'C:/Users/E31/Downloads/project_nixty/server/utils/admin-validation';
 export { validateUserSession, requireAuth, requireAdmin } from 'C:/Users/E31/Downloads/project_nixty/server/utils/auth';

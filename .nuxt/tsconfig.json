@@ -111,6 +111,9 @@
       ],
       "#build": [
         "."
+      ],
+      "#build/*": [
+        "./*"
       ]
     },
     "esModuleInterop": true,

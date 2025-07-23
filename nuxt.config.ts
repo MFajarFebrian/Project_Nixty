@@ -122,13 +122,18 @@ export default defineNuxtConfig({
     supabaseUrl: process.env.SUPABASE_URL || 'https://buafxvcghfeoquyprmcb.supabase.co',
     supabaseKey: process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWZ4dmNnaGZlb3F1eXBybWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2OTQwOTIsImV4cCI6MjA2NjI3MDA5Mn0.yeTIbNE7Caq6wBV_hqvjlUyHAc5PBGsLQvlKSGSe4NI',
     supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY,
+    midtransServerKey: process.env.NUXT_MIDTRANS_SERVER_KEY,
+    databaseUrl: process.env.DATABASE_URL,
     // Keys within public are also exposed client-side
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api',
       bypassAdminAuth: process.env.NODE_ENV === 'development' ? 'true' : 'false',
       nodeEnv: process.env.NODE_ENV || 'development',
       midtransClientKey: process.env.NUXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'SB-Mid-client-XZVBXJmESkGTZlFP',
-      baseUrl: process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+      midtransIsProduction: process.env.NUXT_PUBLIC_MIDTRANS_IS_PRODUCTION || 'false',
+      baseUrl: process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000',
+      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || 'https://buafxvcghfeoquyprmcb.supabase.co',
+      supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWZ4dmNnaGZlb3F1eXBybWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2OTQwOTIsImV4cCI6MjA2NjI3MDA5Mn0.yeTIbNE7Caq6wBV_hqvjlUyHAc5PBGsLQvlKSGSe4NI'
     }
   },
 
