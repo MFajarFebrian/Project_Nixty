@@ -63,7 +63,6 @@ export default defineEventHandler(async (event) => {
       license_type: body.license_type,
       status: body.status || 'available',
       notes: body.notes || null,
-      send_license: 0,
       max_usage: body.license_type === 'product_key' ? 5 : 1
     };
 

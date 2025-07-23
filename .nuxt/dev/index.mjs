@@ -4631,7 +4631,6 @@ const productLicenses_post = defineEventHandler(async (event) => {
       license_type: body.license_type,
       status: body.status || "available",
       notes: body.notes || null,
-      send_license: 0,
       max_usage: body.license_type === "product_key" ? 5 : 1
     };
     const baseLicense = await db.insert("product_license_base", baseLicenseData);
@@ -10745,11 +10744,7 @@ const checkout_get = defineEventHandler(async (event) => {
       const [stockInfo] = await db.query(`
         SELECT 
           COUNT(*) as total_licenses,
-          SUM(CASE 
-            WHEN status = 'available' AND (COALESCE(send_license, 0) < max_usage)
-            THEN (max_usage - COALESCE(send_license, 0))
-            ELSE 0 
-          END) as available_stock
+          COUNT(CASE WHEN status = 'available' THEN 1 END) as available_stock
         FROM nixty.product_license_base 
         WHERE product_id = $1
       `, [p.id]);
