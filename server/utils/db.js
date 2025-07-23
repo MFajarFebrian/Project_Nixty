@@ -27,32 +27,69 @@ const mysqlConfigs = {
   }
 };
 
-// Supabase PostgreSQL configuration
+// Enhanced Supabase PostgreSQL configuration with improved SSL handling
 const supabaseConfig = {
-  host: process.env.SUPABASE_DB_HOST,
-  user: process.env.SUPABASE_DB_USER || 'postgres',
-  password: process.env.SUPABASE_DB_PASSWORD,
-  database: process.env.SUPABASE_DB_NAME || 'postgres',
-  port: process.env.SUPABASE_DB_PORT || 5432,
-  ssl: { rejectUnauthorized: false },
+  connectionString: process.env.DATABASE_URL,
+  ssl: { 
+    rejectUnauthorized: false 
+  },
   max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 5000, // Increased timeout for better reliability
 };
 
 let pool;
 let isPostgreSQL = false;
 
-if (useSupabase) {
-  console.log('Using SUPABASE PostgreSQL database');
-  pool = new Pool(supabaseConfig);
-  isPostgreSQL = true;
-} else {
-  const config = useOnlineDB ? mysqlConfigs.online : mysqlConfigs.local;
-  console.log(`Using ${useOnlineDB ? 'ONLINE' : 'LOCAL'} MySQL database`);
-  pool = mysql.createPool(config);
-  isPostgreSQL = false;
+// Initialize the database connection
+function initializeDbConnection() {
+  try {
+    if (useSupabase) {
+      console.log('Using SUPABASE PostgreSQL database');
+      console.log(`Using direct connection string: ${supabaseConfig.connectionString ? 'Yes' : 'No'}`);
+      
+      // Make sure we have a valid connection string
+      if (!supabaseConfig.connectionString) {
+        console.log('Connection string not found, constructing manually...');
+        // Construct connection string if not provided
+        const connectionString = `postgresql://${process.env.SUPABASE_DB_USER}:${process.env.SUPABASE_DB_PASSWORD}@${process.env.SUPABASE_DB_HOST}:${process.env.SUPABASE_DB_PORT || 6543}/${process.env.SUPABASE_DB_NAME || 'postgres'}`;
+        console.log(`Constructed connection string: ${connectionString.replace(/:[^:]*@/, ':****@')}`);
+        supabaseConfig.connectionString = connectionString;
+      }
+      
+      // Create pool
+      pool = new Pool(supabaseConfig);
+      isPostgreSQL = true;
+    } else {
+      const config = useOnlineDB ? mysqlConfigs.online : mysqlConfigs.local;
+      console.log(`Using ${useOnlineDB ? 'ONLINE' : 'LOCAL'} MySQL database`);
+      pool = mysql.createPool(config);
+      isPostgreSQL = false;
+    }
+    
+    // Add event listeners to handle connection issues
+    if (isPostgreSQL) {
+      pool.on('error', (err) => {
+        console.error('Unexpected PostgreSQL pool error:', err);
+      });
+      
+      // Test the connection
+      pool.query('SELECT 1').then(() => {
+        console.log('PostgreSQL connection successful');
+      }).catch(err => {
+        console.error('PostgreSQL connection test failed:', err);
+      });
+    }
+    
+    return pool;
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    throw error;
+  }
 }
+
+// Initialize the connection
+pool = initializeDbConnection();
 
 // Create a unified database interface
 const db = {
@@ -65,12 +102,24 @@ const db = {
         pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
 
         // PostgreSQL query with enhanced error handling
-        const client = await pool.connect();
+        let client;
+        try {
+          client = await pool.connect();
+        } catch (connError) {
+          console.error('Connection error:', connError);
+          // If we're in development mode and database fails, just log error and return empty result
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Development mode: returning empty result instead of failing');
+            return [[], []];
+          }
+          throw connError;
+        }
+        
         try {
           console.log('Executing PostgreSQL query:', pgSql);
           console.log('With parameters:', params);
           const result = await client.query(pgSql, params);
-          console.log('Query result rows:', result.rows.length);
+          console.log('Query result rows:', result.rows?.length || 0);
           return [result.rows, result.fields];
         } finally {
           client.release();
@@ -106,7 +155,8 @@ const db = {
       const fields = Object.keys(data);
       const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
       const values = Object.values(data);
-      const query = `INSERT INTO ${tableName} (${fields.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+      const fullTableName = `nixty.${tableName}`;
+      const query = `INSERT INTO ${fullTableName} (${fields.join(', ')}) VALUES (${placeholders}) RETURNING *`;
       const [result] = await this.query(query, values);
       return result[0];
     } else {
@@ -126,8 +176,9 @@ const db = {
     values.push(id);
     
     if (isPostgreSQL) {
+      const fullTableName = `nixty.${tableName}`;
       const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
-      const query = `UPDATE ${tableName} SET ${setClause} WHERE id = $${fields.length + 1} RETURNING *`;
+      const query = `UPDATE ${fullTableName} SET ${setClause} WHERE id = $${fields.length + 1} RETURNING *`;
       const [result] = await this.query(query, values);
       return result[0];
     } else {
@@ -140,7 +191,8 @@ const db = {
   },
 
   async select(tableName, conditions = {}, options = {}) {
-    let query = `SELECT * FROM ${tableName}`;
+    const fullTableName = isPostgreSQL ? `nixty.${tableName}` : tableName;
+    let query = `SELECT * FROM ${fullTableName}`;
     const params = [];
     
     if (Object.keys(conditions).length > 0) {
@@ -161,6 +213,24 @@ const db = {
     
     const [result] = await this.query(query, params);
     return result;
+  },
+  
+  // Testing connection
+  async testConnection() {
+    try {
+      if (isPostgreSQL) {
+        const [result] = await this.query('SELECT NOW() as time');
+        console.log('PostgreSQL connection test successful:', result[0].time);
+        return true;
+      } else {
+        const [result] = await this.query('SELECT NOW() as time');
+        console.log('MySQL connection test successful:', result[0].time);
+        return true;
+      }
+    } catch (error) {
+      console.error('Connection test failed:', error);
+      return false;
+    }
   }
 };
 

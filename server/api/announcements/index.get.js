@@ -9,12 +9,12 @@ export default defineEventHandler(async (event) => {
       status = 'active'
     } = query;
 
-    const [rows] = await pool.execute(`
+    const [rows] = await pool.query(`
       SELECT *
-      FROM announcements
-      WHERE status = ?
+      FROM nixty.announcements
+      WHERE status = $1
       ORDER BY created_at DESC
-      LIMIT ? OFFSET ?
+      LIMIT $2 OFFSET $3
     `, [status, parseInt(limit), parseInt(offset)]);
 
     const announcements = rows.map(row => ({

@@ -36,11 +36,11 @@
       </div>
       
       <div class="finish-actions">
-        <NuxtLink to="/products" class="galaxy-button-secondary">
-          <i class="fas fa-shopping-cart"></i> Lanjut Belanja
+        <NuxtLink :to="`/orders/${transactionId}`" class="galaxy-button-primary" v-if="isSuccess && transactionId">
+          <i class="fas fa-eye"></i> Detail Order
         </NuxtLink>
-        <NuxtLink to="/profile/history_order" class="galaxy-button-primary" v-if="isSuccess">
-          <i class="fas fa-receipt"></i> Lihat Pesanan Saya
+        <NuxtLink to="/orders" class="galaxy-button-primary" v-else-if="isSuccess">
+          <i class="fas fa-receipt"></i> Detail Order
         </NuxtLink>
       </div>
     </div>
@@ -50,6 +50,7 @@
 <script setup>
 import { onMounted } from 'vue'
 const route = useRoute()
+const { success: showSuccessToast, info: showInfoToast, error: showErrorToast } = useToast()
 
 // Get URL parameters from Midtrans callback
 const orderData = reactive({
@@ -60,6 +61,9 @@ const orderData = reactive({
 
 // Loading state for license processing
 const isProcessingLicense = ref(false)
+
+// Transaction ID for detail page link
+const transactionId = ref(null)
 
 // Determine status based on transaction_status
 const statusInfo = computed(() => {
@@ -142,6 +146,27 @@ const isSuccess = computed(() => statusInfo.value.isSuccess)
 // Log the received data for debugging
 console.log('Payment finish page - Received data:', orderData)
 
+// Get transaction ID from order_id
+const getTransactionId = async () => {
+  if (orderData.order_id) {
+    try {
+      const response = await $fetch('/api/orders/get-transaction-id', {
+        method: 'POST',
+        body: {
+          order_id: orderData.order_id
+        }
+      })
+      
+      if (response.success && response.transaction_id) {
+        transactionId.value = response.transaction_id
+        console.log('Transaction ID found:', transactionId.value)
+      }
+    } catch (error) {
+      console.error('Failed to get transaction ID:', error)
+    }
+  }
+}
+
 // Auto-process license for successful payments
 const autoProcessLicense = async () => {
   if (orderData.transaction_status === 'settlement' || orderData.transaction_status === 'capture') {
@@ -163,15 +188,24 @@ const autoProcessLicense = async () => {
         console.log('✅ License auto-processing completed:', response)
         if (response.already_processed) {
           console.log(`📝 License already processed (${response.licenses_count} license(s))`)
+          showInfoToast(
+            `🎉 Payment successful! Your license & guide have been sent to your email.`, 
+            6000
+          )
         } else {
           console.log(`🎉 Successfully processed ${response.licenses_processed} license(s)`)
+          showSuccessToast(
+            `🎉 Payment successful! Your ${response.licenses_processed > 1 ? 'licenses & guides have' : 'license & guide has'} been sent to your email.`, 
+            8000
+          )
         }
       } else {
         console.log('⚠️ License auto-processing skipped:', response.message)
+        showInfoToast(`Payment successful! Please check your email or contact support for license delivery.`, 6000)
       }
     } catch (error) {
       console.error('❌ License auto-processing failed:', error)
-      // Don't show error to user as payment was successful
+      showErrorToast(`Payment successful but license delivery failed. Please contact support with Order ID: ${orderData.order_id}`, 8000)
     } finally {
       // Hide loading state
       isProcessingLicense.value = false
@@ -179,10 +213,43 @@ const autoProcessLicense = async () => {
   }
 }
 
+// Show notification for non-success statuses
+const showPaymentStatusNotification = () => {
+  const status = orderData.transaction_status.toLowerCase()
+  
+  switch (status) {
+    case 'pending':
+      showInfoToast('Payment is pending. Please wait for confirmation.', 5000)
+      break
+    case 'deny':
+      showErrorToast('Payment was denied. Please try again with a different payment method.', 6000)
+      break
+    case 'cancel':
+      showErrorToast('Payment was cancelled.', 4000)
+      break
+    case 'expire':
+      showErrorToast('Payment session expired. Please create a new order.', 6000)
+      break
+    case 'failure':
+      showErrorToast('Payment failed. Please try again or contact support.', 6000)
+      break
+  }
+}
+
 // Run auto-processing on page load
-onMounted(() => {
+onMounted(async () => {
   if (orderData.order_id && orderData.transaction_status) {
-    autoProcessLicense()
+    // First get the transaction ID
+    await getTransactionId()
+    
+    // Show notification for success/failure
+    if (orderData.transaction_status === 'settlement' || orderData.transaction_status === 'capture') {
+      // Process license for successful payments
+      autoProcessLicense()
+    } else {
+      // Show notification for failed/pending payments
+      showPaymentStatusNotification()
+    }
   }
 })
 </script>

@@ -1,6 +1,6 @@
 
 import db from '../../utils/db.js';
-import { cached } from '../../utils/cache.js';
+import { useCache } from '../../utils/cache.js';
 import { rateLimiter } from '../../utils/rateLimiter.js';
 
 /**
@@ -35,8 +35,8 @@ export default defineEventHandler(async (event) => {
     // Get list of existing tables first
     let existingTables = [];
     try {
-      // Use PostgreSQL compatible query
-      const [tableResult] = await db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+      // Use PostgreSQL compatible query for nixty schema
+      const [tableResult] = await db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'nixty'");
       existingTables = tableResult.map(row => row.table_name);
       console.log('Existing tables:', existingTables);
     } catch (error) {
@@ -47,18 +47,20 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Only query tables that actually exist
-    const requestedTables = ['users', 'products', 'categories', 'announcements', 'hero_slides', 'transactions', 'product_licenses'];
-    const tables = requestedTables.filter(table => existingTables.includes(table));
+    // Use all existing tables from nixty schema
+    const tables = existingTables.filter(table => {
+      // Filter out any system tables if needed
+      return !table.startsWith('_') && !table.includes('pg_');
+    });
 
     console.log('Tables to query:', tables);
 
     await Promise.all(tables.map(async table => {
       try {
-        const count = await cached(`count_${table}`, async () => {
-          const [result] = await db.query(`SELECT COUNT(*) as count FROM ${table}`);
+        const count = await useCache(`count_${table}`, async () => {
+          const [result] = await db.query(`SELECT COUNT(*) as count FROM nixty.${table}`);
           return result[0].count;
-        }, 300); // Cache for 5 minutes
+        });
         stats[table] = count;
         console.log(`${table}: ${stats[table]} records (cached)`);
       } catch (error) {
@@ -155,21 +157,21 @@ export default defineEventHandler(async (event) => {
       if (tables.includes('transactions')) {
         try {
           // Total transactions count
-          const txCountQuery = buildQuery('SELECT COUNT(*) as count FROM transactions', ['(status = \'settlement\' OR status = \'completed\')']);
+          const txCountQuery = buildQuery('SELECT COUNT(*) as count FROM nixty.transactions', ['(status = \'settlement\' OR status = \'completed\')']);
           const [totalTransactions] = await db.query(txCountQuery.sql, txCountQuery.params);
           stats.transactions = totalTransactions[0].count;
           // Alias for clarity in frontend metrics
           stats.totalOrders = stats.transactions;
           
           // Total revenue
-          const revenueQuery = buildQuery('SELECT COALESCE(SUM(amount), 0) as total FROM transactions', ['(status = \'settlement\' OR status = \'completed\')']);
+          const revenueQuery = buildQuery('SELECT COALESCE(SUM(amount), 0) as total FROM nixty.transactions', ['(status = \'settlement\' OR status = \'completed\')']);
           const [revenue] = await db.query(revenueQuery.sql, revenueQuery.params);
           stats.totalRevenue = parseFloat(revenue[0].total);
 
           // Active users based on transactions within date range
           try {
             const activeUsersQuery = buildQuery(
-              'SELECT COUNT(DISTINCT user_id) as count FROM transactions',
+              'SELECT COUNT(DISTINCT user_id) as count FROM nixty.transactions',
               [
                 '(status = \'settlement\' OR status = \'completed\')',
                 'user_id IS NOT NULL'
@@ -185,7 +187,7 @@ export default defineEventHandler(async (event) => {
           // Products sold (total licenses purchased/sent) based on quantity in transactions within date range
           try {
             const productsSoldQuery = buildQuery(
-              'SELECT COALESCE(SUM(quantity), 0) as total FROM transactions',
+              'SELECT COALESCE(SUM(quantity), 0) as total FROM nixty.transactions',
               ['(status = \'settlement\' OR status = \'completed\')']
             );
             const [productsSold] = await db.query(productsSoldQuery.sql, productsSoldQuery.params);
@@ -206,14 +208,14 @@ export default defineEventHandler(async (event) => {
       if (tables.includes('products')) {
         try {
           const [activeProducts] = await db.query(
-            'SELECT COUNT(*) as count FROM products WHERE status = ?',
+            'SELECT COUNT(*) as count FROM nixty.products WHERE status = $1',
             ['active']
           );
           stats.activeProducts = activeProducts[0].count;
 
           // Featured products
           const [featuredProducts] = await db.query(
-            'SELECT COUNT(*) as count FROM products WHERE is_featured = ?',
+            'SELECT COUNT(*) as count FROM nixty.products WHERE is_featured = $1',
             [true]
           );
           stats.featuredProducts = featuredProducts[0].count;
@@ -228,7 +230,7 @@ export default defineEventHandler(async (event) => {
       if (tables.includes('users')) {
         try {
           const [adminUsers] = await db.query(
-            'SELECT COUNT(*) as count FROM users WHERE account_type = ?',
+            'SELECT COUNT(*) as count FROM nixty.users WHERE account_type = $1',
             ['admin']
           );
           stats.adminUsers = adminUsers[0].count;
@@ -242,7 +244,7 @@ export default defineEventHandler(async (event) => {
       if (tables.includes('announcements')) {
         try {
           const [activeAnnouncements] = await db.query(
-            'SELECT COUNT(*) as count FROM announcements WHERE status = ?',
+            'SELECT COUNT(*) as count FROM nixty.announcements WHERE status = $1',
             ['active']
           );
           stats.activeAnnouncements = activeAnnouncements[0].count;
@@ -252,19 +254,19 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      // License stats (only if product_licenses table exists)
-      if (tables.includes('product_licenses')) {
+      // License stats (only if product_license_base table exists)
+      if (tables.includes('product_license_base')) {
         try {
           // Available licenses
           const [availableLicenses] = await db.query(
-            'SELECT COUNT(*) as count FROM product_licenses WHERE status = ?',
+            'SELECT COUNT(*) as count FROM nixty.product_license_base WHERE status = $1',
             ['available']
           );
           stats.availableLicenses = availableLicenses[0].count;
 
           // Used licenses
           const [usedLicenses] = await db.query(
-            'SELECT COUNT(*) as count FROM product_licenses WHERE status = ?',
+            'SELECT COUNT(*) as count FROM nixty.product_license_base WHERE status = $1',
             ['used']
           );
           stats.usedLicenses = usedLicenses[0].count;
@@ -312,7 +314,7 @@ export default defineEventHandler(async (event) => {
         // Previous orders count
         let prevOrders = 0;
         if (tables.includes('transactions')) {
-          const prevOrdersQuery = buildPrevQuery('SELECT COUNT(*) as count FROM transactions', ['(status = \'settlement\' OR status = \'completed\')']);
+          const prevOrdersQuery = buildPrevQuery('SELECT COUNT(*) as count FROM nixty.transactions', ['(status = \'settlement\' OR status = \'completed\')']);
           const [prevOrdersRes] = await db.query(prevOrdersQuery.sql, prevOrdersQuery.params);
           prevOrders = prevOrdersRes[0].count;
         }
@@ -320,7 +322,7 @@ export default defineEventHandler(async (event) => {
         // Previous active users
         let prevActiveUsers = 0;
         if (tables.includes('transactions')) {
-          const prevUsersQuery = buildPrevQuery('SELECT COUNT(DISTINCT user_id) as count FROM transactions', ['(status = \'settlement\' OR status = \'completed\')', 'user_id IS NOT NULL']);
+          const prevUsersQuery = buildPrevQuery('SELECT COUNT(DISTINCT user_id) as count FROM nixty.transactions', ['(status = \'settlement\' OR status = \'completed\')', 'user_id IS NOT NULL']);
           const [prevUsersRes] = await db.query(prevUsersQuery.sql, prevUsersQuery.params);
           prevActiveUsers = prevUsersRes[0].count;
         }
@@ -328,7 +330,7 @@ export default defineEventHandler(async (event) => {
         // Previous products sold
         let prevProductsSold = 0;
         if (tables.includes('transactions')) {
-          const prevSoldQuery = buildPrevQuery('SELECT COALESCE(SUM(quantity),0) as total FROM transactions', ['(status = \'settlement\' OR status = \'completed\')']);
+          const prevSoldQuery = buildPrevQuery('SELECT COALESCE(SUM(quantity),0) as total FROM nixty.transactions', ['(status = \'settlement\' OR status = \'completed\')']);
           const [prevSoldRes] = await db.query(prevSoldQuery.sql, prevSoldQuery.params);
           prevProductsSold = parseInt(prevSoldRes[0].total, 10);
         }
@@ -336,7 +338,7 @@ export default defineEventHandler(async (event) => {
         // Previous revenue
         let prevRevenue = 0;
         if (tables.includes('transactions')) {
-          const prevRevenueQuery = buildPrevQuery('SELECT COALESCE(SUM(amount),0) as total FROM transactions', ['(status = \'settlement\' OR status = \'completed\')']);
+          const prevRevenueQuery = buildPrevQuery('SELECT COALESCE(SUM(amount),0) as total FROM nixty.transactions', ['(status = \'settlement\' OR status = \'completed\')']);
           const [prevRevRes] = await db.query(prevRevenueQuery.sql, prevRevenueQuery.params);
           prevRevenue = parseFloat(prevRevRes[0].total);
         }
@@ -361,15 +363,15 @@ export default defineEventHandler(async (event) => {
     let recentActivity = [];
     if (tables.includes('transactions')) {
       try {
-        const recentActivityData = await cached('recent_activity', async () => {
-          const activityQuery = buildQuery('SELECT id, order_id, product_name, amount, status, created_at FROM transactions');
+        const recentActivityData = await useCache('recent_activity', async () => {
+          const activityQuery = buildQuery('SELECT id, product_id, total, status, created_at FROM nixty.transactions');
           const finalActivityQuery = `${activityQuery.sql} ORDER BY created_at DESC LIMIT 10`;
 
           console.log('Executing recent activity query with date filter:', { sql: finalActivityQuery, params: activityQuery.params });
           const [activity] = await db.query(finalActivityQuery, activityQuery.params);
           console.log(`Found ${activity.length} recent transactions`);
           return activity;
-        }, 300);
+        });
         recentActivity = recentActivityData;
       } catch (error) {
         console.error('Error getting recent activity:', error);
@@ -380,14 +382,14 @@ export default defineEventHandler(async (event) => {
     const tableInfo = {};
     for (const table of tables) {
       try {
-        const [columns] = await db.query(`
-          SELECT column_name as "Field", data_type as "Type", 
-                 is_nullable as "Null", column_default as "Default",
-                 '' as "Key", '' as "Extra"
-          FROM information_schema.columns 
-          WHERE table_name = ? AND table_schema = 'public'
-          ORDER BY ordinal_position
-        `, [table]);
+          const [columns] = await db.query(`
+            SELECT column_name as "Field", data_type as "Type", 
+                   is_nullable as "Null", column_default as "Default",
+                   '' as "Key", '' as "Extra"
+            FROM information_schema.columns 
+            WHERE table_name = $1 AND table_schema = 'nixty'
+            ORDER BY ordinal_position
+          `, [table]);
         tableInfo[table] = {
           name: table,
           displayName: table.charAt(0).toUpperCase() + table.slice(1).replace(/_/g, ' '),

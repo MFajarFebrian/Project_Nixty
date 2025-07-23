@@ -123,26 +123,32 @@ export default defineEventHandler(async (event) => {
       await db.execute('START TRANSACTION');
       
       try {
-        // Get transaction details including custom email
+        // Get transaction details including the user's email
         const [transactions] = await db.execute(
-          'SELECT * FROM transactions WHERE order_id = ?',
+          `SELECT o.*, u.email AS user_email, u.name AS user_name
+           FROM nixty.orders o
+           JOIN nixty.users u ON o.user_id = u.id
+           WHERE o.order_id = ?`,
           [orderId]
         );
         
         if (transactions.length > 0) {
           const transaction = transactions[0];
-          let customEmail = transaction.email; // Default to transaction email
-          
-          // Extract custom email from payload if available
-          if (transaction.payment_gateway_payload) {
-            try {
-              const payload = JSON.parse(transaction.payment_gateway_payload);
-              if (payload.custom_email) {
-                customEmail = payload.custom_email;
-              }
-            } catch (parseError) {
-              console.error('Error parsing payment gateway payload:', parseError);
+          let customEmail = null; // Start with no custom email
+
+          // Fetch custom email from payment_gateway_logs table
+          try {
+            const [customEmailLogs] = await db.execute(
+              `SELECT value FROM nixty.payment_gateway_logs WHERE transaction_id = ? AND key = 'custom_email' LIMIT 1`,
+              [transaction.id]
+            );
+            
+            if (customEmailLogs.length > 0 && customEmailLogs[0].value) {
+              customEmail = customEmailLogs[0].value;
+              console.log(`[WEBHOOK-${webhookLogId}] Found custom email in logs: ${customEmail}`);
             }
+          } catch (logError) {
+            console.error(`[WEBHOOK-${webhookLogId}] Error fetching custom email from logs:`, logError);
           }
           
           // Get quantity from database (with fallback)
@@ -242,20 +248,41 @@ export default defineEventHandler(async (event) => {
           
           // Send combined email with all licenses if successful
           if (licenseProcessingSuccess && allLicenses.length > 0) {
-            console.log(`[WEBHOOK-${webhookLogId}] Sending email with ${allLicenses.length} license(s) to ${customEmail}...`);
+            console.log(`[WEBHOOK-${webhookLogId}] Preparing to send email with ${allLicenses.length} license(s)`);
+            console.log(`[WEBHOOK-${webhookLogId}] Email parameters:`);
+            console.log(`[WEBHOOK-${webhookLogId}]   - Primary email: ${transaction.email}`);
+            console.log(`[WEBHOOK-${webhookLogId}]   - Customer name: ${transaction.customer_name || 'Customer'}`);
+            console.log(`[WEBHOOK-${webhookLogId}]   - Product name: ${transaction.product_name || `Product ${transaction.product_id}`}`);
+            console.log(`[WEBHOOK-${webhookLogId}]   - Order ID: ${orderId}`);
+            console.log(`[WEBHOOK-${webhookLogId}]   - Custom email: ${customEmail !== transaction.email ? customEmail : 'None (using primary)'}`);
+            console.log(`[WEBHOOK-${webhookLogId}]   - License count: ${allLicenses.length}`);
             
-            const emailResult = await sendMultipleLicenseEmail(
-              customEmail,
-              transaction.customer_name || 'Customer',
-              transaction.product_name || `Product ${transaction.product_id}`,
-              allLicenses
-            );
-            
-            if (emailResult.success) {
-              emailSent = true;
-              console.log(`[WEBHOOK-${webhookLogId}] License email sent successfully`);
-            } else {
-              console.error(`[WEBHOOK-${webhookLogId}] Failed to send license email: ${emailResult.error || emailResult.message}`);
+            try {
+              const emailResult = await sendMultipleLicenseEmail(
+                transaction.user_email, // Use the fetched user email
+                transaction.customer_name || 'Customer',
+                transaction.product_name || `Product ${transaction.product_id}`,
+                allLicenses,
+                orderId, // Include Order ID
+                customEmail // Pass the retrieved custom email
+              );
+              
+              console.log(`[WEBHOOK-${webhookLogId}] Email service response:`, emailResult);
+              
+              if (emailResult.success) {
+                emailSent = true;
+                console.log(`[WEBHOOK-${webhookLogId}] ✅ License email sent successfully to: ${transaction.user_email}${customEmail ? ` and ${customEmail}` : ''}`);
+              } else {
+                console.error(`[WEBHOOK-${webhookLogId}] ❌ Failed to send license email:`);
+                console.error(`[WEBHOOK-${webhookLogId}]    Error: ${emailResult.error || emailResult.message}`);
+                if (emailResult.details) {
+                  console.error(`[WEBHOOK-${webhookLogId}]    Details:`, emailResult.details);
+                }
+              }
+            } catch (emailError) {
+              console.error(`[WEBHOOK-${webhookLogId}] ❌ Exception thrown during email sending:`);
+              console.error(`[WEBHOOK-${webhookLogId}]    Error: ${emailError.message}`);
+              console.error(`[WEBHOOK-${webhookLogId}]    Stack:`, emailError.stack);
             }
           } else if (allLicenses.length > 0) {
             // Partial success - some licenses processed

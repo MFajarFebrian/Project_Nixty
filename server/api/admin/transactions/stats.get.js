@@ -5,14 +5,14 @@ const getValidatedQueryParams = (event) => {
   const query = getQuery(event);
   const { period, date, startDate, endDate } = query;
 
-  if (!['day', 'month', 'year'].includes(period)) {
+  if (!['hour', 'day', 'month', 'year'].includes(period)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid period specified' });
   }
   
-  // For day period, we now support date range
-  if (period === 'day') {
+  // For hour and day periods, we support date range
+  if (period === 'hour' || period === 'day') {
     if (!startDate || !endDate) {
-      throw createError({ statusCode: 400, statusMessage: 'startDate and endDate are required for day period' });
+      throw createError({ statusCode: 400, statusMessage: 'startDate and endDate are required for hour/day period' });
     }
     return { period, startDate, endDate };
   } else {
@@ -21,6 +21,70 @@ const getValidatedQueryParams = (event) => {
     }
     return { period, date };
   }
+};
+
+// New function for hourly stats (1-3 days range)
+const getHourlyStats = async (startDate, endDate) => {
+    try {
+        // Parse dates as UTC to avoid timezone issues
+        const start = new Date(startDate + 'T00:00:00.000Z');
+        const end = new Date(endDate + 'T23:59:59.999Z');
+        
+        const [rows] = await db.query(`
+            SELECT 
+                TO_CHAR(created_at, 'YYYY-MM-DD') as date,
+                EXTRACT(HOUR FROM created_at) as hour, 
+                COUNT(*) as transaction_count, 
+                SUM(total::numeric) as total_revenue
+            FROM nixty.orders
+            WHERE created_at >= $1 AND created_at <= $2 AND (status = 'settlement' OR status = 'completed')
+            GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD'), EXTRACT(HOUR FROM created_at)
+            ORDER BY date ASC, hour ASC
+        `, [start, end]);
+
+        // Calculate total hours in the range (max 2 days)
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const totalHours = Math.min(diffDays * 24, 48); // Max 48 hours (2 days)
+        
+        const labels = [];
+        const transactionData = Array(totalHours).fill(0);
+        const revenueData = Array(totalHours).fill(0);
+        
+        // Generate labels and initialize data arrays
+        const currentDate = new Date(start);
+        for (let i = 0; i < totalHours; i++) {
+            const hour = i % 24;
+            const dayOffset = Math.floor(i / 24);
+            const labelDate = new Date(start);
+            labelDate.setDate(start.getDate() + dayOffset);
+            
+            // Format: "MM/DD HH:00" for multi-day or "HH:00" for single day
+            if (diffDays > 1) {
+                const monthDay = labelDate.toLocaleDateString('id-ID', { month: '2-digit', day: '2-digit' });
+                labels.push(`${monthDay} ${hour.toString().padStart(2, '0')}:00`);
+            } else {
+                labels.push(`${hour.toString().padStart(2, '0')}:00`);
+            }
+        }
+        
+        // Fill in actual data
+        for (const row of rows) {
+            const rowDate = new Date(row.date + 'T00:00:00.000Z');
+            const dayDiff = Math.floor((rowDate - start) / (1000 * 60 * 60 * 24));
+            const hourIndex = dayDiff * 24 + Number(row.hour);
+            
+            if (hourIndex >= 0 && hourIndex < totalHours) {
+                transactionData[hourIndex] = Number(row.transaction_count);
+                revenueData[hourIndex] = Number(row.total_revenue);
+            }
+        }
+        
+        return { labels, transactionData, revenueData };
+    } catch (error) {
+        console.error("Error in getHourlyStats:", error);
+        return { labels: [], transactionData: [], revenueData: [] };
+    }
 };
 
 const getDailyStats = async (startDate, endDate) => {
@@ -32,13 +96,13 @@ const getDailyStats = async (startDate, endDate) => {
         const isSingleDay = start.toDateString() === end.toDateString();
 
         if (isSingleDay) {
-            const [rows] = await db.execute(`
+            const [rows] = await db.query(`
                 SELECT 
                     EXTRACT(HOUR FROM created_at) as hour, 
                     COUNT(*) as transaction_count, 
-                    SUM(amount) as total_revenue
-                FROM transactions
-                WHERE created_at >= ? AND created_at <= ? AND (status = 'settlement' OR status = 'completed')
+                    SUM(total::numeric) as total_revenue
+                FROM nixty.orders
+                WHERE created_at >= $1 AND created_at <= $2 AND (status = 'settlement' OR status = 'completed')
                 GROUP BY EXTRACT(HOUR FROM created_at)
                 ORDER BY hour ASC
             `, [start, end]);
@@ -54,13 +118,13 @@ const getDailyStats = async (startDate, endDate) => {
             }
             return { labels, transactionData, revenueData };
         } else {
-            const [rows] = await db.execute(`
+            const [rows] = await db.query(`
                 SELECT 
                     TO_CHAR(created_at, 'YYYY-MM-DD') as date,
                     COUNT(*) as transaction_count, 
-                    SUM(amount) as total_revenue
-                FROM transactions
-                WHERE created_at >= ? AND created_at <= ? AND (status = 'settlement' OR status = 'completed')
+                    SUM(total::numeric) as total_revenue
+                FROM nixty.orders
+                WHERE created_at >= $1 AND created_at <= $2 AND (status = 'settlement' OR status = 'completed')
                 GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
                 ORDER BY date ASC
             `, [start, end]);
@@ -100,13 +164,13 @@ const getMonthlyStats = async (date) => {
         const endDate = new Date(`${year}-${month}-${daysInMonth}`);
         endDate.setHours(23,59,59,999);
 
-        const [rows] = await db.execute(`
+        const [rows] = await db.query(`
             SELECT 
                 EXTRACT(DAY FROM created_at) as day, 
                 COUNT(*) as transaction_count, 
-                SUM(amount) as total_revenue
-            FROM transactions
-            WHERE created_at >= ? AND created_at <= ? AND (status = 'settlement' OR status = 'completed')
+                SUM(total::numeric) as total_revenue
+            FROM nixty.orders
+            WHERE created_at >= $1 AND created_at <= $2 AND (status = 'settlement' OR status = 'completed')
             GROUP BY EXTRACT(DAY FROM created_at)
             ORDER BY day ASC
         `, [startDate, endDate]);
@@ -142,13 +206,13 @@ const getYearlyStats = async (year) => {
         endDate.setHours(23,59,59,999);
 
 
-        const [rows] = await db.execute(`
+        const [rows] = await db.query(`
             SELECT 
                 EXTRACT(MONTH FROM created_at) as month, 
                 COUNT(*) as transaction_count, 
-                SUM(amount) as total_revenue
-            FROM transactions
-            WHERE created_at >= ? AND created_at <= ? AND (status = 'settlement' OR status = 'completed')
+                SUM(total::numeric) as total_revenue
+            FROM nixty.orders
+            WHERE created_at >= $1 AND created_at <= $2 AND (status = 'settlement' OR status = 'completed')
             GROUP BY EXTRACT(MONTH FROM created_at)
             ORDER BY month ASC
         `, [startDate, endDate]);
@@ -180,7 +244,10 @@ export default defineEventHandler(async (event) => {
         const { period } = validatedParams;
 
         let stats;
-        if (period === 'day') {
+        if (period === 'hour') {
+            const { startDate, endDate } = validatedParams;
+            stats = await getHourlyStats(startDate, endDate);
+        } else if (period === 'day') {
             const { startDate, endDate } = validatedParams;
             stats = await getDailyStats(startDate, endDate);
         } else if (period === 'month') {

@@ -18,7 +18,7 @@
     <div v-else-if="product" class="product-checkout-container">
       <div class="checkout-header">
         <h1>Complete Your Purchase</h1>
-        <p class="product-name">{{ product.name }}</p>
+<p class="product-name">{{ selectedVersionName || product.name }}</p>
       </div>
       
       <div class="checkout-grid">
@@ -61,7 +61,7 @@
                 :class="['version-btn', { active: selectedVersionId === version.id }]"
                 @click="selectVersion(version)"
               >
-                <span class="version-name">{{ version.version || 'Standard' }}</span>
+<span class="version-name">{{ version.name }}</span>
                 <span class="version-price">{{ formatCurrency(version.price) }}</span>
                 <span v-if="version.version === '365'" class="version-badge">Subscription</span>
               </button>
@@ -164,10 +164,10 @@ const selectedVersionImage = computed(() => {
 
 const selectedVersionName = computed(() => {
   if (!product.value || !selectedVersionId.value) {
-    return null;
+    return product.value?.name || '';
   }
   const selectedVersion = product.value.versions.find(v => v.id === selectedVersionId.value);
-  return selectedVersion ? `${product.value.name} ${selectedVersion.version || ''}`.trim() : null;
+  return selectedVersion ? selectedVersion.name : product.value?.name || '';
 });
 
 // Computed property for selected version description
@@ -176,7 +176,7 @@ const selectedVersionDescription = computed(() => {
     return product.value?.description || '';
   }
   const selectedVersion = product.value.versions.find(v => v.id === selectedVersionId.value);
-  return selectedVersion ? selectedVersion.description || product.value?.description || '' : product.value?.description || '';
+  return selectedVersion ? (selectedVersion.description || '') : (product.value?.description || '');
 });
 
 const fetchProductDetails = async () => {

@@ -14,8 +14,8 @@ export default defineEventHandler(async (event) => {
       };
     }
     
-    const [existingUsers] = await pool.execute(
-      'SELECT id FROM users WHERE email = ?',
+    const [existingUsers] = await pool.query(
+      'SELECT id FROM nixty.users WHERE email = $1',
       [email]
     );
     
@@ -28,19 +28,12 @@ export default defineEventHandler(async (event) => {
     
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    const [result] = await pool.execute(
-      'INSERT INTO users (email, password, name) VALUES (?, ?, ?)',
+    const [result] = await pool.query(
+      'INSERT INTO nixty.users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name, account_type',
       [email, hashedPassword, name || null]
     );
     
-    const insertResult = result;
-    
-    const [newUsers] = await pool.execute(
-      'SELECT id, email, name, account_type, created_at FROM users WHERE id = ?',
-      [insertResult.insertId]
-    );
-    
-    const newUser = newUsers[0];
+    const newUser = result[0];
     
     return {
       success: true,

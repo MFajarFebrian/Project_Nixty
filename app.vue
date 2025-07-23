@@ -13,21 +13,32 @@
       :default-tab="authModalTab"
       @close="closeAuthModal"
     />
-    <WhatsAppChat phone-number="1234567890" />
+    
+    <!-- Global Toast Notifications -->
+    <ToastNotifications />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import '~/assets/css/global/main.css';
 import { useAuth } from '~/composables/useAuth';
+import { useRoute, useRouter } from '#app';
+import ToastNotifications from '~/components/ToastNotifications.vue';
 
 // Auth modal state
 const isAuthModalOpen = ref(false);
 const authModalTab = ref('login');
 
 // Use auth composable
-const { initUser } = useAuth();
+const { user, initUser } = useAuth();
+const route = useRoute();
+const router = useRouter();
+
+// Computed property to check if user is admin
+const isAdmin = computed(() => {
+  return user.value && user.value.account_type === 'admin';
+});
 
 // Methods
 const openAuthModal = (tab = 'login') => {
@@ -39,7 +50,21 @@ const openAuthModal = (tab = 'login') => {
 const closeAuthModal = () => {
   console.log('Closing auth modal');
   isAuthModalOpen.value = false;
+  
+  // Remove modal query parameter if it exists
+  if (route.query.modal) {
+    const newQuery = { ...route.query };
+    delete newQuery.modal;
+    router.replace({ query: newQuery });
+  }
 };
+
+// Watch for modal query parameter
+watch(() => route.query.modal, (modalType) => {
+  if (modalType === 'login' || modalType === 'register') {
+    openAuthModal(modalType);
+  }
+}, { immediate: true });
 
 // Initialize user on mount
 onMounted(() => {

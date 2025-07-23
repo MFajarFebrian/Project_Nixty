@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     
     // Check if user exists with this email
     const [users] = await pool.execute(
-      'SELECT id, email, name FROM users WHERE email = ?',
+      'SELECT id, email, name FROM nixty.users WHERE email = ?',
       [email]
     );
     
@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
     
     // Store token in database
     await pool.execute(
-      'UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
+      'UPDATE nixty.users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
       [resetToken, tokenExpiry, user.id]
     );
     

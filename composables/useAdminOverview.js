@@ -180,11 +180,13 @@ export function useAdminOverview() {
       'users': 'Users',
       'products': 'Products',
       'categories': 'Categories',
-      'announcements': 'Announcements',
-      'deals': 'Deals',
-      'hero_slides': 'Hero Slides',
       'transactions': 'Transactions',
-      'product_licenses': 'Product Licenses'
+      'product_license_base': 'Product License Base',
+      'product_license_keys': 'Product License Keys',
+      'product_license_accounts': 'Product License Accounts',
+      'product_tags': 'Product Tags',
+      'transaction_license': 'Transaction License',
+      'payment_gateway_logs': 'Payment Gateway Logs'
     };
     return displayNames[tableName] || tableName.charAt(0).toUpperCase() + tableName.slice(1);
   };
@@ -195,11 +197,13 @@ export function useAdminOverview() {
       'users': 'fas fa-users',
       'products': 'fas fa-box',
       'categories': 'fas fa-tags',
-      'announcements': 'fas fa-bullhorn',
-      'deals': 'fas fa-percent',
-      'hero_slides': 'fas fa-images',
       'transactions': 'fas fa-credit-card',
-      'product_licenses': 'fas fa-key'
+      'product_license_base': 'fas fa-key',
+      'product_license_keys': 'fas fa-key',
+      'product_license_accounts': 'fas fa-user-lock',
+      'product_tags': 'fas fa-tag',
+      'transaction_license': 'fas fa-link',
+      'payment_gateway_logs': 'fas fa-receipt'
     };
     return icons[tableName] || 'fas fa-table';
   };

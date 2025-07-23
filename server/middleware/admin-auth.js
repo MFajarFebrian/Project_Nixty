@@ -35,11 +35,11 @@ export default defineEventHandler(async (event) => {
   // Check if user is an admin
   try {
     const [users] = await pool.execute(
-      'SELECT role FROM users WHERE id = ? AND email = ? LIMIT 1', 
+      'SELECT account_type FROM nixty.users WHERE id = ? AND email = ? LIMIT 1', 
       [userId, userEmail]
     );
     
-    const isAdmin = users && users.length > 0 && users[0].role === 'admin';
+    const isAdmin = users && users.length > 0 && users[0].account_type === 'admin';
     
     if (!isAdmin) {
       throw createError({

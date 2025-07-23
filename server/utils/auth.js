@@ -1,4 +1,4 @@
-import pool from './db.js';
+import db from './db.js';
 
 /**
  * Validate user session and return user data
@@ -27,8 +27,8 @@ export async function validateUserSession(event) {
     }
 
     // Verify user exists in database and session data is valid
-    const [rows] = await pool.execute(
-      'SELECT id, email, name, account_type, profile_picture, created_at FROM users WHERE id = ?',
+    const [rows] = await db.query(
+      'SELECT id, email, name, account_type, phone FROM nixty.users WHERE id = ?',
       [user.id]
     );
 

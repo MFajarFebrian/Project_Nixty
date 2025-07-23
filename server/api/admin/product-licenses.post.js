@@ -1,9 +1,8 @@
-import pool from '../../utils/db';
-import { validateRecordData } from '../../utils/admin-validation';
+import db from '../../utils/db';
 
 /**
  * POST /api/admin/product-licenses
- * Create a new product license with automatic additional_info population
+ * Create a new product license using Supabase schema structure
  */
 export default defineEventHandler(async (event) => {
   try {
@@ -29,122 +28,102 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Validate basic data
-    let validData;
-    try {
-      validData = validateRecordData('product_licenses', body, false);
-    } catch (error) {
-      if (error.validationErrors) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Validation errors',
-          data: { errors: error.validationErrors }
-        });
-      }
-      throw error;
-    }
-
-    // If product_id is provided, get product details from database
-    let product = null;
-    if (validData.product_id) {
-      const [productRows] = await pool.execute(
-        'SELECT id, name, version FROM products WHERE id = ? AND status = "active" LIMIT 1',
-        [validData.product_id]
-      );
-
-      if (productRows.length === 0) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Invalid product ID: Product not found or inactive'
-        });
-      }
-
-      product = productRows[0];
-      
-      // Auto-fill product_name and product_version if not provided
-      if (!validData.product_name) {
-        validData.product_name = product.name;
-      }
-      if (!validData.product_version) {
-        validData.product_version = product.version || '';
-      }
-    } else if (validData.product_name) {
-      // If product_id not provided but product_name is, find the product
-      const whereClause = validData.product_version
-        ? 'name = ? AND version = ?'
-        : 'name = ? AND (version IS NULL OR version = "")';
-
-      const params = validData.product_version
-        ? [validData.product_name, validData.product_version]
-        : [validData.product_name];
-
-      const [productRows] = await pool.execute(
-        `SELECT id, name, version FROM products WHERE ${whereClause} AND status = 'active' LIMIT 1`,
-        params
-      );
-
-      if (productRows.length === 0) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Invalid product name/version combination: Product not found or inactive'
-        });
-      }
-
-      product = productRows[0];
-      validData.product_id = product.id;
-    } else {
+    // Validate required fields
+    if (!body.product_id || !body.license_type) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Either product_id or product_name is required'
+        statusMessage: 'product_id and license_type are required'
       });
     }
 
-    // Set max_usage based on license_type
-    const maxUsageByType = {
-      'product_key': 5,
-      'email_password': 1,
-      'access_code': 1,
-      'download_link': 999
-    };
-
-    validData.max_usage = maxUsageByType[validData.license_type] || 1;
-    validData.usage_count = 0; // New licenses start with 0 usage
-    validData.send_license = 0; // Initialize send_license to 0
-
-    // Set default status
-    if (!validData.status) {
-      validData.status = 'available';
+    // Validate license type
+    if (!['product_key', 'email_password'].includes(body.license_type)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'license_type must be either "product_key" or "email_password"'
+      });
     }
 
-    console.log('Processed license data:', validData);
+    // Verify product exists
+    const [productRows] = await db.query(
+      'SELECT id, name FROM nixty.products WHERE id = $1 AND status = $2',
+      [body.product_id, 'active']
+    );
 
-    // Build INSERT query
-    const fields = Object.keys(validData);
-    const placeholders = fields.map(() => '?').join(', ');
-    const values = Object.values(validData);
+    if (productRows.length === 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Product not found or inactive'
+      });
+    }
 
-    const query = `INSERT INTO product_licenses (${fields.join(', ')}) VALUES (${placeholders})`;
-    console.log('SQL Query:', query);
-    console.log('SQL Values:', values);
-    
-    const [result] = await pool.execute(query, values);
+    // Create base license record
+    const baseLicenseData = {
+      product_id: body.product_id,
+      license_type: body.license_type,
+      status: body.status || 'available',
+      notes: body.notes || null,
+      send_license: 0,
+      max_usage: 1
+    };
 
-    // Fetch the created record with product information
-    const [newRecord] = await pool.execute(`
-      SELECT 
-        pl.*,
-        p.name as product_name,
-        p.version as product_version,
-        (pl.max_usage - pl.usage_count) as remaining_uses
-      FROM product_licenses pl
-      JOIN products p ON pl.product_id = p.id
-      WHERE pl.id = ?
-    `, [result.insertId]);
+    const baseLicense = await db.insert('product_license_base', baseLicenseData);
+    const licenseId = baseLicense.id;
+
+    // Create type-specific record
+    if (body.license_type === 'product_key') {
+      const licenseKey = body.license_key || generateLicenseKey();
+      console.log('Processing license key - provided:', body.license_key, 'final:', licenseKey);
+      await db.insert('product_license_keys', {
+        id: licenseId,
+        product_key: licenseKey
+      });
+    } else if (body.license_type === 'email_password') {
+      if (!body.email || !body.password) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'email and password are required for email_password license type'
+        });
+      }
+      await db.insert('product_license_accounts', {
+        id: licenseId,
+        email: body.email,
+        password: body.password
+      });
+    }
+
+    // Fetch the complete license data
+    let licenseData;
+    if (body.license_type === 'product_key') {
+      const [rows] = await db.query(`
+        SELECT 
+          plb.id, plb.product_id, plb.license_type, plb.status, plb.notes,
+          plk.product_key as license_key,
+          p.name as product_name
+        FROM nixty.product_license_base plb
+        JOIN nixty.product_license_keys plk ON plb.id = plk.id
+        JOIN nixty.products p ON plb.product_id = p.id
+        WHERE plb.id = $1
+      `, [licenseId]);
+      licenseData = rows[0];
+    } else {
+      const [rows] = await db.query(`
+        SELECT 
+          plb.id, plb.product_id, plb.license_type, plb.status, plb.notes,
+          pla.email, pla.password,
+          p.name as product_name
+        FROM nixty.product_license_base plb
+        JOIN nixty.product_license_accounts pla ON plb.id = pla.id
+        JOIN nixty.products p ON plb.product_id = p.id
+        WHERE plb.id = $1
+      `, [licenseId]);
+      licenseData = rows[0];
+    }
 
     return {
       success: true,
       message: 'Product license created successfully',
-      data: newRecord[0]
+      data: licenseData
     };
 
   } catch (error) {
@@ -159,3 +138,14 @@ export default defineEventHandler(async (event) => {
     });
   }
 });
+
+// Helper function to generate license keys
+function generateLicenseKey() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 16; i++) {
+    if (i > 0 && i % 4 === 0) result += '-';
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}

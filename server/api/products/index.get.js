@@ -1,103 +1,61 @@
-import pool from '../../utils/db.js';
+import db from '../../utils/db.js';
 
 export default defineEventHandler(async (event) => {
   try {
+    console.log('Fetching all products...');
+    
+    // Query parameters
     const query = getQuery(event);
-    const { 
-      category, 
-      featured, 
-      trending, 
-      new: isNew, 
-      limit = 50, 
-      offset = 0,
-      status = 'active'
-    } = query;
-
-    let sql = `
-      SELECT
-        p.*,
-        c.name as category_name,
-        c.slug as category_slug
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-      WHERE p.status = ?
+    const limit = query.limit ? parseInt(query.limit) : 12;
+    const page = query.page ? parseInt(query.page) : 1;
+    const offset = (page - 1) * limit;
+    
+    // Use the database to fetch products with pagination - using nixty schema
+    const productsQuery = `
+      SELECT p.*, c.name as category_name, c.slug as category_slug
+      FROM nixty.products p
+      LEFT JOIN nixty.categories c ON p.category_id = c.id
+      WHERE p.status = 'active'
+      ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?
     `;
     
-    const params = [status];
-
-    // Add filters
-    if (category) {
-      sql += ' AND c.slug = ?';
-      params.push(category);
-    }
-
-    if (featured === 'true') {
-      sql += ' AND p.is_featured = 1';
-    }
-
-    if (trending === 'true') {
-      sql += ' AND p.is_trending = 1';
-    }
-
-    if (isNew === 'true') {
-      sql += ' AND p.is_new = 1';
-    }
-
-    // Add ordering and pagination
-    sql += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
-
-    const [rows] = await pool.execute(sql, params);
-
-    // Transform data to match frontend expectations
-    const products = rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      version: row.version,
-      description: row.description,
-      shortDescription: row.short_description,
-      price: row.price,
-      currency: row.currency,
-      period: row.period,
-      rating: row.rating,
-      image_url: row.image_url,
-      category: row.category_slug,
-      category_id: row.category_id,
-      categoryName: row.category_name,
-      stock: row.stock || 0,
-      isNew: Boolean(row.is_new),
-      discount: row.discount_percentage || null,
-      timeLeft: row.time_left,
-      isFeatured: Boolean(row.is_featured),
-      isTrending: Boolean(row.is_trending),
-      soldCount: row.sold_count,
-      viewCount: row.view_count,
-      status: row.status,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    }));
-
-    return {
-      success: true,
-      data: products,
-      total: products.length,
-      filters: {
-        category,
-        featured,
-        trending,
-        isNew,
-        limit: parseInt(limit),
-        offset: parseInt(offset)
-      }
-    };
-
-  } catch (error) {
-    console.error('Error fetching products:', error);
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM nixty.products
+      WHERE status = 'active'
+    `;
+    
+    const [products, countResult] = await Promise.all([
+      db.query(productsQuery, [limit, offset]),
+      db.query(countQuery)
+    ]);
+    
+    console.log(`Found ${products.length} products`);
+    
+    const total = countResult[0]?.total || 0;
+    const totalPages = Math.ceil(total / limit);
     
     return {
-      success: false,
-      message: 'An error occurred while fetching products',
-      data: []
+      products,
+      pagination: {
+        total,
+        per_page: limit,
+        current_page: page,
+        total_pages: totalPages
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching products:', error.message);
+    
+    return {
+      products: [],
+      pagination: {
+        total: 0,
+        per_page: 12,
+        current_page: 1,
+        total_pages: 0
+      }
     };
   }
 });

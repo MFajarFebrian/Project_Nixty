@@ -30,6 +30,11 @@
   transition: transform 0.3s ease-in-out;
 }
 
+.nav-links > div {
+  display: flex;
+  gap: var(--galaxy-space-xl);
+}
+
 .nav-links.nav-slide {
   transform: translateX(-100px);
 }

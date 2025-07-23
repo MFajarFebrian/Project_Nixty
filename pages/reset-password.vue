@@ -43,7 +43,7 @@
       
       <div v-if="isReset" class="success-container">
         <p>Your password has been reset successfully!</p>
-        <NuxtLink to="/home" class="home-button">Login</NuxtLink>
+        <p class="redirect-message">Redirecting to home page...</p>
       </div>
     </div>
   </div>
@@ -51,10 +51,11 @@
 
 <script setup lang="js">
 import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import '~/assets/css/pages/reset-password.css';
 
 const route = useRoute();
+const router = useRouter();
 const token = ref('');
 const password = ref('');
 const confirmPassword = ref('');
@@ -107,6 +108,11 @@ const handleSubmit = async () => {
       password.value = '';
       confirmPassword.value = '';
       isReset.value = true;
+      
+      // Redirect to home after 2 seconds
+      setTimeout(() => {
+        router.push('/home');
+      }, 2000);
     } else {
       errorMessage.value = response.message || 'An error occurred';
     }

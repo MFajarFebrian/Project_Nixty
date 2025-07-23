@@ -7,14 +7,14 @@ export default defineEventHandler(async (event) => {
     
     if (useSupabase) {
       // PostgreSQL queries for Supabase
-      const [dbResult] = await pool.execute('SELECT current_database() as db_name');
+      const [dbResult] = await pool.query('SELECT current_database() as db_name');
       dbName = dbResult[0].db_name;
       
-      // Get tables from public schema (excluding system tables)
-      const [rows] = await pool.execute(`
+      // Get tables from nixty schema (excluding system tables)
+      const [rows] = await pool.query(`
         SELECT table_name 
         FROM information_schema.tables 
-        WHERE table_schema = 'public' 
+        WHERE table_schema = 'nixty' 
         AND table_type = 'BASE TABLE'
         ORDER BY table_name
       `);

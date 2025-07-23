@@ -2,7 +2,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   build: {
-    transpile: ['csv-parse'],
+    transpile: [],
   },
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
@@ -17,14 +17,27 @@ export default defineNuxtConfig({
       },
     },
     vue: {
-      compilerOptions: {
-        isCustomElement: (tag) => tag === 'RouterLink'
+      template: {
+        compilerOptions: {
+          isCustomElement: (tag: string) => tag === 'RouterLink'
+        }
       }
     }
   },
   modules: [
-    // '@nuxtjs/supabase', // Disabled temporarily - using local storage instead
+    '@nuxtjs/supabase', // Re-enabled Supabase module
   ],
+  
+  // Ensure imports work properly
+  imports: {
+    autoImport: true
+  },
+  // Supabase configuration with proper URL and key
+  supabase: {
+    url: process.env.SUPABASE_URL || 'https://buafxvcghfeoquyprmcb.supabase.co',
+    key: process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWZ4dmNnaGZlb3F1eXBybWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2OTQwOTIsImV4cCI6MjA2NjI3MDA5Mn0.yeTIbNE7Caq6wBV_hqvjlUyHAc5PBGsLQvlKSGSe4NI',
+    redirect: false
+  },
   plugins: [
     '~/plugins/cleanup-cache.client.js',
     '~/plugins/chart.client.js',
@@ -106,20 +119,16 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // The private keys which are only available server-side
     apiSecret: process.env.NUXT_API_SECRET || 'default_secret',
-    supabaseUrl: process.env.SUPABASE_URL,
-    supabaseKey: process.env.SUPABASE_KEY,
+    supabaseUrl: process.env.SUPABASE_URL || 'https://buafxvcghfeoquyprmcb.supabase.co',
+    supabaseKey: process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWZ4dmNnaGZlb3F1eXBybWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2OTQwOTIsImV4cCI6MjA2NjI3MDA5Mn0.yeTIbNE7Caq6wBV_hqvjlUyHAc5PBGsLQvlKSGSe4NI',
     supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY,
     // Keys within public are also exposed client-side
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api',
-      googleClientId: process.env.GOOGLE_CLIENT_ID,
       bypassAdminAuth: process.env.NODE_ENV === 'development' ? 'true' : 'false',
       nodeEnv: process.env.NODE_ENV || 'development',
       midtransClientKey: process.env.NUXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'SB-Mid-client-XZVBXJmESkGTZlFP',
-      baseUrl: process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000',
-      // Supabase public config
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseKey: process.env.SUPABASE_KEY
+      baseUrl: process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'
     }
   },
 

@@ -20,15 +20,8 @@
           <span>{{ route.query.transaction_status }}</span>
         </div>
       </div>
-      <div class="action-buttons">
-        <button @click="retryPayment" class="galaxy-button-primary">
-          <i class="fas fa-redo"></i>
-          Coba Bayar Lagi
-        </button>
-        <NuxtLink to="/profile/history_order" class="galaxy-button-secondary">
-          <i class="fas fa-history"></i>
-          Lihat Riwayat Pesanan
-        </NuxtLink>
+      <div class="actions">
+        <NuxtLink to="/orders" class="galaxy-button-secondary">View My Orders</NuxtLink>
       </div>
     </div>
   </div>

@@ -62,7 +62,12 @@ export const useAuthModal = (props, emit) => {
         
         setTimeout(() => {
           closeModal();
-          router.push('/home');
+          // Redirect admin to dashboard, regular users to home
+          if (response.user.account_type === 'admin') {
+            router.push('/dashboard');
+          } else {
+            router.push('/home');
+          }
         }, 1000);
       } else {
         errorMessage.value = response.message || 'Login failed';
@@ -122,15 +127,7 @@ export const useAuthModal = (props, emit) => {
     }
   };
 
-  const handleGoogleAuthSuccess = (user) => {
-    setUser(user);
-    closeModal();
-    router.push('/home');
-  };
 
-  const handleGoogleAuthError = (error) => {
-    errorMessage.value = error;
-  };
 
   return {
     // State
@@ -150,7 +147,5 @@ export const useAuthModal = (props, emit) => {
     clearForms,
     handleLogin,
     handleRegister,
-    handleGoogleAuthSuccess,
-    handleGoogleAuthError
   };
 };

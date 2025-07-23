@@ -14,16 +14,16 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // Find all products with the same slug or specific ID
+  // Find all products with the same category slug or specific ID
     const productsQuery = `
       SELECT 
         p.*, 
         c.name as category_name, 
         c.slug as category_slug 
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-      WHERE ${productSlug ? 'p.slug = ?' : 'p.id = ?'}
-      ORDER BY p.version DESC
+      FROM nixty.products p
+      LEFT JOIN nixty.categories c ON p.category_id = c.id
+      WHERE ${productSlug ? 'c.slug = ?' : 'p.id = ?'}
+      ORDER BY p.created_at DESC
     `;
     const [products] = await db.query(productsQuery, [productSlug || productId]);
     
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
             THEN (max_usage - COALESCE(send_license, 0))
             ELSE 0 
           END) as available_stock
-        FROM product_licenses 
+        FROM nixty.product_license_base 
         WHERE product_id = ?
       `, [p.id]);
       
@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
         id: p.id.toString(),
         name: p.version ? `${p.name} ${p.version}` : p.name,
         version: p.version,
-        slug: p.slug,
+        slug: p.category_slug, // Use category slug
         description: p.description, // Add description for each version
         price: originalPrice,
         discount_price: discountPrice > 0 ? discountPrice : null,
@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
       id: mainProduct.id,
       name: mainProduct.name,
       version: mainProduct.version,
-      slug: mainProduct.slug,
+      slug: mainProduct.category_slug, // Use category slug instead of product slug
       description: mainProduct.description,
       price: originalPrice,
       discount_price: discountPrice > 0 ? discountPrice : null,

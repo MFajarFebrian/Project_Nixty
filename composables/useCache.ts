@@ -1,4 +1,4 @@
-import { debounce } from 'lodash-es'
+import debounce from 'lodash-es/debounce'
 
 interface CacheOptions {
   ttl?: number // Time to live in milliseconds

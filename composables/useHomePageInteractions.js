@@ -1,4 +1,4 @@
-import { debounce } from 'lodash-es';
+import debounce from 'lodash-es/debounce';
 
 export const useHomePageInteractions = (stateAndData) => {
   // Extract reactive state object and data

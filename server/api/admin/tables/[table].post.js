@@ -41,8 +41,9 @@ export default defineEventHandler(async (event) => {
     if (tableName === 'users') {
       // Check email uniqueness
       if (validData.email) {
+        const userTable = useSupabase ? 'nixty.users' : 'users';
         const [existingUser] = await db.execute(
-          'SELECT id FROM users WHERE email = ?',
+          `SELECT id FROM ${userTable} WHERE email = ?`,
           [validData.email]
         );
 

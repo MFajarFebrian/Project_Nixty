@@ -1,8 +1,8 @@
-import db from '~/server/utils/db';
+import db from '../utils/db.js';
 
 export default defineEventHandler(async (event) => {
   try {
-    const [categories] = await db.execute('SELECT id, name, slug FROM categories ORDER BY name');
+    const [categories] = await db.query('SELECT id, name, slug FROM nixty.categories ORDER BY name');
     return {
       success: true,
       data: categories

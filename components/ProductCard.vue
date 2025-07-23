@@ -12,10 +12,8 @@
       
       <!-- Overlays and Badges -->
       <div class="product-badges">
-        <span v-if="product.is_new" class="badge new-badge">NEW</span>
-        <span v-if="product.discount_percentage" class="badge discount-badge">
-          {{ product.discount_percentage }}% OFF
-        </span>
+        <!-- Simplified badges - no complex features from old schema -->
+        <span v-if="product.status === 'active'" class="badge active-badge">ACTIVE</span>
       </div>
     </div>
 
@@ -69,15 +67,17 @@ const fullProductName = computed(() => {
 
 const goToCheckout = () => {
   console.log('ProductCard clicked! Product data:', props.product);
-  console.log('Product slug:', props.product.slug);
+  console.log('Category slug:', props.product.category_slug);
   console.log('Product ID:', props.product.id);
   
-  if (props.product.slug && props.product.id) {
-    const url = `/checkout?slug=${props.product.slug}&productId=${props.product.id}`;
+  if (props.product.id) {
+    // Prefer to use category_slug if available, fall back to slug if needed
+    const slug = props.product.category_slug || props.product.slug || '';
+    const url = `/checkout?slug=${slug}&productId=${props.product.id}`;
     console.log('Navigating to:', url);
     router.push(url);
   } else {
-    console.error('Missing slug or ID for product:', props.product);
+    console.error('Missing ID for product:', props.product);
   }
 };
 

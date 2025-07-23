@@ -104,7 +104,7 @@ import { useFetch } from '#app';
 import { useNuxtApp } from '#app';
 
 // Define emits
-const emit = defineEmits(['dateRangeChanged']);
+const emit = defineEmits(['dateRangeChanged', 'metricsUpdated']);
 
 const chartCanvas = ref(null);
 let chartInstance = null;
@@ -127,6 +127,16 @@ const showRevenue = ref(true);
 const dateRangeError = ref('');
 const showDatePicker = ref(false);
 const isSingleDayView = computed(() => selectedStartDate.value && selectedEndDate.value && selectedStartDate.value === selectedEndDate.value);
+
+// Check if date range is 1-2 days for hourly view
+const isHourlyView = computed(() => {
+  if (!selectedStartDate.value || !selectedEndDate.value) return false;
+  const startDate = new Date(selectedStartDate.value);
+  const endDate = new Date(selectedEndDate.value);
+  const diffTime = Math.abs(endDate - startDate);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays <= 1; // 0-1 days difference (max 2 days total) will show hourly view
+});
 
 // Maximum date (today)
 const maxDate = computed(() => {
@@ -216,7 +226,8 @@ const toISODateStringUTC = (dateStr) => {
 
 const fetchTransactionStats = async () => {
   loading.value = true;
-  let params = { period: 'day' }; // Always use 'day' period for unified date filter
+  // Determine period based on date range
+  let params = { period: isHourlyView.value ? 'hour' : 'day' };
 
   // Send start and end dates with proper UTC handling to prevent timezone shifts
   params.startDate = toISODateStringUTC(selectedStartDate.value);
@@ -357,15 +368,36 @@ const averageRevenueLabel = computed(() => {
   }
 });
 
+// Expose computed values for parent component
+defineExpose({
+  totalRevenue,
+  totalTransactions,
+  averageRevenue,
+  transactionStats
+});
+
 const chartTitle = computed(() => {
-  if (isSingleDayView.value) {
+  if (isHourlyView.value) {
     if (!selectedStartDate.value) return 'Hourly Transactions';
-    const date = new Date(selectedStartDate.value + 'T00:00:00');
-    return `Hourly Transactions for ${date.toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    })}`;
+    const startDate = new Date(selectedStartDate.value + 'T00:00:00');
+    const endDate = new Date(selectedEndDate.value + 'T00:00:00');
+    
+    if (isSingleDayView.value) {
+      return `Hourly Transactions for ${startDate.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })}`;
+    } else {
+      return `Hourly Transactions: ${startDate.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short'
+      })} - ${endDate.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      })}`;
+    }
   }
   return 'Daily Transaction Overview';
 });
@@ -427,8 +459,9 @@ const chartOptions = computed(() => ({
             if (!item) return '';
             const label = item.label;
 
-            if (isSingleDayView.value) {
-              return `${label.padStart(2, '0')}:00`;
+            if (isHourlyView.value) {
+              // Label is already formatted as "MM/DD HH:00" or "HH:00"
+              return label;
             } else {
               const date = new Date(label + 'T00:00:00');
               return date.toLocaleDateString('id-ID', {
@@ -464,14 +497,38 @@ const chartOptions = computed(() => ({
           size: 12,
           weight: '500'
         },
-        callback: function(value) {
+callback: function(value) {
           const label = this.getLabelForValue(value);
-          if (isSingleDayView.value) {
-            return `${label.padStart(2, '0')}:00`;
+          if (isHourlyView.value) {
+            // Smart label filtering for hourly view
+            const labelParts = label.split(' ');
+            if (labelParts.length > 1) {
+              // Multi-day format: "MM/DD HH:00" - show every 6 hours with date when day changes
+              const hourPart = labelParts[1].split(':')[0];
+              const hour = parseInt(hourPart);
+              if (hour % 6 === 0 || hour === 0) {
+                if (hour === 0) {
+                  return labelParts[0]; // Show date at midnight
+                } else {
+                  return labelParts[1]; // Show time only
+                }
+              }
+              return '';
+            } else {
+              // Single day format: "HH:00" - show every 3 hours
+              const hourPart = label.split(':')[0];
+              const hour = parseInt(hourPart);
+              if (hour % 3 === 0) {
+                return label;
+              }
+              return '';
+            }
           }
           const date = new Date(label + 'T00:00:00');
           return date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
-        }
+        },
+        maxTicksLimit: isHourlyView.value ? 8 : 10, // Limit number of ticks shown
+        autoSkip: true // Auto-skip labels if too many
       },
       grid: { 
         color: 'rgba(255,255,255,0.12)',
@@ -994,6 +1051,19 @@ watch([showTransactions, showRevenue], () => {
     chartInstance.update();
   }
 }, { deep: true });
+
+// Watch for metrics changes and emit to parent
+watch(
+  [totalRevenue, totalTransactions, averageRevenue],
+  () => {
+    emit('metricsUpdated', {
+      totalRevenue: totalRevenue.value,
+      totalOrders: totalTransactions.value,
+      avgOrderValue: averageRevenue.value
+    });
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

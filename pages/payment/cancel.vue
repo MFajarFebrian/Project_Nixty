@@ -25,14 +25,9 @@
         </div>
       </div>
       
-      <div class="cancel-actions">
-        <NuxtLink to="/products" class="galaxy-button-secondary">
-          <i class="fas fa-shopping-cart"></i> Lanjut Belanja
-        </NuxtLink>
-        <NuxtLink to="/profile/history_order" class="galaxy-button-secondary">
-          <i class="fas fa-history"></i>
-          Lihat Riwayat Pesanan
-        </NuxtLink>
+      <div class="actions">
+        <NuxtLink to="/products" class="galaxy-button-primary">Browse Other Products</NuxtLink>
+        <NuxtLink to="/orders" class="galaxy-button-secondary">Go to My Orders</NuxtLink>
       </div>
     </div>
   </div>

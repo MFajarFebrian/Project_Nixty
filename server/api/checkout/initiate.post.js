@@ -2,6 +2,7 @@ import midtransClient from 'midtrans-client';
 import { midtransConfig } from '~/server/utils/config';
 import db from '~/server/utils/db';
 import { requireAuth } from '~/server/utils/auth';
+import { generateOrderIdWithProduct } from '~/server/utils/order-id-generator';
 
 // Get runtime config for baseUrl
 const { public: { baseUrl } } = useRuntimeConfig();
@@ -53,21 +54,29 @@ export default defineEventHandler(async (event) => {
   // Authenticate the user - authentication is required
   const user = await requireAuth(event);
   
-  // Check stock availability
+  // Check stock availability from product_license_base
   try {
-    const [stockResult] = await db.execute(
-      `SELECT available_stock FROM product_stock_view WHERE product_id = ?`,
+    const [stockResult] = await db.query(
+      `SELECT 
+        COUNT(*) as total_licenses,
+        SUM(CASE 
+          WHEN status = 'available' AND (COALESCE(send_license, 0) < max_usage)
+          THEN (max_usage - COALESCE(send_license, 0))
+          ELSE 0 
+        END) as available_stock
+      FROM nixty.product_license_base 
+      WHERE product_id = ?`,
       [product.id]
     );
     
-    if (stockResult.length === 0 || !stockResult[0].available_stock) {
+    if (stockResult.length === 0) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Product is out of stock.'
       });
     }
     
-    const availableStock = parseInt(stockResult[0].available_stock);
+    const availableStock = parseInt(stockResult[0].available_stock || 0);
     
     if (availableStock < quantity) {
       throw createError({
@@ -88,8 +97,8 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // 1. Create a unique order ID
-  const order_id = `NIXTY-${Date.now()}-${product.id}`;
+  // 1. Create a unique order ID using the proper generator
+  const order_id = generateOrderIdWithProduct(user.id, product.id);
 
   // 2. Prepare transaction parameters for Midtrans
   const parameter = {
@@ -158,24 +167,43 @@ export default defineEventHandler(async (event) => {
 
   // 4. Insert transaction into database with proper Midtrans response
   try {
-    const [result] = await db.execute(
-      `INSERT INTO transactions (user_id, order_id, product_id, product_name, email, amount, quantity, status, payment_method, customer_name, payment_gateway_status, payment_gateway_payload)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?) RETURNING id`,
+    const [result] = await db.query(
+      `INSERT INTO nixty.orders (user_id, product_id, quantity, total, status, order_id) 
+       VALUES (?, ?, ?, ?, 'pending', ?) RETURNING id`,
       [
         user.id, 
-        order_id, 
         product.id, 
-        `${product.name} ${product.version}`, 
-        customer.email, 
-        product.price * quantity, 
         quantity, 
-        'midtrans', // Will be updated via webhook with actual payment method
-        customer.name, 
-        'pending',
-        midtransResponse // Pass object directly for PostgreSQL JSONB
+        product.price * quantity,
+        order_id
       ]
     );
-    console.log('Transaction created with ID:', result.length > 0 ? result[0].id : 'unknown', 'for user ID:', user.id);
+    
+    const transactionId = result.length > 0 ? result[0].id : null;
+    console.log('Transaction created with ID:', transactionId, 'for user ID:', user.id);
+    
+    // Store payment gateway logs
+    if (transactionId) {
+      await db.query(
+        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
+        [transactionId, 'midtrans_order_id', order_id]
+      );
+      
+      await db.query(
+        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
+        [transactionId, 'midtrans_response', JSON.stringify(midtransResponse)]
+      );
+      
+      await db.query(
+        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
+        [transactionId, 'customer_email', customer.email]
+      );
+      
+      await db.query(
+        `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
+        [transactionId, 'custom_email', body.custom_email || customer.email]
+      );
+    }
   } catch (error) {
     console.error('Database Error:', error);
     throw createError({

@@ -1,15 +1,88 @@
 <template>
   <div>
-    <!-- This page redirects to /home. It acts as the root entry point. -->
+    Redirecting...
   </div>
 </template>
 
-<script setup lang="js">
-// Use Nuxt's built-in navigation utilities
+<script setup>
+import { onMounted, onBeforeMount } from 'vue';
+import { useRouter } from 'vue-router';
+
 const router = useRouter();
 
-// Redirect to home page
-onMounted(() => {
+onBeforeMount(() => {
+  // Try to immediately redirect during the setup phase
   router.push('/home');
 });
-</script> 
+
+onMounted(() => {
+  // Ensure redirect happens even if onBeforeMount fails
+  window.location.href = '/home';
+});
+</script>
+
+<style scoped>
+.welcome-page {
+  min-height: 100vh;
+  background: var(--galaxy-hero-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--galaxy-space-lg);
+}
+
+.welcome-container {
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.welcome-content {
+  background: var(--galaxy-card-gradient);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--galaxy-radius-xl);
+  padding: var(--galaxy-space-2xl);
+  backdrop-filter: blur(15px);
+  box-shadow: var(--galaxy-shadow-large);
+}
+
+.welcome-content h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--galaxy-starlight);
+  margin: 0 0 var(--galaxy-space-lg) 0;
+  background: var(--galaxy-accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-content p {
+  color: var(--galaxy-cloud-gray);
+  font-size: 1.1rem;
+  margin: 0 0 var(--galaxy-space-xl) 0;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+}
+
+.loading-spinner i {
+  font-size: 2rem;
+  color: var(--galaxy-aurora-cyan);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .welcome-content h1 {
+    font-size: 2rem;
+  }
+  
+  .welcome-content p {
+    font-size: 1rem;
+  }
+}
+</style>

@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     
     // Find user with this reset token
     const [users] = await pool.execute(
-      'SELECT * FROM users WHERE reset_token = ?',
+      'SELECT * FROM nixty.users WHERE reset_token = ?',
       [token]
     );
     
@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
     
     // Update user's password and clear reset token
     await pool.execute(
-      'UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
+      'UPDATE nixty.users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
       [hashedPassword, user.id]
     );
     

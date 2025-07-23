@@ -1,10 +1,10 @@
 <template>
   <div>
-    <!-- Modal peringatan login -->
+    <!-- Login warning modal -->
     <div v-if="showLoginWarning" class="modal-overlay">
       <div class="modal-content">
-        <h2>Login Diperlukan</h2>
-        <p>Anda harus login terlebih dahulu untuk melanjutkan pembelian produk.</p>
+        <h2>Login Required</h2>
+        <p>You must log in first to proceed with the product purchase.</p>
         <button class="cosmic-button" @click="openAuthModal">Login</button>
       </div>
     </div>
@@ -17,7 +17,7 @@
       @close="closeAuthModal"
     />
 
-    <!-- Konten checkout lainnya -->
+    <!-- Other checkout content -->
     <div v-if="!showLoginWarning">
       <div class="checkout-page">
         <!-- Loading State -->
@@ -38,7 +38,7 @@
         <div v-else-if="product" class="product-checkout-container">
           <div class="checkout-header">
             <h1>Complete Your Purchase</h1>
-            <p class="product-name">{{ product.name }} {{ product.version }}</p>
+<p class="product-name">{{ selectedVersionName }}</p>
           </div>
           
           <div class="checkout-grid">
@@ -56,10 +56,10 @@
             <div class="product-details">
                 <div class="product-description" v-html="selectedVersionDescription"></div>
                 
-                <div class="product-features" v-if="product.features">
+                <div class="product-features" v-if="selectedVersionFeatures.length > 0">
                   <h3>Features</h3>
                   <ul>
-                    <li v-for="(feature, index) in product.features" :key="index">
+                    <li v-for="(feature, index) in selectedVersionFeatures" :key="index">
                       {{ feature }}
                     </li>
                   </ul>
@@ -81,26 +81,44 @@
                     :class="['version-btn', { active: selectedVersionId === version.id }]"
                     @click="selectVersion(version)"
                   >
-                    <span class="version-name">{{ version.version || 'Standard' }}</span>
+<span class="version-name">{{ version.name }}</span>
                     <span class="version-price">{{ formatCurrency(version.price) }}</span>
                     <span v-if="version.version === '365'" class="version-badge">Subscription</span>
                   </button>
                 </div>
               </div>
               
-              <!-- Custom Email Field -->
+              <!-- Email Field -->
               <div class="form-group">
-                <label for="customEmail">Email for License Delivery</label>
+                <label for="emailInput">Email for License Delivery</label>
                 <input 
                   type="email" 
-                  id="customEmail" 
-                  v-model="customEmail" 
-                  placeholder="Enter email address for license delivery"
+                  id="emailInput" 
+                  :value="useCustomEmail ? customEmail : (user?.email || '')"
+                  @input="handleEmailInput"
+                  :placeholder="useCustomEmail ? 'Enter custom email address' : 'Your registered email'"
                   class="form-input"
                   :class="{ 'error': emailError }"
+                  :disabled="!useCustomEmail"
                 />
+                
+                <!-- Simple Checkbox -->
+                <div class="simple-checkbox">
+                  <input 
+                    type="checkbox" 
+                    id="useCustomEmailCheckbox" 
+                    v-model="useCustomEmail" 
+                    class="simple-checkbox-input"
+                  />
+                  <label for="useCustomEmailCheckbox" class="simple-checkbox-label">
+                    Use different email address
+                  </label>
+                </div>
+                
                 <small v-if="emailError" class="error-text">{{ emailError }}</small>
-                <small class="help-text">Product license/credentials will be sent to this email</small>
+                <small class="help-text">
+                  {{ useCustomEmail ? 'Product license will be sent to the custom email above' : `Product license will be sent to your registered email: ${user?.email}` }}
+                </small>
               </div>
               
               <div class="form-group">
@@ -203,8 +221,16 @@ const quantity = ref(1);
 const selectedVersionId = ref(null);
 const availableVersions = ref([]);
 const customEmail = ref('');
+const useCustomEmail = ref(false); // Toggle for custom email
 const emailError = ref('');
 const isCalculating = ref(false);
+
+// Handle email input changes
+const handleEmailInput = (event) => {
+  if (useCustomEmail.value) {
+    customEmail.value = event.target.value;
+  }
+};
 
 // Log route parameters for debugging
 console.log('Checkout page loaded with route query:', route.query);
@@ -274,14 +300,7 @@ async function fetchProductDetails() {
       throw new Error(`API error: ${apiError.message || 'Unknown error'}`);
     }
     
-    // Parse features from description if not provided
-    if (!product.value.features && product.value.description) {
-      const featureMatch = product.value.description.match(/Features:(.*?)(?:\n\n|$)/s);
-      if (featureMatch && featureMatch[1]) {
-        const featuresText = featureMatch[1].trim();
-        product.value.features = featuresText.split('\n').map(f => f.replace(/^[-•*]\s*/, '').trim()).filter(f => f);
-      }
-    }
+    // Don't parse features globally anymore - will be handled per version
     
     console.log('Product data fetched:', product.value);
   } catch (e) {
@@ -306,7 +325,7 @@ const selectedVersionDescription = computed(() => {
     return product.value?.description || '';
   }
   const selectedVersion = availableVersions.value.find(v => v.id === selectedVersionId.value);
-  return selectedVersion ? selectedVersion.description || product.value?.description || '' : product.value?.description || '';
+  return selectedVersion ? (selectedVersion.description || '') : (product.value?.description || '');
 });
 
 // Computed property for selected version image
@@ -324,7 +343,21 @@ const selectedVersionName = computed(() => {
     return product.value?.name || '';
   }
   const selectedVersion = availableVersions.value.find(v => v.id === selectedVersionId.value);
-  return selectedVersion ? `${product.value?.name} ${selectedVersion.version || ''}`.trim() : product.value?.name || '';
+  return selectedVersion ? selectedVersion.name : product.value?.name || '';
+});
+
+// Computed property for selected version features
+const selectedVersionFeatures = computed(() => {
+  if (!selectedVersionId.value || !availableVersions.value.length) {
+    return [];
+  }
+  const selectedVersion = availableVersions.value.find(v => v.id === selectedVersionId.value);
+  const featureMatch = selectedVersion.description.match(/Features:(.*?)(?:\n\n|$)/s);
+  if (featureMatch && featureMatch[1]) {
+    const featuresText = featureMatch[1].trim();
+    return featuresText.split('\n').map(f => f.replace(/^[-•*]\s*/, '').trim()).filter(f => f);
+  }
+  return [];
 });
 
 const totalPrice = ref(0);
@@ -407,14 +440,17 @@ const validateEmail = (email) => {
 const validateForm = () => {
   emailError.value = '';
   
-  if (!customEmail.value.trim()) {
-    emailError.value = 'Email is required for license delivery';
-    return false;
-  }
-  
-  if (!validateEmail(customEmail.value)) {
-    emailError.value = 'Please enter a valid email address';
-    return false;
+  // Only validate custom email if custom email is enabled
+  if (useCustomEmail.value) {
+    if (!customEmail.value.trim()) {
+      emailError.value = 'Custom email is required when this option is selected';
+      return false;
+    }
+    
+    if (!validateEmail(customEmail.value)) {
+      emailError.value = 'Please enter a valid email address';
+      return false;
+    }
   }
   
   return true;
@@ -436,6 +472,8 @@ const initiatePayment = async () => {
     name: user.value.name,
     email: user.value.email
   });
+  
+  console.log('📋 User session data for header:', JSON.stringify(user.value));
   
   if (!product.value || quantity.value < 1) {
     console.error('❌ Invalid product or quantity');
@@ -484,7 +522,7 @@ const initiatePayment = async () => {
         email: user.value.email
       },
       quantity: quantity.value,
-      custom_email: customEmail.value.trim()
+      custom_email: useCustomEmail.value ? customEmail.value.trim() : null
     };
     
     console.log('📦 Request body prepared:', requestBody);
@@ -509,14 +547,17 @@ const initiatePayment = async () => {
       window.snap.pay(response.token, {
         onSuccess: function(result){
           console.log("Payment successful!", result);
-          router.push({
-            path: '/payment/finish',
-            query: {
-              order_id: result.order_id,
-              status_code: result.status_code,
-              transaction_status: result.transaction_status
-            }
-          });
+          // Add 5-second delay before redirecting to payment finish page
+          setTimeout(() => {
+            router.push({
+              path: '/payment/finish',
+              query: {
+                order_id: result.order_id,
+                status_code: result.status_code,
+                transaction_status: result.transaction_status
+              }
+            });
+          }, 5000); // 5000ms = 5 seconds
         },
         onPending: function(result){
           console.log("Payment pending", result);
@@ -570,7 +611,7 @@ const openAuthModal = () => {
 }
 const closeAuthModal = () => {
   isAuthModalOpen.value = false
-  // Jika user sudah login setelah modal ditutup, hilangkan warning
+  // If user is logged in after modal is closed, hide the warning
   if (user.value) showLoginWarning.value = false
 }
 
@@ -584,8 +625,9 @@ onMounted(() => {
   if (!user.value) {
     showLoginWarning.value = true
   } else {
-    // Auto-fill custom email with user's email when logged in
-    customEmail.value = user.value.email || '';
+    // Initialize email options
+    useCustomEmail.value = false; // Default to user's email
+    customEmail.value = '';
   }
   fetchProductDetails();
 
@@ -816,6 +858,36 @@ onMounted(() => {
   margin-top: var(--galaxy-space-xs);
   display: block;
   opacity: 0.8;
+}
+
+/* Simple Checkbox */
+.simple-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-xs);
+  margin-top: var(--galaxy-space-sm);
+  margin-bottom: var(--galaxy-space-xs);
+}
+
+.simple-checkbox-input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--galaxy-aurora-cyan);
+  cursor: pointer;
+}
+
+.simple-checkbox-label {
+  font-size: 0.9rem;
+  color: var(--galaxy-light-gray);
+  cursor: pointer;
+  user-select: none;
+}
+
+.form-input:disabled {
+  background: var(--galaxy-asteroid-gray);
+  color: var(--galaxy-light-gray);
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .version-options {

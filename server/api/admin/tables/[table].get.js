@@ -17,10 +17,11 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Check for allowed tables
+    // Check for allowed tables (from nixty schema)
     const allowedTables = [
       'users', 'products', 'categories', 'transactions', 
-      'product_licenses', 'announcements', 'hero_slides'
+      'product_license_base', 'product_license_keys', 'product_license_accounts',
+      'product_tags', 'transaction_license', 'payment_gateway_logs'
     ];
     
     if (!allowedTables.includes(tableName)) {
@@ -30,8 +31,9 @@ export default defineEventHandler(async (event) => {
       });
     }
     
-    // Count total records
-    const [countResult] = await db.query(`SELECT COUNT(*) as total FROM ${tableName}`);
+    // Count total records (use nixty schema for Supabase)
+    const schemaPrefix = useSupabase ? 'nixty.' : '';
+    const [countResult] = await db.query(`SELECT COUNT(*) as total FROM ${schemaPrefix}${tableName}`);
     const total = useSupabase ? parseInt(countResult[0].total) : countResult[0].total;
     console.log(`Total records found: ${total}`);
 
@@ -42,23 +44,21 @@ export default defineEventHandler(async (event) => {
 
     // Special handling for specific tables
     if (tableName === 'products') {
-      // Join with categories and stock view
-      joinClauses.push('LEFT JOIN categories c ON t.category_id = c.id');
-      joinClauses.push('LEFT JOIN product_stock_view psv ON t.id = psv.product_id');
+      // Join with categories and calculate stock from license tables
+      joinClauses.push(`LEFT JOIN ${schemaPrefix}categories c ON t.category_id = c.id`);
+      joinClauses.push(`LEFT JOIN (SELECT product_id, COUNT(*) as total_licenses, COUNT(CASE WHEN status = 'available' THEN 1 END) as available_stock FROM ${schemaPrefix}product_license_base GROUP BY product_id) plb ON t.id = plb.product_id`);
       joinFields.push('c.name AS categoryName');
-      joinFields.push('psv.available_stock');
-      joinFields.push('psv.total_licenses');
-      joinFields.push('psv.stock_status');
-      joinFields.push('psv.version');
+      joinFields.push('COALESCE(plb.available_stock, 0) as stock');
+      joinFields.push('COALESCE(plb.total_licenses, 0) as total_licenses');
     } else if (tableName === 'product_licenses') {
       // Join with products
-      joinClauses.push('LEFT JOIN products p ON t.product_id = p.id');
+      joinClauses.push(`LEFT JOIN ${schemaPrefix}products p ON t.product_id = p.id`);
       joinFields.push('p.name AS product_name');
       joinFields.push('p.version AS product_version');
     } else if (tableName === 'transactions') {
       // Transactions doesn't have user_id, we use email from transactions table
       // Add product info if needed
-      joinClauses.push('LEFT JOIN products p ON t.product_id = p.id');
+      joinClauses.push(`LEFT JOIN ${schemaPrefix}products p ON t.product_id = p.id`);
       joinFields.push('p.name AS product_name');
       joinFields.push('p.version AS product_version');
     }
@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
                is_nullable as "Null", column_default as "Default",
                '' as "Key", '' as "Extra"
         FROM information_schema.columns 
-        WHERE table_name = ? AND table_schema = 'public'
+        WHERE table_name = ? AND table_schema = 'nixty'
         ORDER BY ordinal_position
       `, [tableName]);
     } else {
@@ -128,7 +128,7 @@ searchConditions += ` AND (${searchQueries.join(' AND ')})`;
     
     // Build query with join information
     const selectedFields = ['t.*', ...joinFields];
-    let query = `SELECT ${selectedFields.join(', ')} FROM ${tableName} t ${joinClauses.join(' ')} ${searchConditions}`;
+    let query = `SELECT ${selectedFields.join(', ')} FROM ${schemaPrefix}${tableName} t ${joinClauses.join(' ')} ${searchConditions}`;
     
     // Add grouping if needed
     if (groupByFields.length > 0) {
@@ -162,7 +162,7 @@ searchConditions += ` AND (${searchQueries.join(' AND ')})`;
     // If table is products, fetch categories for the dropdown
     let categories = [];
     if (tableName === 'products') {
-      const [categoryRows] = await db.query('SELECT id, name, slug FROM categories ORDER BY name ASC');
+      const [categoryRows] = await db.query(`SELECT id, name, slug FROM ${schemaPrefix}categories ORDER BY name ASC`);
       categories = categoryRows;
     }
 

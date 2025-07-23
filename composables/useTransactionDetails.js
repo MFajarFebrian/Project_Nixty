@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { useToast } from './useToast';
 
-export function useTransactionDetails() {
+export function useTransactionDetails(transactionId, user) {
   const { success, error: showError } = useToast();
   const isProcessingPayment = ref(false);
   const isFetchingLicense = ref(false);
@@ -18,7 +18,7 @@ export function useTransactionDetails() {
            completedStatuses.includes(gatewayStatus?.toLowerCase());
   };
 
-  const repayOrder = async (transactionId, user, refreshCallback) => {
+  const repay = async () => {
     isProcessingPayment.value = true;
     try {
       if (!transactionId) {
@@ -26,11 +26,11 @@ export function useTransactionDetails() {
       }
 
       // Get a new payment token for the order
-      const response = await $fetch(`/api/profile/history_order/repay`, {
+      const response = await $fetch(`/api/orders/repay`, {
         method: 'POST',
-        body: { transactionId },
+        body: { transaction_id: transactionId },
         headers: {
-          'x-user-session': JSON.stringify(user)
+          'x-user-session': JSON.stringify(user.value)
         }
       });
 
@@ -66,18 +66,18 @@ export function useTransactionDetails() {
     }
   };
 
-  const fetchLicenseManually = async (transactionId, user, updateCallback) => {
+  const getLicense = async () => {
     isFetchingLicense.value = true;
     try {
       if (!transactionId) {
         throw new Error('Transaction ID is required.');
       }
 
-      const response = await $fetch(`/api/profile/history_order/get-license`, {
+      const response = await $fetch(`/api/orders/get-license`, {
         method: 'POST',
-        body: { transactionId },
+        body: { transaction_id: transactionId },
         headers: {
-          'x-user-session': JSON.stringify(user)
+          'x-user-session': JSON.stringify(user.value)
         }
       });
 

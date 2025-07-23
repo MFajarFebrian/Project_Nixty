@@ -13,8 +13,6 @@ export const useAppHeader = (emit) => {
   const userDropdownRef = ref(null);
   const guestDropdownRef = ref(null);
 
-  // Search animation state
-  const isSearchExpanded = ref(false);
 
   // Active route detection
   const currentRoute = computed(() => route.path);
@@ -31,13 +29,13 @@ export const useAppHeader = (emit) => {
       return true;
     }
 
-    // Admin routes special handling
-    if (path === '/admin' && currentRoute.value.startsWith('/admin')) {
+    // Dashboard routes special handling
+    if (path === '/dashboard' && currentRoute.value.startsWith('/dashboard')) {
       return true;
     }
 
-    // General sub-route matching (but not for admin to avoid conflicts)
-    if (path !== '/admin' && currentRoute.value.startsWith(path + '/')) {
+    // General sub-route matching (but not for dashboard to avoid conflicts)
+    if (path !== '/dashboard' && currentRoute.value.startsWith(path + '/')) {
       return true;
     }
 
@@ -75,18 +73,14 @@ export const useAppHeader = (emit) => {
   };
 
   const navigateToOrders = () => {
-    router.push('/profile/history_order');
+    router.push('/orders');
     isUserDropdownOpen.value = false;
   };
 
-  const navigateToSettings = () => {
-    router.push('/profile/settings');
-    isUserDropdownOpen.value = false;
-  };
 
   // Admin navigation methods
-  const navigateToAdminDashboard = () => {
-    router.push('/admin');
+  const navigateToDashboard = () => {
+    router.push('/dashboard');
     isUserDropdownOpen.value = false;
   };
 
@@ -94,39 +88,29 @@ export const useAppHeader = (emit) => {
   const openAuthModal = (tab = 'login') => {
     if (emit) {
       emit('open-auth-modal', tab);
+      // Close any open dropdowns
       isGuestDropdownOpen.value = false;
+      isUserDropdownOpen.value = false;
     }
   };
 
   const handleLogout = () => {
+    const isAdmin = user.value?.account_type === 'admin';
     logout();
-    router.push('/');
+    
+    // Redirect admin to home with login modal, regular users to home
+    if (isAdmin) {
+      router.push('/?modal=login');
+    } else {
+      router.push('/');
+    }
+    
     isUserDropdownOpen.value = false;
   };
 
-  // Search handlers
-  const handleSearch = (searchData) => {
-    console.log('Search performed:', searchData);
-    // You can implement search navigation logic here
-    // For example: router.push(`/search?q=${searchData.query}&filter=${searchData.filter}`);
-  };
 
-  const handleSuggestionSelected = (data) => {
-    console.log('Suggestion selected:', data);
-    // You can implement suggestion navigation logic here
-    // For example: router.push(`/${data.filter.toLowerCase()}/${data.suggestion.id}`);
-  };
 
-  // Search animation handlers
-  const handleSearchExpanded = () => {
-    isSearchExpanded.value = true;
-    console.log('Navigation sliding for search expansion');
-  };
 
-  const handleSearchCollapsed = () => {
-    isSearchExpanded.value = false;
-    console.log('Navigation sliding back to normal');
-  };
 
   // Lifecycle methods
   const initializeComponent = () => {
@@ -145,7 +129,6 @@ export const useAppHeader = (emit) => {
     isGuestDropdownOpen,
     userDropdownRef,
     guestDropdownRef,
-    isSearchExpanded,
     currentRoute,
 
     // Methods
@@ -153,14 +136,9 @@ export const useAppHeader = (emit) => {
     toggleGuestDropdown,
     navigateToProfile,
     navigateToOrders,
-    navigateToSettings,
-    navigateToAdminDashboard,
+    navigateToDashboard,
     openAuthModal,
     handleLogout,
-    handleSearch,
-    handleSuggestionSelected,
-    handleSearchExpanded,
-    handleSearchCollapsed,
     initializeComponent,
     cleanupComponent,
     isActiveRoute

@@ -1,11 +1,13 @@
 import { ref } from 'vue';
 import { useAdminAuth } from './useAdminAuth';
+import { useToast } from './useToast';
 
 /**
  * Image upload composable for admin use
  */
 export function useImageUpload() {
   const { getAdminHeaders, checkAdminAccess } = useAdminAuth();
+  const toast = useToast();
   
   // State
   const uploading = ref(false);
@@ -104,14 +106,19 @@ export function useImageUpload() {
 
       if (result.success) {
         progress.value = 100;
+        toast.success('Image uploaded successfully!');
         return result.data;
       } else {
-        setError(result.message || 'Failed to upload image');
+        const errorMsg = result.message || 'Failed to upload image';
+        setError(errorMsg);
+        toast.error(errorMsg);
         return null;
       }
 
     } catch (err) {
-      setError(err.message || 'Failed to upload image');
+      const errorMsg = err.message || 'Failed to upload image';
+      setError(errorMsg);
+      toast.error(errorMsg);
       return null;
     } finally {
       uploading.value = false;
@@ -141,14 +148,19 @@ export function useImageUpload() {
       });
 
       if (response.success) {
+        toast.success('Image deleted successfully!');
         return true;
       } else {
-        setError(response.message || 'Failed to delete image');
+        const errorMsg = response.message || 'Failed to delete image';
+        setError(errorMsg);
+        toast.error(errorMsg);
         return false;
       }
 
     } catch (err) {
-      setError(err.message || 'Failed to delete image');
+      const errorMsg = err.message || 'Failed to delete image';
+      setError(errorMsg);
+      toast.error(errorMsg);
       return false;
     }
   };

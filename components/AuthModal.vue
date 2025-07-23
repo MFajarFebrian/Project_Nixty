@@ -50,16 +50,6 @@
             </button>
           </form>
           
-          <div class="separator">
-            <span>OR</span>
-          </div>
-          
-          <GoogleButton 
-            button-text="Continue with Google" 
-            auth-type="login"
-            @google-auth-success="handleGoogleAuthSuccess"
-            @google-auth-error="handleGoogleAuthError"
-          />
         </div>
 
         <!-- Register Form -->
@@ -94,16 +84,6 @@
             </button>
           </form>
           
-          <div class="separator">
-            <span>OR</span>
-          </div>
-          
-          <GoogleButton 
-            button-text="Sign up with Google" 
-            auth-type="register"
-            @google-auth-success="handleGoogleAuthSuccess"
-            @google-auth-error="handleGoogleAuthError"
-          />
         </div>
       </div>
     </div>
@@ -156,7 +136,5 @@ const {
   clearForms,
   handleLogin,
   handleRegister,
-  handleGoogleAuthSuccess,
-  handleGoogleAuthError
 } = useAuthModal(props, emit);
 </script>
