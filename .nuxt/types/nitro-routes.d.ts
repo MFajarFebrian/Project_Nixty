@@ -39,9 +39,6 @@ declare module "nitropack/types" {
     '/api/admin/fix-transactions-table': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/fix-transactions-table.get').default>>>>
     }
-    '/api/admin/init-database': {
-      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/init-database.get').default>>>>
-    }
     '/api/admin/license-delivery-stats': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/license-delivery-stats.get').default>>>>
     }
@@ -66,21 +63,6 @@ declare module "nitropack/types" {
     '/api/admin/retry-license-delivery': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/retry-license-delivery.post').default>>>>
     }
-    '/api/admin/setup-auth-credentials': {
-      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/setup-auth-credentials.post').default>>>>
-    }
-    '/api/admin/setup-license-tracking': {
-      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/setup-license-tracking.get').default>>>>
-    }
-    '/api/admin/setup-test-user': {
-      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/setup-test-user.get').default>>>>
-    }
-    '/api/admin/setup-transactions-table': {
-      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/setup-transactions-table.get').default>>>>
-    }
-    '/api/admin/setup-webhook-logging': {
-      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/setup-webhook-logging.get').default>>>>
-    }
     '/api/admin/table-metadata': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/table-metadata.get').default>>>>
     }
@@ -100,12 +82,6 @@ declare module "nitropack/types" {
     }
     '/api/admin/test-email': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/test-email.get').default>>>>
-    }
-    '/api/admin/test-transaction': {
-      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/test-transaction.post').default>>>>
-    }
-    '/api/admin/test-users': {
-      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/test-users.get').default>>>>
     }
     '/api/admin/transaction-status': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/transaction-status.get').default>>>>
@@ -263,12 +239,6 @@ declare module "nitropack/types" {
     }
     '/api/setup-missing-tables': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/setup-missing-tables.get').default>>>>
-    }
-    '/api/test-data': {
-      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/test-data.get').default>>>>
-    }
-    '/api/test-products-nixty': {
-      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/test-products-nixty.get').default>>>>
     }
     '/api/transactions/license-status/:id': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/transactions/license-status/[id].get').default>>>>
