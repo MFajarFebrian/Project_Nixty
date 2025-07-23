@@ -1,5 +1,5 @@
-import db from '~/server/utils/db';
-import { requireAuth } from '~/server/utils/auth';
+import db from '../../../utils/db.js';
+import { requireAuth } from '../../../utils/auth.js';
 
 export default defineEventHandler(async (event) => {
   // Require authentication
@@ -35,8 +35,8 @@ export default defineEventHandler(async (event) => {
           t.updated_at,
           p.name as product_name_full,
           p.version as product_version
-        FROM transactions t
-        LEFT JOIN products p ON t.product_id = p.id
+        FROM nixty.transactions t
+        LEFT JOIN nixty.products p ON t.product_id = p.id
         WHERE t.order_id = ? AND t.user_id = ?
       `;
       params = [order_id, user.id];
@@ -55,14 +55,14 @@ export default defineEventHandler(async (event) => {
           t.updated_at,
           p.name as product_name_full,
           p.version as product_version
-        FROM transactions t
-        LEFT JOIN products p ON t.product_id = p.id
+        FROM nixty.transactions t
+        LEFT JOIN nixty.products p ON t.product_id = p.id
         WHERE t.id = ? AND t.user_id = ?
       `;
       params = [transaction_id, user.id];
     }
     
-    const [rows] = await db.execute(query, params);
+    const [rows] = await db.query(query, params);
     
     if (rows.length === 0) {
       throw createError({

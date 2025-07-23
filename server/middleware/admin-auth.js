@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   
   const config = useRuntimeConfig();
   
-  // Skip authentication for development mode
+  // Skip authentication for development mode only if explicitly set
   const isDev = process.env.NODE_ENV === 'development';
   const bypassAuth = isDev && config.public.bypassAdminAuth === 'true';
   
@@ -27,15 +27,26 @@ export default defineEventHandler(async (event) => {
     return;
   }
   
+  console.log('Admin auth middleware active - Environment:', process.env.NODE_ENV);
+  console.log('Bypass auth setting:', config.public.bypassAdminAuth);
+  
   // Regular authentication process
   const headers = getHeaders(event);
   const userId = headers['x-user-id'];
   const userEmail = headers['x-user-email'];
   
+  console.log('Admin auth headers received:', { 
+    hasUserId: !!userId, 
+    hasUserEmail: !!userEmail,
+    userId: userId ? userId.substring(0, 3) + '***' : 'none',
+    userEmail: userEmail ? userEmail.substring(0, 3) + '***' : 'none'
+  });
+  
   if (!userId || !userEmail) {
+    console.log('Missing authentication headers');
     throw createError({
       statusCode: 401,
-      statusMessage: 'Authentication required'
+      statusMessage: 'Authentication required - Missing user credentials'
     });
   }
   

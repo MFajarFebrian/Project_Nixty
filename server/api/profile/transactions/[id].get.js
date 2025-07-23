@@ -1,5 +1,5 @@
-import db from '~/server/utils/db';
-import { requireAuth } from '~/server/utils/auth';
+import db from '../../../utils/db.js';
+import { requireAuth } from '../../../utils/auth.js';
 
 export default defineEventHandler(async (event) => {
   // Require authentication
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   
   try {
     // Get transaction details
-    const [rows] = await db.execute(`
+    const [rows] = await db.query(`
       SELECT 
         t.id,
         t.order_id,
@@ -36,8 +36,8 @@ export default defineEventHandler(async (event) => {
         p.name as product_name_full,
         p.version as product_version,
         p.image_url as product_image
-      FROM transactions t
-      LEFT JOIN products p ON t.product_id = p.id
+      FROM nixty.transactions t
+      LEFT JOIN nixty.products p ON t.product_id = p.id
       WHERE t.id = ? AND t.user_id = ?
     `, [transactionId, user.id]);
     

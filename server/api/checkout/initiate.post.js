@@ -1,8 +1,8 @@
 import midtransClient from 'midtrans-client';
-import { midtransConfig } from '~/server/utils/config';
-import db from '~/server/utils/db';
-import { requireAuth } from '~/server/utils/auth';
-import { generateOrderIdWithProduct } from '~/server/utils/order-id-generator';
+import { midtransConfig } from '../../utils/config.js';
+import db from '../../utils/db.js';
+import { requireAuth } from '../../utils/auth.js';
+import { generateOrderIdWithProduct } from '../../utils/order-id-generator.js';
 
 // Get runtime config for baseUrl
 const { public: { baseUrl } } = useRuntimeConfig();

@@ -1,6 +1,6 @@
 import midtransClient from 'midtrans-client';
-import { midtransConfig } from '~/server/utils/config';
-import db from '~/server/utils/db';
+import { midtransConfig } from '../../utils/config.js';
+import db from '../../utils/db.js';
 import crypto from 'crypto';
 import { sendLicenseEmail, sendMultipleLicenseEmail } from '../../utils/emailService.js';
 
@@ -49,8 +49,8 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const [result] = await db.execute(
-      `UPDATE transactions SET status = ?, payment_method = ?, payment_gateway_status = ?, payment_gateway_payload = ?, updated_at = NOW() WHERE order_id = ?`,
+    const [result] = await db.query(
+      `UPDATE nixty.transactions SET status = ?, payment_method = ?, payment_gateway_status = ?, payment_gateway_payload = ?, updated_at = NOW() WHERE order_id = ?`,
       [newStatus, body.payment_type || 'midtrans', transaction_status, JSON.stringify(body), order_id]
     );
 
@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
       
       // If transaction is completed, assign and store license info
       if (newStatus === 'completed') {
-        const [transactionRows] = await db.execute('SELECT id, product_id, quantity, user_id, email, customer_name, product_name FROM transactions WHERE order_id = ?', [order_id]);
+        const [transactionRows] = await db.query('SELECT id, product_id, quantity, user_id, email, customer_name, product_name FROM nixty.transactions WHERE order_id = ?', [order_id]);
         if (transactionRows.length > 0) {
           const transactionId = transactionRows[0].id;
           const productId = transactionRows[0].product_id;
@@ -70,12 +70,12 @@ export default defineEventHandler(async (event) => {
           const productName = transactionRows[0].product_name || `Product ${productId}`;
 
           // Find available licenses for this product using the new system
-          const [availableLicenses] = await db.execute(
+          const [availableLicenses] = await db.query(
             `SELECT id, license_type, product_key, email, password, additional_info, send_license, max_usage, notes 
-             FROM product_licenses 
+             FROM nixty.product_licenses 
              WHERE product_id = ? 
              AND status = 'available' 
-             AND (send_license < max_usage OR send_license IS NULL)
+             AND (send_license  max_usage OR send_license IS NULL)
              ORDER BY created_at ASC 
              LIMIT ?`,
             [productId, quantity]
@@ -95,19 +95,19 @@ export default defineEventHandler(async (event) => {
               max_usage: license.max_usage || 1
             }));
 
-            // Update transaction with license info
-            await db.execute(
-              `UPDATE transactions SET license_info = ? WHERE id = ?`,
-              [JSON.stringify(licenseInfo), transactionId]
-            );
+          // Update transaction with license info
+          await db.query(
+            `UPDATE nixty.transactions SET license_info = ? WHERE id = ?`,
+            [JSON.stringify(licenseInfo), transactionId]
+          );
 
             // Update license usage tracking
             for (const license of availableLicenses) {
               const newSendLicense = (license.send_license || 0) + 1;
               const newStatus = newSendLicense >= license.max_usage ? 'used' : 'available';
               
-              await db.execute(
-                `UPDATE product_licenses 
+              await db.query(
+                `UPDATE nixty.product_licenses 
                  SET send_license = ?, status = ?, updated_at = NOW() 
                  WHERE id = ?`,
                 [newSendLicense, newStatus, license.id]
@@ -122,8 +122,8 @@ export default defineEventHandler(async (event) => {
             // Get custom email if exists in payment gateway logs
             let customEmail = null;
             try {
-              const [customEmailLogs] = await db.execute(
-                "SELECT log_value FROM payment_gateway_logs WHERE transaction_id = ? AND log_key = 'custom_email' LIMIT 1",
+              const [customEmailLogs] = await db.query(
+                "SELECT log_value FROM nixty.payment_gateway_logs WHERE transaction_id = ? AND log_key = 'custom_email' LIMIT 1",
                 [transactionId]
               );
               

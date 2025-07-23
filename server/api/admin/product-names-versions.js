@@ -1,13 +1,12 @@
-import db from '~/server/utils/db'
-import adminAuth from '~/server/middleware/admin-auth'
+import db from '../../utils/db.js'
+// Note: admin auth is handled by middleware automatically
 
 /**
  * GET /api/admin/product-names-versions
  * Get unique product names and versions for dropdowns
  */
 export default defineEventHandler(async (event) => {
-  // Check admin authentication
-  await adminAuth(event)
+  // Admin authentication is handled by middleware
 
   try {
     const query = getQuery(event);
@@ -19,19 +18,21 @@ export default defineEventHandler(async (event) => {
     let sql = '';
     let params = [];
 
+    const schemaPrefix = 'nixty.';
+    
     if (type === 'names') {
       // Get unique product names
-      sql = `SELECT DISTINCT name FROM products ORDER BY name ASC`;
+      sql = `SELECT DISTINCT name FROM ${schemaPrefix}products ORDER BY name ASC`;
     } else if (type === 'versions' && productName) {
       // Get versions for a specific product name
-      sql = `SELECT DISTINCT version FROM products WHERE name = ? ORDER BY version ASC`;
+      sql = `SELECT DISTINCT version FROM ${schemaPrefix}products WHERE name = ? ORDER BY version ASC`;
       params = [productName];
     } else {
       // Get all products
-      sql = `SELECT id, name, version FROM products ORDER BY id ASC`;
+      sql = `SELECT id, name, version FROM ${schemaPrefix}products ORDER BY id ASC`;
     }
 
-    const [results] = await db.execute(sql, params);
+    const [results] = await db.query(sql, params);
 
     let data = [];
     
