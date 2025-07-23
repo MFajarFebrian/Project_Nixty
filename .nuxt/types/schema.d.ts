@@ -85,6 +85,10 @@ declare module 'nuxt/schema' {
 
    supabaseServiceKey: string,
 
+   midtransServerKey: string,
+
+   databaseUrl: string,
+
    nitro: {
       envPrefix: string,
    },
@@ -102,7 +106,13 @@ declare module 'nuxt/schema' {
 
    midtransClientKey: string,
 
+   midtransIsProduction: string,
+
    baseUrl: string,
+
+   supabaseUrl: string,
+
+   supabaseKey: string,
 
    supabase: {
       url: string,

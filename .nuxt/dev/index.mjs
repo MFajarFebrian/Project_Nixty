@@ -699,7 +699,10 @@ const _inlineRuntimeConfig = {
     "bypassAdminAuth": "true",
     "nodeEnv": "development",
     "midtransClientKey": "SB-Mid-client-XZVBXJmESkGTZlFP",
+    "midtransIsProduction": "false",
     "baseUrl": "http://localhost:3000",
+    "supabaseUrl": "https://buafxvcghfeoquyprmcb.supabase.co",
+    "supabaseKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWZ4dmNnaGZlb3F1eXBybWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2OTQwOTIsImV4cCI6MjA2NjI3MDA5Mn0.yeTIbNE7Caq6wBV_hqvjlUyHAc5PBGsLQvlKSGSe4NI",
     "supabase": {
       "url": "https://buafxvcghfeoquyprmcb.supabase.co",
       "key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWZ4dmNnaGZlb3F1eXBybWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2OTQwOTIsImV4cCI6MjA2NjI3MDA5Mn0.yeTIbNE7Caq6wBV_hqvjlUyHAc5PBGsLQvlKSGSe4NI",
@@ -726,6 +729,8 @@ const _inlineRuntimeConfig = {
   "supabaseUrl": "https://buafxvcghfeoquyprmcb.supabase.co",
   "supabaseKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWZ4dmNnaGZlb3F1eXBybWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2OTQwOTIsImV4cCI6MjA2NjI3MDA5Mn0.yeTIbNE7Caq6wBV_hqvjlUyHAc5PBGsLQvlKSGSe4NI",
   "supabaseServiceKey": "",
+  "midtransServerKey": "SB-Mid-server-0-XiKyaD4PwMJvSRl7JZbZDp",
+  "databaseUrl": "postgresql://postgres.buafxvcghfeoquyprmcb:xD5U0KxWnyFSZoEr@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres",
   "supabase": {
     "serviceKey": ""
   }
@@ -1340,6 +1345,9 @@ const midtransConfig = {
 };
 
 const { Pool } = pkg;
+{
+  dotenv.config();
+}
 const mysqlConfigs = {
   local: {
     host: process.env.DB_HOST || "localhost",
@@ -1367,12 +1375,20 @@ const supabaseConfig = {
   ssl: {
     rejectUnauthorized: false
   },
-  max: 10,
-  idleTimeoutMillis: 3e4,
-  connectionTimeoutMillis: 5e3
-  // Increased timeout for better reliability
+  max: 20,
+  // Increased pool size
+  idleTimeoutMillis: 6e4,
+  // Increased idle timeout
+  connectionTimeoutMillis: 3e4,
+  // Significantly increased timeout
+  acquireTimeoutMillis: 6e4,
+  // Added acquire timeout
+  query_timeout: 3e4,
+  // Added query timeout
+  statement_timeout: 3e4
+  // Added statement timeout
 };
-let pool;
+let pool$1;
 let isPostgreSQL = false;
 function initializeDbConnection() {
   try {
@@ -1385,26 +1401,30 @@ function initializeDbConnection() {
         console.log(`Constructed connection string: ${connectionString.replace(/:[^:]*@/, ":****@")}`);
         supabaseConfig.connectionString = connectionString;
       }
-      pool = new Pool(supabaseConfig);
+      pool$1 = new Pool(supabaseConfig);
       isPostgreSQL = true;
     }
     if (isPostgreSQL) {
-      pool.on("error", (err) => {
+      pool$1.on("error", (err) => {
         console.error("Unexpected PostgreSQL pool error:", err);
       });
-      pool.query("SELECT 1").then(() => {
+      pool$1.query("SELECT 1").then(() => {
         console.log("PostgreSQL connection successful");
       }).catch((err) => {
         console.error("PostgreSQL connection test failed:", err);
+        setTimeout(() => {
+          console.log("Attempting to reconnect to PostgreSQL...");
+          pool$1 = new Pool(supabaseConfig);
+        }, 5e3);
       });
     }
-    return pool;
+    return pool$1;
   } catch (error) {
     console.error("Database initialization error:", error);
     throw error;
   }
 }
-pool = initializeDbConnection();
+pool$1 = initializeDbConnection();
 const db = {
   async query(sql, params = []) {
     var _a;
@@ -1414,15 +1434,29 @@ const db = {
         let paramIndex = 1;
         pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
         let client;
-        try {
-          client = await pool.connect();
-        } catch (connError) {
-          console.error("Connection error:", connError);
-          if (true) {
-            console.log("Development mode: returning empty result instead of failing");
-            return [[], []];
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            client = await Promise.race([
+              pool$1.connect(),
+              new Promise(
+                (_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 15e3)
+              )
+            ]);
+            break;
+          } catch (connError) {
+            retries--;
+            console.error(`Connection attempt failed (${3 - retries}/3):`, connError.message);
+            if (retries === 0) {
+              console.error("All connection attempts failed");
+              if (true) {
+                console.log("Development mode: returning empty result instead of failing");
+                return [[], []];
+              }
+              throw connError;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 1e3));
           }
-          throw connError;
         }
         try {
           console.log("Executing PostgreSQL query:", pgSql);
@@ -1436,7 +1470,7 @@ const db = {
       } else {
         console.log("Executing MySQL query:", sql);
         console.log("With parameters:", params);
-        const [rows, fields] = await pool.execute(sql, params);
+        const [rows, fields] = await pool$1.execute(sql, params);
         console.log("Query result rows:", rows.length);
         return [rows, fields];
       }
@@ -1533,6 +1567,10 @@ const db = {
 };
 
 const adminAuth = defineEventHandler(async (event) => {
+  const url = getRequestURL(event);
+  if (!url.pathname.startsWith("/api/admin/")) {
+    return;
+  }
   const config = useRuntimeConfig();
   const bypassAuth = config.public.bypassAdminAuth === "true";
   if (bypassAuth) {
@@ -1541,17 +1579,26 @@ const adminAuth = defineEventHandler(async (event) => {
     event.node.req.headers["x-user-email"] = "dev-admin@example.com";
     return;
   }
+  console.log("Admin auth middleware active - Environment:", "development");
+  console.log("Bypass auth setting:", config.public.bypassAdminAuth);
   const headers = getHeaders(event);
   const userId = headers["x-user-id"];
   const userEmail = headers["x-user-email"];
+  console.log("Admin auth headers received:", {
+    hasUserId: !!userId,
+    hasUserEmail: !!userEmail,
+    userId: userId ? userId.substring(0, 3) + "***" : "none",
+    userEmail: userEmail ? userEmail.substring(0, 3) + "***" : "none"
+  });
   if (!userId || !userEmail) {
+    console.log("Missing authentication headers");
     throw createError({
       statusCode: 401,
-      statusMessage: "Authentication required"
+      statusMessage: "Authentication required - Missing user credentials"
     });
   }
   try {
-    const [users] = await db.execute(
+    const [users] = await db.query(
       "SELECT account_type FROM nixty.users WHERE id = ? AND email = ? LIMIT 1",
       [userId, userEmail]
     );
@@ -2754,7 +2801,7 @@ const autoCleanupFailedOrders_post = defineEventHandler(async (event) => {
     console.log("\u{1F9F9} Starting auto-cleanup of failed orders older than 1 week...");
     const oneWeekAgo = /* @__PURE__ */ new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const [failedOrders] = await db.execute(
+    const [failedOrders] = await db.query(
       `SELECT id, user_id, product_id, status, created_at 
        FROM nixty.orders 
        WHERE status = 'failed' 
@@ -2778,16 +2825,16 @@ const autoCleanupFailedOrders_post = defineEventHandler(async (event) => {
     for (const order of failedOrders) {
       try {
         console.log(`\u{1F5D1}\uFE0F Cleaning up order ${order.id} (created: ${order.created_at})`);
-        await db.execute("START TRANSACTION");
-        await db.execute(
+        await db.query("START TRANSACTION");
+        await db.query(
           "DELETE FROM nixty.payment_gateway_logs WHERE transaction_id = ?",
           [order.id]
         );
-        await db.execute(
+        await db.query(
           "DELETE FROM nixty.orders_license WHERE transaction_id = ?",
           [order.id]
         );
-        const [deleteResult] = await db.execute(
+        const [deleteResult] = await db.query(
           "DELETE FROM nixty.orders WHERE id = ?",
           [order.id]
         );
@@ -2795,9 +2842,9 @@ const autoCleanupFailedOrders_post = defineEventHandler(async (event) => {
           deletedCount++;
           console.log(`\u2705 Successfully deleted order ${order.id}`);
         }
-        await db.execute("COMMIT");
+        await db.query("COMMIT");
       } catch (error) {
-        await db.execute("ROLLBACK");
+        await db.query("ROLLBACK");
         console.error(`\u274C Error deleting order ${order.id}:`, error.message);
         errors.push({
           order_id: order.id,
@@ -2819,7 +2866,7 @@ const autoCleanupFailedOrders_post = defineEventHandler(async (event) => {
   } catch (error) {
     console.error("\u274C Auto-cleanup failed:", error);
     try {
-      await db.execute("ROLLBACK");
+      await db.query("ROLLBACK");
     } catch (rollbackError) {
       console.error("Rollback error:", rollbackError);
     }
@@ -3645,7 +3692,7 @@ function validateImageUrl(url) {
 const fixProductSlugs_get = defineEventHandler(async (event) => {
   try {
     await adminAuth(event);
-    const [beforeProducts] = await db.execute(`
+    const [beforeProducts] = await db.query(`
       SELECT p.id, p.name, p.version, p.slug, c.name AS category_name, c.slug AS category_slug
       FROM products p
       JOIN categories c ON p.category_id = c.id
@@ -3653,13 +3700,13 @@ const fixProductSlugs_get = defineEventHandler(async (event) => {
     `);
     const updatePromises = beforeProducts.map(async (product) => {
       const newSlug = generateProductSlug(product.name);
-      await db.execute(
+      await db.query(
         "UPDATE products SET slug = ? WHERE id = ?",
         [newSlug, product.id]
       );
     });
     await Promise.all(updatePromises);
-    const [afterProducts] = await db.execute(`
+    const [afterProducts] = await db.query(`
       SELECT p.id, p.name, p.version, p.slug, c.name AS category_name, c.slug AS category_slug
       FROM products p
       JOIN categories c ON p.category_id = c.id
@@ -4008,7 +4055,7 @@ const massAdd_post$2 = defineEventHandler(async (event) => {
   if (!table || !records || !Array.isArray(records) || records.length === 0) {
     return { success: false, message: "Invalid request body" };
   }
-  const connection = await db.getConnection();
+  const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     for (const record of records) {
@@ -4658,7 +4705,7 @@ const use_post = defineEventHandler(async (event) => {
         statusMessage: "license_id is required"
       });
     }
-    const [licenseRows] = await db.execute(`
+    const [licenseRows] = await db.query(`
       SELECT 
         pl.*,
         p.name as product_name,
@@ -4704,14 +4751,14 @@ const use_post = defineEventHandler(async (event) => {
         updated_at = NOW()
       WHERE id = ?
     `;
-    await db.execute(updateQuery, [
+    await db.query(updateQuery, [
       newSendLicense,
       newSendLicense,
       newStatus,
       transaction_id || null,
       license_id
     ]);
-    const [updatedLicense] = await db.execute(`
+    const [updatedLicense] = await db.query(`
       SELECT 
         pl.*,
         p.name as product_name,
@@ -4756,7 +4803,6 @@ const use_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const productNamesVersions = defineEventHandler(async (event) => {
-  await adminAuth(event);
   try {
     const query = getQuery$1(event);
     const type = query.type || "all";
@@ -4764,15 +4810,16 @@ const productNamesVersions = defineEventHandler(async (event) => {
     console.log(`Fetching product ${type} ${productName ? "for " + productName : ""}`);
     let sql = "";
     let params = [];
+    const schemaPrefix = "nixty.";
     if (type === "names") {
-      sql = `SELECT DISTINCT name FROM products ORDER BY name ASC`;
+      sql = `SELECT DISTINCT name FROM ${schemaPrefix}products ORDER BY name ASC`;
     } else if (type === "versions" && productName) {
-      sql = `SELECT DISTINCT version FROM products WHERE name = ? ORDER BY version ASC`;
+      sql = `SELECT DISTINCT version FROM ${schemaPrefix}products WHERE name = ? ORDER BY version ASC`;
       params = [productName];
     } else {
-      sql = `SELECT id, name, version FROM products ORDER BY id ASC`;
+      sql = `SELECT id, name, version FROM ${schemaPrefix}products ORDER BY id ASC`;
     }
-    const [results] = await db.execute(sql, params);
+    const [results] = await db.query(sql, params);
     let data = [];
     if (results && results.length > 0) {
       if (type === "names") {
@@ -5729,7 +5776,7 @@ const tableMetadata_get = defineEventHandler(async (event) => {
         statusMessage: "Table name is required"
       });
     }
-    const [columns] = await db.execute(`
+    const [columns] = await db.query(`
       SELECT 
         COLUMN_NAME as name,
         DATA_TYPE as type,
@@ -5761,7 +5808,7 @@ const tableMetadata_get = defineEventHandler(async (event) => {
       validation: getValidationRules(column)
     }));
     const visibleColumns = processedColumns.filter((col) => !col.isHidden);
-    const [tableInfo] = await db.execute(`
+    const [tableInfo] = await db.query(`
       SELECT 
         TABLE_COMMENT as comment,
         ENGINE as engine,
@@ -6152,7 +6199,7 @@ const _id__delete = defineEventHandler(async (event) => {
     const recordId = getRouterParam(event, "id");
     validateTableName(tableName);
     const validRecordId = validateRecordId(recordId);
-    const [existingRecord] = await db.execute(
+    const [existingRecord] = await db.query(
       `SELECT * FROM ${tableName} WHERE id = ?`,
       [validRecordId]
     );
@@ -6164,8 +6211,9 @@ const _id__delete = defineEventHandler(async (event) => {
     }
     if (tableName === "users") {
       if (existingRecord[0].account_type === "admin") {
-        const [adminCount] = await db.execute(
-          "SELECT COUNT(*) as count FROM users WHERE account_type = ?",
+        const schemaPrefix = useSupabase ? "nixty." : "";
+        const [adminCount] = await db.query(
+          `SELECT COUNT(*) as count FROM ${schemaPrefix}users WHERE account_type = ?`,
           ["admin"]
         );
         const countValue = useSupabase ? parseInt(adminCount[0].count) : adminCount[0].count;
@@ -6179,7 +6227,7 @@ const _id__delete = defineEventHandler(async (event) => {
     }
     if (tableName === "products") {
       try {
-        const [deleteLicensesResult] = await db.execute(
+        const [deleteLicensesResult] = await db.query(
           "DELETE FROM product_licenses WHERE product_id = ?",
           [validRecordId]
         );
@@ -6193,7 +6241,7 @@ const _id__delete = defineEventHandler(async (event) => {
         });
       }
     }
-    const [result] = await db.execute(
+    const [result] = await db.query(
       `DELETE FROM ${tableName} WHERE id = ?`,
       [validRecordId]
     );
@@ -6853,27 +6901,27 @@ const triggerCleanup_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.def
 const updateCategorySlugs_get = defineEventHandler(async (event) => {
   try {
     await adminAuth(event);
-    const [beforeCategories] = await db.execute(`
+    const [beforeCategories] = await db.query(`
       SELECT id, name, slug
       FROM categories
       ORDER BY id
     `);
-    await db.execute(`
+    await db.query(`
       UPDATE categories
       SET slug = 'office'
       WHERE id = 1
     `);
-    await db.execute(`
+    await db.query(`
       UPDATE categories
       SET slug = 'project'
       WHERE id = 2
     `);
-    await db.execute(`
+    await db.query(`
       UPDATE categories
       SET slug = 'visio'
       WHERE id = 3
     `);
-    const [afterCategories] = await db.execute(`
+    const [afterCategories] = await db.query(`
       SELECT id, name, slug
       FROM categories
       ORDER BY id
@@ -6912,14 +6960,14 @@ const updateProductSlugs_get = defineEventHandler(async (event) => {
     ];
     let totalUpdated = 0;
     for (const update of updates) {
-      const [result] = await db.execute(
+      const [result] = await db.query(
         "UPDATE products SET slug = ? WHERE category_id = ?",
         [update.slug, update.categoryId]
       );
       totalUpdated += result.affectedRows;
       console.log(`Updated ${result.affectedRows} products with category_id ${update.categoryId} to slug '${update.slug}'`);
     }
-    const [updatedProducts] = await db.execute(`
+    const [updatedProducts] = await db.query(`
       SELECT p.id, p.name, p.version, p.slug, p.category_id, c.name as category_name, c.slug as category_slug 
       FROM products p 
       LEFT JOIN categories c ON p.category_id = c.id 
@@ -7240,7 +7288,7 @@ const googleLogin_post = defineEventHandler(async (event) => {
         message: "Email and Google ID are required"
       };
     }
-    const [existingUsers] = await db.execute(
+    const [existingUsers] = await db.query(
       "SELECT * FROM users WHERE email = ?",
       [email]
     );
@@ -7249,12 +7297,12 @@ const googleLogin_post = defineEventHandler(async (event) => {
     if (users.length === 0) {
       const randomPassword = Math.random().toString(36).substring(2, 15);
       const hashedPassword = await bcrypt.hash(randomPassword, 10);
-      const [result] = await db.execute(
+      const [result] = await db.query(
         "INSERT INTO users (email, name, password, account_type, google_id, profile_picture) VALUES (?, ?, ?, ?, ?, ?)",
         [email, name, hashedPassword, "user", google_id, picture]
       );
       const insertId = result.insertId;
-      const [newUsers] = await db.execute(
+      const [newUsers] = await db.query(
         "SELECT * FROM users WHERE id = ?",
         [insertId]
       );
@@ -7262,7 +7310,7 @@ const googleLogin_post = defineEventHandler(async (event) => {
     } else {
       user = users[0];
       if (!user.google_id) {
-        await db.execute(
+        await db.query(
           "UPDATE users SET google_id = ?, profile_picture = ? WHERE id = ?",
           [google_id, picture, user.id]
         );
@@ -7299,7 +7347,7 @@ const googleRegister_post = defineEventHandler(async (event) => {
         message: "Email and Google ID are required"
       };
     }
-    const [existingUsers] = await db.execute(
+    const [existingUsers] = await db.query(
       "SELECT * FROM users WHERE email = ?",
       [email]
     );
@@ -7312,12 +7360,12 @@ const googleRegister_post = defineEventHandler(async (event) => {
     }
     const randomPassword = Math.random().toString(36).substring(2, 15);
     const hashedPassword = await bcrypt.hash(randomPassword, 10);
-    const [result] = await db.execute(
+    const [result] = await db.query(
       "INSERT INTO users (email, name, password, account_type, google_id, profile_picture) VALUES (?, ?, ?, ?, ?, ?)",
       [email, name, hashedPassword, "user", google_id, picture]
     );
     const insertId = result.insertId;
-    const [newUsers] = await db.execute(
+    const [newUsers] = await db.query(
       "SELECT * FROM users WHERE id = ?",
       [insertId]
     );
@@ -7588,14 +7636,14 @@ const webhook_post = defineEventHandler(async (event) => {
     newStatus = "pending";
   }
   try {
-    const [result] = await db.execute(
-      `UPDATE transactions SET status = ?, payment_method = ?, payment_gateway_status = ?, payment_gateway_payload = ?, updated_at = NOW() WHERE order_id = ?`,
+    const [result] = await db.query(
+      `UPDATE nixty.transactions SET status = ?, payment_method = ?, payment_gateway_status = ?, payment_gateway_payload = ?, updated_at = NOW() WHERE order_id = ?`,
       [newStatus, body.payment_type || "midtrans", transaction_status, JSON.stringify(body), order_id]
     );
     if (result.affectedRows > 0) {
       console.log(`Transaction ${order_id} updated to ${newStatus}`);
       if (newStatus === "completed") {
-        const [transactionRows] = await db.execute("SELECT id, product_id, quantity, user_id, email, customer_name, product_name FROM transactions WHERE order_id = ?", [order_id]);
+        const [transactionRows] = await db.query("SELECT id, product_id, quantity, user_id, email, customer_name, product_name FROM nixty.transactions WHERE order_id = ?", [order_id]);
         if (transactionRows.length > 0) {
           const transactionId = transactionRows[0].id;
           const productId = transactionRows[0].product_id;
@@ -7604,12 +7652,12 @@ const webhook_post = defineEventHandler(async (event) => {
           const customerEmail = transactionRows[0].email;
           const customerName = transactionRows[0].customer_name || "Customer";
           const productName = transactionRows[0].product_name || `Product ${productId}`;
-          const [availableLicenses] = await db.execute(
+          const [availableLicenses] = await db.query(
             `SELECT id, license_type, product_key, email, password, additional_info, send_license, max_usage, notes 
-             FROM product_licenses 
+             FROM nixty.product_licenses 
              WHERE product_id = ? 
              AND status = 'available' 
-             AND (send_license < max_usage OR send_license IS NULL)
+             AND (send_license \x7F max_usage OR send_license IS NULL)
              ORDER BY created_at ASC 
              LIMIT ?`,
             [productId, quantity]
@@ -7626,15 +7674,15 @@ const webhook_post = defineEventHandler(async (event) => {
               send_license: (license.send_license || 0) + 1,
               max_usage: license.max_usage || 1
             }));
-            await db.execute(
-              `UPDATE transactions SET license_info = ? WHERE id = ?`,
+            await db.query(
+              `UPDATE nixty.transactions SET license_info = ? WHERE id = ?`,
               [JSON.stringify(licenseInfo), transactionId]
             );
             for (const license of availableLicenses) {
               const newSendLicense = (license.send_license || 0) + 1;
               const newStatus2 = newSendLicense >= license.max_usage ? "used" : "available";
-              await db.execute(
-                `UPDATE product_licenses 
+              await db.query(
+                `UPDATE nixty.product_licenses 
                  SET send_license = ?, status = ?, updated_at = NOW() 
                  WHERE id = ?`,
                 [newSendLicense, newStatus2, license.id]
@@ -7646,8 +7694,8 @@ const webhook_post = defineEventHandler(async (event) => {
             });
             let customEmail = null;
             try {
-              const [customEmailLogs] = await db.execute(
-                "SELECT log_value FROM payment_gateway_logs WHERE transaction_id = ? AND log_key = 'custom_email' LIMIT 1",
+              const [customEmailLogs] = await db.query(
+                "SELECT log_value FROM nixty.payment_gateway_logs WHERE transaction_id = ? AND log_key = 'custom_email' LIMIT 1",
                 [transactionId]
               );
               if (customEmailLogs.length > 0 && customEmailLogs[0].log_value) {
@@ -7742,7 +7790,7 @@ const index_get$a = defineEventHandler(async (event) => {
     sql += " AND (d.expires_at IS NULL OR d.expires_at > NOW())";
     sql += " ORDER BY d.is_featured DESC, d.created_at DESC LIMIT ? OFFSET ?";
     params.push(parseInt(limit), parseInt(offset));
-    const [rows] = await db.execute(sql, params);
+    const [rows] = await db.query(sql, params);
     const deals = rows.map((row) => ({
       id: row.id,
       title: row.title,
@@ -7807,7 +7855,7 @@ const forgotPassword_post = defineEventHandler(async (event) => {
         message: "Email is required"
       };
     }
-    const [users] = await db.execute(
+    const [users] = await db.query(
       "SELECT id, email, name FROM nixty.users WHERE email = ?",
       [email]
     );
@@ -7822,7 +7870,7 @@ const forgotPassword_post = defineEventHandler(async (event) => {
     const resetToken = randomBytes(32).toString("hex");
     const tokenExpiry = /* @__PURE__ */ new Date();
     tokenExpiry.setHours(tokenExpiry.getHours() + 1);
-    await db.execute(
+    await db.query(
       "UPDATE nixty.users SET reset_token = ?, reset_token_expires = ? WHERE id = ?",
       [resetToken, tokenExpiry, user.id]
     );
@@ -7850,7 +7898,7 @@ const forgotPassword_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.def
 
 const index_get$8 = defineEventHandler(async (event) => {
   try {
-    const [rows] = await db.execute(`
+    const [rows] = await db.query(`
       SELECT 
         h.*,
         p.name as product_name,
@@ -8106,11 +8154,10 @@ const login_post = defineEventHandler(async (event) => {
         message: "Email and password are required"
       };
     }
-    const [rows] = await db.query(
-      "SELECT * FROM nixty.users WHERE email = $1",
+    const [users] = await db.query(
+      "SELECT * FROM nixty.users WHERE email = ?",
       [email]
     );
-    const users = rows;
     if (users.length === 0) {
       return {
         success: false,
@@ -8991,7 +9038,7 @@ const autoCleanup_post = defineEventHandler(async (event) => {
   try {
     const user = await requireAuth(event);
     console.log("\u{1F9F9} Starting auto-cleanup for user:", user.id);
-    const [result] = await db.execute(
+    const [result] = await db.query(
       `DELETE FROM transactions 
        WHERE user_id = $1 
        AND payment_gateway_status = 'not_found_in_gateway' 
@@ -9031,7 +9078,7 @@ const deleteNotFound_post = defineEventHandler(async (event) => {
         statusMessage: "Transaction ID is required"
       });
     }
-    const [transactions] = await db.execute(
+    const [transactions] = await db.query(
       `SELECT id, order_id, status, payment_gateway_status
        FROM transactions 
        WHERE id = ? AND user_id = ?`,
@@ -9050,7 +9097,7 @@ const deleteNotFound_post = defineEventHandler(async (event) => {
         statusMessage: 'Only transactions with "not found in gateway" status can be deleted'
       });
     }
-    const [result] = await db.execute(
+    const [result] = await db.query(
       `DELETE FROM transactions WHERE id = ? AND user_id = ?`,
       [transactionId, user.id]
     );
@@ -9097,7 +9144,7 @@ const getLicense_post$2 = defineEventHandler(async (event) => {
         statusMessage: "Transaction ID is required"
       });
     }
-    const [transactions] = await db.execute(
+    const [transactions] = await db.query(
       `SELECT 
         t.id, 
         t.product_id,
@@ -9127,7 +9174,7 @@ const getLicense_post$2 = defineEventHandler(async (event) => {
     console.log(`Manual license retrieval for transaction ${transactionId}`);
     const quantity = transaction.quantity || 1;
     const allLicenses = [];
-    await db.execute("START TRANSACTION");
+    await db.query("START TRANSACTION");
     try {
       for (let i = 0; i < quantity; i++) {
         console.log(`Processing license ${i + 1}/${quantity}...`);
@@ -9141,13 +9188,13 @@ const getLicense_post$2 = defineEventHandler(async (event) => {
           allLicenses.push(licenseResult.license);
           console.log(`License ${i + 1} processed successfully`);
           try {
-            const [licenseInfoResult] = await db.execute(
+            const [licenseInfoResult] = await db.query(
               `SELECT license_info FROM transactions WHERE id = ?`,
               [transaction.id]
             );
             if (!licenseInfoResult[0].license_info) {
               const licenseArray = [licenseResult.license];
-              await db.execute(
+              await db.query(
                 `UPDATE transactions SET license_info = ? WHERE id = ?`,
                 [JSON.stringify(licenseArray), transaction.id]
               );
@@ -9163,7 +9210,7 @@ const getLicense_post$2 = defineEventHandler(async (event) => {
                 existingLicenses = [];
               }
               existingLicenses.push(licenseResult.license);
-              await db.execute(
+              await db.query(
                 `UPDATE transactions SET license_info = ? WHERE id = ?`,
                 [JSON.stringify(existingLicenses), transaction.id]
               );
@@ -9176,8 +9223,8 @@ const getLicense_post$2 = defineEventHandler(async (event) => {
           throw new Error(`Failed to process license ${i + 1}: ${licenseResult.error || licenseResult.message}`);
         }
       }
-      await db.execute("COMMIT");
-      const [updatedTransaction] = await db.execute(
+      await db.query("COMMIT");
+      const [updatedTransaction] = await db.query(
         `SELECT license_info FROM transactions WHERE id = ?`,
         [transaction.id]
       );
@@ -9195,7 +9242,7 @@ const getLicense_post$2 = defineEventHandler(async (event) => {
         license: licenseInfo || allLicenses
       };
     } catch (error) {
-      await db.execute("ROLLBACK");
+      await db.query("ROLLBACK");
       console.error("Error processing license delivery:", error);
       throw createError({
         statusCode: 500,
@@ -9229,7 +9276,7 @@ const getTransactionId_post = defineEventHandler(async (event) => {
         statusMessage: "Order ID is required"
       });
     }
-    const [orders] = await db.execute(
+    const [orders] = await db.query(
       `SELECT id FROM nixty.orders WHERE order_id = ?`,
       [order_id]
     );
@@ -9379,7 +9426,7 @@ const processLicense_post = defineEventHandler(async (event) => {
         statusMessage: "Transaction ID is required"
       });
     }
-    const [transactions] = await db.execute(
+    const [transactions] = await db.query(
       `SELECT 
         t.id, 
         t.order_id, 
@@ -9412,13 +9459,13 @@ const processLicense_post = defineEventHandler(async (event) => {
     const licenses = [];
     let success = true;
     console.log(`Processing ${quantity} license(s) for transaction ${transactionId}`);
-    const [beforeStock] = await db.execute(
+    const [beforeStock] = await db.query(
       `SELECT available_stock FROM product_stock_view WHERE product_id = ?`,
       [transaction.product_id]
     );
     const stockBefore = beforeStock.length > 0 ? beforeStock[0].available_stock : 0;
     console.log(`Stock before processing: ${stockBefore}`);
-    await db.execute("START TRANSACTION");
+    await db.query("START TRANSACTION");
     try {
       for (let i = 0; i < quantity; i++) {
         const licenseResult = await processLicenseDelivery(
@@ -9436,7 +9483,7 @@ const processLicense_post = defineEventHandler(async (event) => {
           break;
         }
       }
-      const [afterStock] = await db.execute(
+      const [afterStock] = await db.query(
         `SELECT available_stock FROM product_stock_view WHERE product_id = ?`,
         [transaction.product_id]
       );
@@ -9448,7 +9495,7 @@ const processLicense_post = defineEventHandler(async (event) => {
         console.warn(`Stock reduction mismatch! Expected: ${expectedStockReduction}, Actual: ${actualStockReduction}`);
         if (actualStockReduction < expectedStockReduction) {
           console.log(`Attempting to refresh stock view...`);
-          await db.execute(`
+          await db.query(`
             UPDATE product_licenses 
             SET updated_at = NOW() 
             WHERE product_id = ? AND status = 'used' AND used_by_transaction_id = ?
@@ -9456,19 +9503,19 @@ const processLicense_post = defineEventHandler(async (event) => {
         }
       }
       if (success) {
-        await db.execute(
+        await db.query(
           `UPDATE transactions 
            SET license_info = ? 
            WHERE id = ?`,
           [JSON.stringify(licenses), transaction.id]
         );
-        await db.execute("COMMIT");
+        await db.query("COMMIT");
         console.log(`Licenses stored in transaction ${transactionId}`);
         let emailResult;
         try {
           let customEmail = null;
           try {
-            const [customEmailLogs] = await db.execute(
+            const [customEmailLogs] = await db.query(
               "SELECT log_value FROM payment_gateway_logs WHERE transaction_id = ? AND log_key = 'custom_email' LIMIT 1",
               [transactionId]
             );
@@ -9507,11 +9554,11 @@ const processLicense_post = defineEventHandler(async (event) => {
           console.error("Error sending license email:", emailError);
         }
       } else {
-        await db.execute("ROLLBACK");
+        await db.query("ROLLBACK");
         console.log(`License processing failed for transaction ${transactionId}, rolling back`);
       }
     } catch (error) {
-      await db.execute("ROLLBACK");
+      await db.query("ROLLBACK");
       console.error(`Error processing licenses: ${error.message}`);
       throw error;
     }
@@ -9553,7 +9600,7 @@ const repay_post = defineEventHandler(async (event) => {
         statusMessage: "Transaction ID is required"
       });
     }
-    const [transactions] = await db.execute(
+    const [transactions] = await db.query(
       `SELECT 
         t.id, 
         t.order_id,
@@ -9620,7 +9667,7 @@ const repay_post = defineEventHandler(async (event) => {
       }
     };
     const transactionToken = await snap.createTransaction(parameter);
-    await db.execute(
+    await db.query(
       `UPDATE transactions 
        SET payment_gateway_payload = COALESCE(payment_gateway_payload, '{}')::jsonb || 
          jsonb_build_object(
@@ -9631,7 +9678,7 @@ const repay_post = defineEventHandler(async (event) => {
        WHERE id = $3`,
       [(/* @__PURE__ */ new Date()).toISOString(), newOrderId, transaction.id]
     );
-    await db.execute(
+    await db.query(
       `INSERT INTO transactions (
         order_id, user_id, product_id, product_name, 
         customer_name, email, amount, quantity, status, 
@@ -9693,7 +9740,7 @@ const syncAll_post = defineEventHandler(async (event) => {
     const isAutoSync = body && body.auto_sync === true;
     const syncLimit = isAutoSync ? 5 : 100;
     const specificTransactionIds = body && body.transactionIds || [];
-    const [orders] = await db.execute(
+    const [orders] = await db.query(
       `SELECT id, status, created_at
        FROM nixty.orders 
        WHERE user_id = ? 
@@ -9738,7 +9785,7 @@ const syncAll_post = defineEventHandler(async (event) => {
       totalProcessed++;
       try {
         let order_id;
-        const [existingOrderId] = await db.execute(
+        const [existingOrderId] = await db.query(
           `SELECT value FROM nixty.payment_gateway_logs WHERE transaction_id = ? AND key = 'order_id' LIMIT 1`,
           [order.id]
         );
@@ -9746,7 +9793,7 @@ const syncAll_post = defineEventHandler(async (event) => {
           order_id = existingOrderId[0].value;
         } else {
           order_id = `ORDER_${order.id}_${Date.now()}`;
-          await db.execute(
+          await db.query(
             `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
             [order.id, "order_id", order_id]
           );
@@ -9757,7 +9804,7 @@ const syncAll_post = defineEventHandler(async (event) => {
           if (midtransResponse) {
             const newStatus = mapMidtransStatus(midtransResponse.transaction_status, midtransResponse.fraud_status);
             if (newStatus !== order.status) {
-              const [result] = await db.execute(
+              const [result] = await db.query(
                 `UPDATE nixty.orders SET status = ? WHERE id = ? AND user_id = ?`,
                 [newStatus, order.id, user.id]
               );
@@ -9768,12 +9815,12 @@ const syncAll_post = defineEventHandler(async (event) => {
                   ["payment_gateway_payload", JSON.stringify(midtransResponse)]
                 ];
                 for (const [key, value] of gatewayLogs) {
-                  const [updateResult] = await db.execute(
+                  const [updateResult] = await db.query(
                     `UPDATE nixty.payment_gateway_logs SET value = ? WHERE transaction_id = ? AND key = ?`,
                     [value, order.id, key]
                   );
                   if (updateResult.affectedRows === 0) {
-                    await db.execute(
+                    await db.query(
                       `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
                       [order.id, key, value]
                     );
@@ -9797,17 +9844,17 @@ const syncAll_post = defineEventHandler(async (event) => {
         } catch (midtransError) {
           if (midtransError.httpStatusCode === 404 || midtransError.message && midtransError.message.includes("404") && midtransError.message.includes("doesn't exist")) {
             console.log(`Order ${order.id} (${order_id}) not found in Midtrans - marking as failed`);
-            const [updateResult] = await db.execute(
+            const [updateResult] = await db.query(
               `UPDATE nixty.orders SET status = 'failed' WHERE id = ? AND user_id = ?`,
               [order.id, user.id]
             );
             if (updateResult.affectedRows > 0) {
-              const [logUpdateResult] = await db.execute(
+              const [logUpdateResult] = await db.query(
                 `UPDATE nixty.payment_gateway_logs SET value = ? WHERE transaction_id = ? AND key = ?`,
                 ["not_found_in_gateway", order.id, "payment_gateway_status"]
               );
               if (logUpdateResult.affectedRows === 0) {
-                await db.execute(
+                await db.query(
                   `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
                   [order.id, "payment_gateway_status", "not_found_in_gateway"]
                 );
@@ -9856,13 +9903,13 @@ const syncAll_post = defineEventHandler(async (event) => {
 });
 async function processLicensesIfNeeded(orderId) {
   try {
-    const [existingLicenses] = await db.execute(
+    const [existingLicenses] = await db.query(
       `SELECT COUNT(*) as count FROM nixty.orders_license WHERE transaction_id = ?`,
       [orderId]
     );
     if (existingLicenses[0].count === 0) {
       console.log(`Order ${orderId} completed but has no licenses. Processing now...`);
-      const [orderDetails] = await db.execute(
+      const [orderDetails] = await db.query(
         `SELECT product_id, quantity FROM nixty.orders WHERE id = ?`,
         [orderId]
       );
@@ -9873,18 +9920,18 @@ async function processLicensesIfNeeded(orderId) {
       const order = orderDetails[0];
       const quantity = order.quantity || 1;
       for (let i = 0; i < quantity; i++) {
-        const [availableLicense] = await db.execute(
+        const [availableLicense] = await db.query(
           `SELECT id FROM nixty.product_license_base 
            WHERE product_id = ? AND status = 'available' 
            LIMIT 1`,
           [order.product_id]
         );
         if (availableLicense.length > 0) {
-          await db.execute(
+          await db.query(
             `UPDATE nixty.product_license_base SET status = 'used' WHERE id = ?`,
             [availableLicense[0].id]
           );
-          await db.execute(
+          await db.query(
             `INSERT INTO nixty.orders_license (transaction_id, license_id) VALUES (?, ?)`,
             [orderId, availableLicense[0].id]
           );
@@ -9930,7 +9977,7 @@ const updateStatus_post = defineEventHandler(async (event) => {
     } catch (midtransError) {
       console.log("Midtrans API Error:", midtransError.message);
       if (midtransError.message && (midtransError.message.includes("404") || midtransError.message.includes("not found"))) {
-        const [orderResults2] = await db.execute(
+        const [orderResults2] = await db.query(
           `SELECT id FROM nixty.orders WHERE order_id = ?`,
           [order_id]
         );
@@ -9941,7 +9988,7 @@ const updateStatus_post = defineEventHandler(async (event) => {
           });
         }
         const transactionId2 = orderResults2[0].id;
-        const [userCheck] = await db.execute(
+        const [userCheck] = await db.query(
           `SELECT id FROM nixty.orders WHERE id = ? AND user_id = ?`,
           [transactionId2, user.id]
         );
@@ -9951,17 +9998,17 @@ const updateStatus_post = defineEventHandler(async (event) => {
             statusMessage: "Transaction not found or not owned by user"
           });
         }
-        const [updateResult] = await db.execute(
+        const [updateResult] = await db.query(
           `UPDATE nixty.payment_gateway_logs SET value = ? WHERE transaction_id = ? AND key = ?`,
           ["not_found_in_gateway", transactionId2, "payment_gateway_status"]
         );
         if (updateResult.affectedRows === 0) {
-          await db.execute(
+          await db.query(
             `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
             [transactionId2, "payment_gateway_status", "not_found_in_gateway"]
           );
         }
-        const [updatedTransaction2] = await db.execute(
+        const [updatedTransaction2] = await db.query(
           `SELECT 
             o.id, 
             o.product_id, 
@@ -9975,7 +10022,7 @@ const updateStatus_post = defineEventHandler(async (event) => {
           WHERE o.id = ?`,
           [transactionId2]
         );
-        const [gatewayLogs2] = await db.execute(
+        const [gatewayLogs2] = await db.query(
           `SELECT key, value FROM nixty.payment_gateway_logs WHERE transaction_id = ?`,
           [transactionId2]
         );
@@ -10025,7 +10072,7 @@ const updateStatus_post = defineEventHandler(async (event) => {
       }
     };
     const newStatus = mapMidtransStatus(midtransResponse.transaction_status, midtransResponse.fraud_status);
-    const [orderResults] = await db.execute(
+    const [orderResults] = await db.query(
       `SELECT id FROM nixty.orders WHERE order_id = ?`,
       [order_id]
     );
@@ -10036,7 +10083,7 @@ const updateStatus_post = defineEventHandler(async (event) => {
       });
     }
     const transactionId = orderResults[0].id;
-    const [result] = await db.execute(
+    const [result] = await db.query(
       `UPDATE nixty.orders SET status = ? WHERE id = ? AND user_id = ?`,
       [newStatus, transactionId, user.id]
     );
@@ -10052,18 +10099,18 @@ const updateStatus_post = defineEventHandler(async (event) => {
       ["payment_gateway_payload", JSON.stringify(midtransResponse)]
     ];
     for (const [key, value] of gatewayLogs) {
-      const [updateResult] = await db.execute(
+      const [updateResult] = await db.query(
         `UPDATE nixty.payment_gateway_logs SET value = ? WHERE transaction_id = ? AND key = ?`,
         [value, transactionId, key]
       );
       if (updateResult.affectedRows === 0) {
-        await db.execute(
+        await db.query(
           `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
           [transactionId, key, value]
         );
       }
     }
-    const [updatedTransaction] = await db.execute(
+    const [updatedTransaction] = await db.query(
       `SELECT 
         o.id, 
         o.product_id, 
@@ -10077,7 +10124,7 @@ const updateStatus_post = defineEventHandler(async (event) => {
       WHERE o.id = ?`,
       [transactionId]
     );
-    const [allGatewayLogs] = await db.execute(
+    const [allGatewayLogs] = await db.query(
       `SELECT key, value FROM nixty.payment_gateway_logs WHERE transaction_id = ?`,
       [transactionId]
     );
@@ -10815,7 +10862,7 @@ const details_get = defineEventHandler(async (event) => {
     }
     console.log("Executing product query:", productQuery);
     console.log("With parameters:", params);
-    const [products] = await db.execute(productQuery, params);
+    const [products] = await db.query(productQuery, params);
     if (products.length === 0) {
       throw createError({
         statusCode: 404,
@@ -10853,7 +10900,7 @@ const details_get = defineEventHandler(async (event) => {
       }
     }
     product.period = period;
-    const [versions] = await db.execute(
+    const [versions] = await db.query(
       `SELECT id, name, version, price, discount_price, image_url, is_subscription FROM products WHERE name = ? ORDER BY version DESC`,
       [product.name]
     );
@@ -11094,7 +11141,7 @@ const _id__get$4 = defineEventHandler(async (event) => {
         statusMessage: "Product ID is required"
       });
     }
-    const [result] = await db.execute(`
+    const [result] = await db.query(`
       SELECT 
         COUNT(*) AS total_stock,
         SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) AS available_stock
@@ -11254,7 +11301,7 @@ const _id__get$2 = defineEventHandler(async (event) => {
     });
   }
   try {
-    const [rows] = await db.execute(`
+    const [rows] = await db.query(`
       SELECT 
         t.id,
         t.order_id,
@@ -11274,8 +11321,8 @@ const _id__get$2 = defineEventHandler(async (event) => {
         p.name as product_name_full,
         p.version as product_version,
         p.image_url as product_image
-      FROM transactions t
-      LEFT JOIN products p ON t.product_id = p.id
+      FROM nixty.transactions t
+      LEFT JOIN nixty.products p ON t.product_id = p.id
       WHERE t.id = ? AND t.user_id = ?
     `, [transactionId, user.id]);
     if (rows.length === 0) {
@@ -11366,8 +11413,8 @@ const getLicense_post = defineEventHandler(async (event) => {
           t.updated_at,
           p.name as product_name_full,
           p.version as product_version
-        FROM transactions t
-        LEFT JOIN products p ON t.product_id = p.id
+        FROM nixty.transactions t
+        LEFT JOIN nixty.products p ON t.product_id = p.id
         WHERE t.order_id = ? AND t.user_id = ?
       `;
       params = [order_id, user.id];
@@ -11386,13 +11433,13 @@ const getLicense_post = defineEventHandler(async (event) => {
           t.updated_at,
           p.name as product_name_full,
           p.version as product_version
-        FROM transactions t
-        LEFT JOIN products p ON t.product_id = p.id
+        FROM nixty.transactions t
+        LEFT JOIN nixty.products p ON t.product_id = p.id
         WHERE t.id = ? AND t.user_id = ?
       `;
       params = [transaction_id, user.id];
     }
-    const [rows] = await db.execute(query, params);
+    const [rows] = await db.query(query, params);
     if (rows.length === 0) {
       throw createError({
         statusCode: 404,
@@ -11611,7 +11658,7 @@ const resetPassword_post = defineEventHandler(async (event) => {
         message: "Password must be at least 8 characters long"
       };
     }
-    const [users] = await db.execute(
+    const [users] = await db.query(
       "SELECT * FROM nixty.users WHERE reset_token = ?",
       [token]
     );
@@ -11631,7 +11678,7 @@ const resetPassword_post = defineEventHandler(async (event) => {
       };
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-    await db.execute(
+    await db.query(
       "UPDATE nixty.users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?",
       [hashedPassword, user.id]
     );
@@ -11707,7 +11754,7 @@ const index_get = defineEventHandler(async (event) => {
       `;
       console.log("\u{1F4DD} Product SQL:", productSql);
       console.log("\u{1F4DD} Product Params:", [...productParams, parseInt(limit)]);
-      const [productRows] = await db.execute(productSql, [...productParams, parseInt(limit)]);
+      const [productRows] = await db.query(productSql, [...productParams, parseInt(limit)]);
       console.log("\u{1F4CA} Product search results:", productRows.length, "rows found");
       productRows.forEach((row) => {
         results.push({
@@ -11742,7 +11789,7 @@ const index_get = defineEventHandler(async (event) => {
         ORDER BY d.is_featured DESC, d.created_at DESC
         LIMIT ?
       `;
-      const [dealRows] = await db.execute(dealSql, [...dealParams, parseInt(limit)]);
+      const [dealRows] = await db.query(dealSql, [...dealParams, parseInt(limit)]);
       dealRows.forEach((row) => {
         results.push({
           id: row.id,
@@ -11774,7 +11821,7 @@ const index_get = defineEventHandler(async (event) => {
         ORDER BY a.created_at DESC
         LIMIT ?
       `;
-      const [newsRows] = await db.execute(newsSql, [...newsParams, parseInt(limit)]);
+      const [newsRows] = await db.query(newsSql, [...newsParams, parseInt(limit)]);
       newsRows.forEach((row) => {
         results.push({
           id: row.id,

@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   
   // Skip authentication for development mode only if explicitly set
   const isDev = process.env.NODE_ENV === 'development';
-  const bypassAuth = isDev && config.public.bypassAdminAuth === 'true';
+  const bypassAuth = config.public.bypassAdminAuth === 'true';
   
   if (bypassAuth) {
     console.log('Admin auth bypassed for development');
