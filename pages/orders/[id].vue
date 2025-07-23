@@ -66,7 +66,7 @@
             </div>
 
             <!-- License Information -->
-            <div class="section" v-if="order.licenses && order.licenses.length > 0">
+            <div class="section" v-if="order.status === 'completed' && order.licenses && order.licenses.length > 0">
               <h3>License Information ({{ order.licenses.length }} License{{ order.licenses.length > 1 ? 's' : '' }})</h3>
               
               <!-- Loop through each license -->
@@ -133,6 +133,20 @@
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- No License Information for Completed Orders -->
+            <div class="section" v-if="order.status === 'completed' && (!order.licenses || order.licenses.length === 0)">
+              <h3>License Information</h3>
+              <div class="license-card">
+                <div class="license-status">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <span>No license information available</span>
+                </div>
+                <p style="color: var(--galaxy-cloud-gray); margin-top: var(--galaxy-space-md);">
+                  This order is completed but license information is not available. Please contact support if you need assistance.
+                </p>
               </div>
             </div>
 
@@ -293,11 +307,18 @@ const fetchOrderDetails = async () => {
 
 // Initialize on mount
 onMounted(async () => {
-  await initUser()
-  if (user.value) {
-    await fetchOrderDetails()
-  } else {
-    error.value = 'Please log in to view order details'
+  try {
+    isLoading.value = true
+    await initUser()
+    if (user.value) {
+      await fetchOrderDetails()
+    } else {
+      error.value = 'Please log in to view order details'
+      isLoading.value = false
+    }
+  } catch (err) {
+    console.error('Error initializing user:', err)
+    error.value = 'Failed to initialize. Please refresh and try again.'
     isLoading.value = false
   }
 })
