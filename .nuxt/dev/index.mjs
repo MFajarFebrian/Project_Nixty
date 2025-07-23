@@ -10693,17 +10693,36 @@ const checkout_get = defineEventHandler(async (event) => {
     });
   }
   try {
-    const productsQuery = `
-      SELECT 
-        p.*, 
-        c.name as category_name, 
-        c.slug as category_slug 
-      FROM nixty.products p
-      LEFT JOIN nixty.categories c ON p.category_id = c.id
-      WHERE ${productSlug ? "c.slug = ?" : "p.id = ?"}
-      ORDER BY p.created_at DESC
-    `;
-    const [products] = await db.query(productsQuery, [productSlug || productId]);
+    console.log("API Checkout: Building query with params:", { productSlug, productId });
+    let productsQuery, queryParams;
+    if (productSlug) {
+      productsQuery = `
+        SELECT 
+          p.*, 
+          c.name as category_name, 
+          c.slug as category_slug 
+        FROM nixty.products p
+        LEFT JOIN nixty.categories c ON p.category_id = c.id
+        WHERE c.slug = $1
+        ORDER BY p.created_at DESC
+      `;
+      queryParams = [productSlug];
+    } else {
+      productsQuery = `
+        SELECT 
+          p.*, 
+          c.name as category_name, 
+          c.slug as category_slug 
+        FROM nixty.products p
+        LEFT JOIN nixty.categories c ON p.category_id = c.id
+        WHERE p.id = $1
+        ORDER BY p.created_at DESC
+      `;
+      queryParams = [productId];
+    }
+    console.log("API Checkout: Executing query:", productsQuery);
+    console.log("API Checkout: Query params:", queryParams);
+    const [products] = await db.query(productsQuery, queryParams);
     if (!products || products.length === 0) {
       console.warn("API Checkout: Product not found for:", productSlug ? `slug: ${productSlug}` : `ID: ${productId}`);
       throw createError({
@@ -10722,6 +10741,7 @@ const checkout_get = defineEventHandler(async (event) => {
     console.log("API Checkout: Found main product:", mainProduct.name, "ID:", mainProduct.id);
     const versions = [];
     for (let p of products) {
+      console.log("API Checkout: Fetching stock for product ID:", p.id);
       const [stockInfo] = await db.query(`
         SELECT 
           COUNT(*) as total_licenses,
@@ -10731,7 +10751,7 @@ const checkout_get = defineEventHandler(async (event) => {
             ELSE 0 
           END) as available_stock
         FROM nixty.product_license_base 
-        WHERE product_id = ?
+        WHERE product_id = $1
       `, [p.id]);
       const originalPrice2 = parseFloat(p.price) || 0;
       const discountPrice2 = parseFloat(p.discount_price) || 0;

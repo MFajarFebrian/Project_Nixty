@@ -14,18 +14,41 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-  // Find all products with the same category slug or specific ID
-    const productsQuery = `
-      SELECT 
-        p.*, 
-        c.name as category_name, 
-        c.slug as category_slug 
-      FROM nixty.products p
-      LEFT JOIN nixty.categories c ON p.category_id = c.id
-      WHERE ${productSlug ? 'c.slug = ?' : 'p.id = ?'}
-      ORDER BY p.created_at DESC
-    `;
-    const [products] = await db.query(productsQuery, [productSlug || productId]);
+    console.log('API Checkout: Building query with params:', { productSlug, productId });
+    
+    // Find all products with the same category slug or specific ID
+    let productsQuery, queryParams;
+    
+    if (productSlug) {
+      productsQuery = `
+        SELECT 
+          p.*, 
+          c.name as category_name, 
+          c.slug as category_slug 
+        FROM nixty.products p
+        LEFT JOIN nixty.categories c ON p.category_id = c.id
+        WHERE c.slug = $1
+        ORDER BY p.created_at DESC
+      `;
+      queryParams = [productSlug];
+    } else {
+      productsQuery = `
+        SELECT 
+          p.*, 
+          c.name as category_name, 
+          c.slug as category_slug 
+        FROM nixty.products p
+        LEFT JOIN nixty.categories c ON p.category_id = c.id
+        WHERE p.id = $1
+        ORDER BY p.created_at DESC
+      `;
+      queryParams = [productId];
+    }
+    
+    console.log('API Checkout: Executing query:', productsQuery);
+    console.log('API Checkout: Query params:', queryParams);
+    
+    const [products] = await db.query(productsQuery, queryParams);
     
     if (!products || products.length === 0) {
       console.warn('API Checkout: Product not found for:', productSlug ? `slug: ${productSlug}` : `ID: ${productId}`);
@@ -53,6 +76,8 @@ export default defineEventHandler(async (event) => {
     for (let p of products) {
       // Get stock information for each product
       // Calculate available stock based on max_usage and send_license (multi-use support)
+      console.log('API Checkout: Fetching stock for product ID:', p.id);
+      
       const [stockInfo] = await db.query(`
         SELECT 
           COUNT(*) as total_licenses,
@@ -62,7 +87,7 @@ export default defineEventHandler(async (event) => {
             ELSE 0 
           END) as available_stock
         FROM nixty.product_license_base 
-        WHERE product_id = ?
+        WHERE product_id = $1
       `, [p.id]);
       
       // Calculate discount percentage if discount_price exists
