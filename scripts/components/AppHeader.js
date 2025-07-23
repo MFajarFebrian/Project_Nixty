@@ -12,6 +12,9 @@ export const useAppHeader = (emit) => {
   const isGuestDropdownOpen = ref(false);
   const userDropdownRef = ref(null);
   const guestDropdownRef = ref(null);
+  
+  // Mobile menu state
+  const isMobileMenuOpen = ref(false);
 
 
   // Active route detection
@@ -51,6 +54,27 @@ export const useAppHeader = (emit) => {
   const toggleGuestDropdown = () => {
     isGuestDropdownOpen.value = !isGuestDropdownOpen.value;
     isUserDropdownOpen.value = false; // Close other dropdown
+  };
+  
+  // Mobile menu toggle methods
+  const toggleMobileMenu = () => {
+    isMobileMenuOpen.value = !isMobileMenuOpen.value;
+    // Close dropdowns when opening mobile menu
+    if (isMobileMenuOpen.value) {
+      isUserDropdownOpen.value = false;
+      isGuestDropdownOpen.value = false;
+    }
+    // Toggle body scroll lock
+    if (isMobileMenuOpen.value) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  };
+  
+  const closeMobileMenu = () => {
+    isMobileMenuOpen.value = false;
+    document.body.style.overflow = '';
   };
 
   // Close dropdown when clicking outside
@@ -130,10 +154,13 @@ export const useAppHeader = (emit) => {
     userDropdownRef,
     guestDropdownRef,
     currentRoute,
+    isMobileMenuOpen,
 
     // Methods
     toggleUserDropdown,
     toggleGuestDropdown,
+    toggleMobileMenu,
+    closeMobileMenu,
     navigateToProfile,
     navigateToOrders,
     navigateToDashboard,

@@ -4,11 +4,32 @@
       <NuxtLink to="/">Nixty</NuxtLink>
     </div>
     
+    <!-- Mobile Menu Toggle Button -->
+    <button 
+      class="mobile-menu-toggle" 
+      @click="toggleMobileMenu"
+      :class="{ 'active': isMobileMenuOpen }"
+      v-if="!user || user.account_type !== 'admin'"
+    >
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+    
     <!-- Navigation Links - Hidden for admin users -->
-    <nav class="nav-links" v-if="!user || user.account_type !== 'admin'">
-      <div>
-        <NuxtLink to="/home" :class="{ 'active': isActiveRoute('/home') }">Home</NuxtLink>
-        <NuxtLink to="/products" :class="{ 'active': isActiveRoute('/products') }">Products</NuxtLink>
+    <nav class="nav-links" :class="{ 'mobile-open': isMobileMenuOpen }" v-if="!user || user.account_type !== 'admin'">
+      <div class="nav-overlay" @click="closeMobileMenu"></div>
+      <div class="nav-container">
+        <div class="nav-header">
+          <span class="nav-title">Navigation</span>
+          <button class="nav-close" @click="closeMobileMenu">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="nav-items">
+          <NuxtLink to="/home" :class="{ 'active': isActiveRoute('/home') }" @click="closeMobileMenu">Home</NuxtLink>
+          <NuxtLink to="/products" :class="{ 'active': isActiveRoute('/products') }" @click="closeMobileMenu">Products</NuxtLink>
+        </div>
       </div>
     </nav>
 
@@ -116,10 +137,13 @@ const {
   userDropdownRef,
   guestDropdownRef,
   currentRoute,
+  isMobileMenuOpen,
 
   // Methods
   toggleUserDropdown,
   toggleGuestDropdown,
+  toggleMobileMenu,
+  closeMobileMenu,
   navigateToProfile,
   navigateToOrders,
   navigateToDashboard,
