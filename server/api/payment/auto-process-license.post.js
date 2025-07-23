@@ -212,7 +212,6 @@ export default defineEventHandler(async (event) => {
         password: license.password,
         additional_info: license.additional_info || '',
         notes: license.notes || '',
-        send_license: 1,
         max_usage: license.max_usage || 1
       }));
       
@@ -317,16 +316,12 @@ if (emailLicenses.length > 1) {
     }
     
     // Verify final stock
-    const [finalStock] = await db.execute(
+    const [finalStock] = await db.query(
       `SELECT 
         COUNT(*) as total_licenses,
-        SUM(CASE 
-          WHEN status = 'available' AND (COALESCE(send_license, 0) < max_usage)
-          THEN (max_usage - COALESCE(send_license, 0))
-          ELSE 0 
-        END) as available_stock
+        COUNT(CASE WHEN status = 'available' THEN 1 END) as available_stock
       FROM nixty.product_license_base 
-      WHERE product_id = ?`,
+      WHERE product_id = $1`,
       [transaction.product_id]
     );
     const finalAvailableStock = finalStock.length > 0 ? parseInt(finalStock[0].available_stock || 0) : 0;
