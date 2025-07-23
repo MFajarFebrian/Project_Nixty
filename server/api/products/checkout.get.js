@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
           c.slug as category_slug 
         FROM nixty.products p
         LEFT JOIN nixty.categories c ON p.category_id = c.id
-        WHERE c.slug = $1
+        WHERE c.slug = $1 AND p.status = 'active'
         ORDER BY p.created_at DESC
       `;
       queryParams = [productSlug];
@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
           c.slug as category_slug 
         FROM nixty.products p
         LEFT JOIN nixty.categories c ON p.category_id = c.id
-        WHERE p.id = $1
+        WHERE p.id = $1 AND p.status = 'active'
         ORDER BY p.created_at DESC
       `;
       queryParams = [productId];
