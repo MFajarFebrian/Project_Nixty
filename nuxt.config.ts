@@ -42,6 +42,7 @@ export default defineNuxtConfig({
     '~/plugins/cleanup-cache.client.js',
     '~/plugins/chart.client.js',
     '~/plugins/preload-optimizer.client.js',
+    '~/plugins/mobile-session.client.js',
     // '~/plugins/page-cache.client.ts', // Disabled - causing navigation issues
   ],
   
@@ -140,9 +141,30 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'Nixty Demo',
+      meta: [
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' },
+        { name: 'format-detection', content: 'telephone=no' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        { name: 'theme-color', content: '#0a0a0f' },
+        { name: 'msapplication-navbutton-color', content: '#0a0a0f' },
+        { name: 'apple-mobile-web-app-title', content: 'Nixty' },
+        { name: 'application-name', content: 'Nixty' },
+        { name: 'msapplication-TileColor', content: '#0a0a0f' },
+        { name: 'msapplication-config', content: '/browserconfig.xml' }
+      ],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
+        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png' },
+        { rel: 'manifest', href: '/site.webmanifest' }
+      ],
       script: [
         {
-src: `https://app.sandbox.midtrans.com/snap/snap.js`,
+          src: `https://app.sandbox.midtrans.com/snap/snap.js`,
           'data-client-key': 'SB-Mid-client-XZVBXJmESkGTZlFP'
         },
         {

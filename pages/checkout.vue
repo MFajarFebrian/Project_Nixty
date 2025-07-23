@@ -524,6 +524,22 @@ const initiatePayment = async () => {
     // Set loading state before API call
     isPaymentLoading.value = true;
     
+    // Enable mobile session protection
+    if ($mobileSession) {
+      $mobileSession.saveTransactionState({
+        active: true,
+        step: 'initiating_payment',
+        productId: selectedVersion.id,
+        timestamp: Date.now()
+      })
+      $mobileSession.preventNavigation(true)
+      
+      // Request wake lock on mobile to keep screen active
+      if (isMobile.value) {
+        await $mobileSession.requestWakeLock()
+      }
+    }
+    
     const requestBody = {
       product: {
         id: selectedVersion.id,
@@ -559,10 +575,28 @@ const initiatePayment = async () => {
         sessionStorage.setItem('currentOrderId', response.order_id);
       }
 
+      // Update transaction state before opening Midtrans
+      if ($mobileSession) {
+        $mobileSession.saveTransactionState({
+          active: true,
+          step: 'payment_popup_open',
+          orderId: response.order_id,
+          token: response.token,
+          timestamp: Date.now()
+        })
+      }
+
       window.snap.pay(response.token, {
-onSuccess: function(result) {
+        onSuccess: function(result) {
           isPaymentLoading.value = false;
           console.log("Payment successful!", result);
+          
+          // Clean up mobile session on success
+          if ($mobileSession) {
+            $mobileSession.clearTransactionState()
+            $mobileSession.releaseWakeLock()
+          }
+          
           // Add 5-second delay before redirecting to payment finish page
           setTimeout(() => {
             router.push({
@@ -575,9 +609,20 @@ onSuccess: function(result) {
             });
           }, 5000); // 5000ms = 5 seconds
         },
-onPending: function(result) {
+        onPending: function(result) {
           isPaymentLoading.value = false;
           console.log("Payment pending", result);
+          
+          // Update transaction state for pending
+          if ($mobileSession) {
+            $mobileSession.saveTransactionState({
+              active: true,
+              step: 'payment_pending',
+              orderId: result.order_id,
+              timestamp: Date.now()
+            })
+          }
+          
           router.push({
             path: '/payment/unfinish',
             query: {
@@ -587,9 +632,16 @@ onPending: function(result) {
             }
           });
         },
-onError: function(result) {
+        onError: function(result) {
           isPaymentLoading.value = false;
           console.error("Payment failed", result);
+          
+          // Clean up mobile session on error
+          if ($mobileSession) {
+            $mobileSession.clearTransactionState()
+            $mobileSession.releaseWakeLock()
+          }
+          
           router.push({
             path: '/payment/error',
             query: {
@@ -599,9 +651,20 @@ onError: function(result) {
             }
           });
         },
-onClose: function() {
+        onClose: function() {
           isPaymentLoading.value = false;
           console.log('Payment window closed by user.');
+          
+          // Keep transaction state active on close (user may reopen)
+          if ($mobileSession) {
+            $mobileSession.saveTransactionState({
+              active: true,
+              step: 'payment_closed',
+              timestamp: Date.now(),
+              canResume: true
+            })
+          }
+          
           const orderId = localStorage.getItem('currentOrderId');
           router.push({
             path: '/payment/unfinish',
@@ -624,8 +687,13 @@ alert('Error initiating payment: ' + (e.message || 'Unknown error'));
 };
 
 const { user, initUser } = useAuth()
+const { $mobileSession } = useNuxtApp()
 const showLoginWarning = ref(false)
 const isAuthModalOpen = ref(false)
+
+// Mobile session management
+let autoSaveCleanup = null
+const isMobile = computed(() => $mobileSession?.isMobile() || false)
 
 const openAuthModal = () => {
   isAuthModalOpen.value = true
@@ -641,14 +709,58 @@ useHead({
   title: 'Checkout'
 });
 
-onMounted(() => {
-  initUser()
+onMounted(async () => {
+  // Initialize mobile features first
+  if ($mobileSession) {
+    await $mobileSession.initializeMobileFeatures()
+    
+    // Check for existing transaction state
+    const transactionState = $mobileSession.getTransactionState()
+    if (transactionState.active) {
+      console.log('Found active transaction state:', transactionState)
+      // Show resume notification or modal if needed
+    }
+    
+    // Setup auto-save for form data on mobile
+    if (isMobile.value) {
+      autoSaveCleanup = $mobileSession.setupAutoSave(() => ({
+        selectedVersionId: selectedVersionId.value,
+        quantity: quantity.value,
+        useCustomEmail: useCustomEmail.value,
+        customEmail: customEmail.value,
+        totalPrice: totalPrice.value
+      }), 3000) // Save every 3 seconds
+    }
+  }
+  
+  await initUser()
   if (!user.value) {
     showLoginWarning.value = true
   } else {
     // Initialize email options
     useCustomEmail.value = false; // Default to user's email
     customEmail.value = '';
+    
+    // Try to restore checkout state if available
+    if ($mobileSession) {
+      const savedState = $mobileSession.getCheckoutState()
+      if (savedState && savedState.isMobile) {
+        console.log('Restoring checkout state:', savedState)
+        // Restore form values if they match current product
+        if (savedState.selectedVersionId) {
+          selectedVersionId.value = savedState.selectedVersionId
+        }
+        if (savedState.quantity) {
+          quantity.value = savedState.quantity
+        }
+        if (savedState.useCustomEmail !== undefined) {
+          useCustomEmail.value = savedState.useCustomEmail
+        }
+        if (savedState.customEmail) {
+          customEmail.value = savedState.customEmail
+        }
+      }
+    }
   }
   fetchProductDetails();
 
