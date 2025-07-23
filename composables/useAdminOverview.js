@@ -248,6 +248,7 @@ export function useAdminOverview() {
       
       // Fetch products with stock data
       const response = await $fetch('/api/admin/tables/products', {
+        headers: getAdminHeaders(),
         query: {
           orderBy: 'name',
           orderDir: 'asc',
