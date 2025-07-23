@@ -118,7 +118,7 @@
         
         <div v-if="selectedTable && !loadingTable" class="table-container">
           <div class="table-info">
-            <h3>{{ selectedTable.charAt(0).toUpperCase() + selectedTable.slice(1) }} ({{ tableData.length }} records)</h3>
+            <h3>{{ selectedTable.charAt(0).toUpperCase() + selectedTable.slice(1) }} ({{ filteredData.length }} records)</h3>
             <input v-model="searchQuery" type="text" placeholder="Search records..." class="search-input">
           </div>
           
@@ -130,7 +130,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(record, index) in filteredData" :key="record.id || index">
+                <tr v-for="(record, index) in paginatedData" :key="record.id || index">
                   <td v-for="column in tableColumns" :key="column">
                     {{ formatCellData(record[column], column) }}
                   </td>
@@ -138,13 +138,50 @@
               </tbody>
             </table>
           </div>
+          
+          <!-- Pagination Controls -->
+          <div v-if="totalPages > 1" class="pagination-container">
+            <div class="pagination-info">
+              <span>Showing {{ paginationInfo.startItem }}-{{ paginationInfo.endItem }} of {{ paginationInfo.totalItems }} records</span>
+            </div>
+            <div class="pagination-controls">
+              <button @click="prevPage" :disabled="currentPage === 1" class="pagination-btn">
+                <i class="fas fa-chevron-left"></i> Previous
+              </button>
+              
+              <div class="page-numbers">
+                <button 
+                  v-for="page in Math.min(5, totalPages)" 
+                  :key="page"
+                  @click="goToPage(page)"
+                  :class="['page-btn', { active: currentPage === page }]"
+                >
+                  {{ page }}
+                </button>
+                <span v-if="totalPages > 5" class="pagination-ellipsis">...</span>
+                <button 
+                  v-if="totalPages > 5 && currentPage < totalPages - 2"
+                  @click="goToPage(totalPages)"
+                  :class="['page-btn', { active: currentPage === totalPages }]"
+                >
+                  {{ totalPages }}
+                </button>
+              </div>
+              
+              <button @click="nextPage" :disabled="currentPage === totalPages" class="pagination-btn">
+                Next <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
         </div>
-        <div v-else-if="loadingTable" class="loading-message">Loading table data...</div>
+        <div v-else-if="loadingTable" class="loading-message">
+          <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading table data...</p>
+          </div>
+        </div>
       </div>
 
-      <div class="dashboard-footer">
-        <LogoutButton size="large" label="Logout" show-icon />
-      </div>
     </template>
   </div>
 </template>
@@ -181,6 +218,8 @@ const selectedTable = ref('');
 const tableData = ref([]);
 const tableColumns = ref([]);
 const searchQuery = ref('');
+const currentPage = ref(1);
+const itemsPerPage = 10;
 
 // Format currency to Indonesian Rupiah
 const formatRupiah = (amount) => {
@@ -303,17 +342,44 @@ const safeStockProducts = computed(() => {
 
 // Filtered table data based on search
 const filteredData = computed(() => {
+  let data = [];
+  
   if (!searchQuery.value || !tableData.value.length) {
-    return tableData.value.slice(0, 50); // Limit to 50 records for performance
+    data = tableData.value;
+  } else {
+    const query = searchQuery.value.toLowerCase();
+    data = tableData.value.filter(record => {
+      return Object.values(record).some(value => {
+        if (value === null || value === undefined) return false;
+        return String(value).toLowerCase().includes(query);
+      });
+    });
   }
   
-  const query = searchQuery.value.toLowerCase();
-  return tableData.value.filter(record => {
-    return Object.values(record).some(value => {
-      if (value === null || value === undefined) return false;
-      return String(value).toLowerCase().includes(query);
-    });
-  }).slice(0, 50);
+  return data;
+});
+
+// Paginated data for display
+const paginatedData = computed(() => {
+  const startIndex = (currentPage.value - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  return filteredData.value.slice(startIndex, endIndex);
+});
+
+// Total pages for pagination
+const totalPages = computed(() => {
+  return Math.ceil(filteredData.value.length / itemsPerPage);
+});
+
+// Pagination info
+const paginationInfo = computed(() => {
+  const startItem = (currentPage.value - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage.value * itemsPerPage, filteredData.value.length);
+  return {
+    startItem,
+    endItem,
+    totalItems: filteredData.value.length
+  };
 });
 
 // Load products data
@@ -372,11 +438,13 @@ const loadTableData = async () => {
   if (!selectedTable.value) {
     tableData.value = [];
     tableColumns.value = [];
+    currentPage.value = 1;
     return;
   }
   
   loadingTable.value = true;
   searchQuery.value = '';
+  currentPage.value = 1;
   
   try {
     let data = [];
@@ -450,6 +518,30 @@ const formatCellData = (value, column) => {
 
 
 
+
+// Pagination methods
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+  }
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+  }
+};
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+};
+
+// Reset pagination when search changes
+watch(searchQuery, () => {
+  currentPage.value = 1;
+});
 
 // Navigation methods
 const navigateToAddProduct = () => {
@@ -1408,6 +1500,115 @@ useHead({
   
   .chart-number {
     font-size: 1.6rem;
+  }
+}
+
+/* Pagination Styles */
+.pagination-container {
+  margin-top: var(--galaxy-space-lg);
+  padding-top: var(--galaxy-space-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--galaxy-space-md);
+}
+
+.pagination-info {
+  color: var(--galaxy-cloud-gray);
+  font-size: 0.9rem;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-md);
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-sm);
+  padding: var(--galaxy-space-sm) var(--galaxy-space-md);
+  background: var(--galaxy-card-gradient);
+  border: 1px solid var(--galaxy-aurora-cyan);
+  border-radius: var(--galaxy-radius-md);
+  color: var(--galaxy-starlight);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--galaxy-transition-normal);
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--galaxy-aurora-cyan);
+  color: var(--galaxy-deep-space);
+  transform: translateY(-1px);
+  box-shadow: var(--galaxy-glow-cyan);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-xs);
+}
+
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: var(--galaxy-space-xs);
+  background: var(--galaxy-card-gradient);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--galaxy-radius-sm);
+  color: var(--galaxy-starlight);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--galaxy-transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-btn:hover {
+  background: var(--galaxy-aurora-cyan);
+  color: var(--galaxy-deep-space);
+  border-color: var(--galaxy-aurora-cyan);
+}
+
+.page-btn.active {
+  background: var(--galaxy-comet-green);
+  color: var(--galaxy-deep-space);
+  border-color: var(--galaxy-comet-green);
+  font-weight: 600;
+}
+
+.pagination-ellipsis {
+  color: var(--galaxy-cloud-gray);
+  padding: 0 var(--galaxy-space-xs);
+}
+
+@media (max-width: 768px) {
+  .pagination-container {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .pagination-controls {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .page-numbers {
+    order: -1;
+    justify-content: center;
+    margin-bottom: var(--galaxy-space-sm);
   }
 }
 </style>
