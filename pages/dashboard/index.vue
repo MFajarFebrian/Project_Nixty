@@ -130,7 +130,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(record, index) in paginatedData" :key="record.id || index">
+                <tr v-for="(record, index) in paginatedData" :key="record.order_id || record.id || index">
                   <td v-for="column in tableColumns" :key="column">
                     {{ formatCellData(record[column], column) }}
                   </td>
@@ -207,7 +207,7 @@ const categories = ref([]);
 const users = ref([]);
 
 // Loading states
-const loadingCharts = ref(true);
+const loadingCharts = ref(false);
 const loadingTable = ref(false);
 
 // Chart component reference
@@ -466,7 +466,7 @@ const loadTableData = async () => {
       
       // Define essential columns for each table
       const essentialColumns = {
-        orders: ['id', 'user_name', 'user_email', 'product_name', 'total', 'status', 'created_at'],
+        orders: ['order_id', 'user_name', 'user_email', 'product_name', 'total', 'status', 'created_at'],
         users: ['id', 'name', 'email', 'account_type']
       };
       

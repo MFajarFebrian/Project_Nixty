@@ -4,6 +4,7 @@ export default defineEventHandler(async (event) => {
   try {
     const [rows] = await db.query(`
       SELECT 
+        o.order_id as id,
         o.*,
         p.name as product_name,
         u.name as user_name,

@@ -4631,7 +4631,7 @@ const productLicenses_post = defineEventHandler(async (event) => {
       status: body.status || "available",
       notes: body.notes || null,
       send_license: 0,
-      max_usage: 1
+      max_usage: body.license_type === "product_key" ? 5 : 1
     };
     const baseLicense = await db.insert("product_license_base", baseLicenseData);
     const licenseId = baseLicense.id;
@@ -6637,6 +6637,7 @@ const transactions_get = defineEventHandler(async (event) => {
   try {
     const [rows] = await db.query(`
       SELECT 
+        o.order_id as id,
         o.*,
         p.name as product_name,
         u.name as user_name,

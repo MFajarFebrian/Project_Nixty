@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
       status: body.status || 'available',
       notes: body.notes || null,
       send_license: 0,
-      max_usage: 1
+      max_usage: body.license_type === 'product_key' ? 5 : 1
     };
 
     const baseLicense = await db.insert('product_license_base', baseLicenseData);
