@@ -1,5 +1,5 @@
 <template>
-  <div class="product-card" @click="goToCheckout">
+  <div class="product-card">
     <!-- Product Image Section -->
     <div class="product-image-wrapper">
        <img 
@@ -15,6 +15,16 @@
         <!-- Simplified badges - no complex features from old schema -->
         <span v-if="product.status === 'active'" class="badge active-badge">ACTIVE</span>
       </div>
+      
+      <!-- Checkout Button -->
+      <button class="checkout-button" @click="goToCheckout" title="Checkout">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="m1 1 4 4 2 11 5-2 6-8"></path>
+          <path d="M16 8h5l-1 4"></path>
+        </svg>
+      </button>
     </div>
 
     <!-- Product Info Section -->
@@ -170,6 +180,10 @@ const formatCurrency = (value) => {
   background: var(--galaxy-pulsar-pink, #ff6b9d);
 }
 
+.active-badge {
+  background: var(--galaxy-stellar-green, #4caf50);
+}
+
 .product-info {
   padding: var(--galaxy-space-md, 1rem);
   display: flex;
@@ -230,5 +244,32 @@ const formatCurrency = (value) => {
   font-size: 1.2rem;
   font-weight: bold;
   color: var(--galaxy-aurora-cyan, #4dd0e1);
+}
+
+.checkout-button {
+  width: 36px;
+  height: 36px;
+  background: var(--galaxy-primary-gradient, linear-gradient(135deg, #1976d2, #42a5f5));
+  border: none;
+  border-radius: 50%;
+  color: var(--galaxy-starlight, #e8f4f8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all var(--galaxy-transition-fast, 0.2s ease);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+  z-index: 10;
+}
+
+.checkout-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.5);
+  background: linear-gradient(135deg, #1565c0, #2196f3);
+}
+
+.checkout-button:active {
+  transform: scale(0.95);
 }
 </style>

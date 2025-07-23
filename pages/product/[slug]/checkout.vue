@@ -17,7 +17,7 @@
     <!-- Product Content -->
     <div v-else-if="product" class="product-checkout-container">
       <div class="checkout-header">
-        <h1>Complete Your Purchase</h1>
+        <h1>Checkout</h1>
 <p class="product-name">{{ selectedVersionName || product.name }}</p>
       </div>
       
@@ -99,9 +99,9 @@
             </div>
           </div>
           
-          <button @click="initiatePayment" class="galaxy-button-primary pay-button">
-            <span class="button-text">Complete Purchase</span>
-            <span class="button-icon">→</span>
+          <button @click="initiatePayment" class="galaxy-button-primary pay-button checkout-button">
+            <span class="button-icon">🛒</span>
+            <span class="button-text">Payment</span>
           </button>
           
           <div class="payment-info">
@@ -622,12 +622,35 @@ onMounted(() => {
   margin-bottom: var(--galaxy-space-lg);
 }
 
+.checkout-button {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  border: none !important;
+  color: white !important;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.checkout-button:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
 .button-icon {
   transition: transform 0.3s ease;
+  font-size: 1.1rem;
+}
+
+.checkout-button .button-icon {
+  margin-right: var(--galaxy-space-xs);
 }
 
 .pay-button:hover .button-icon {
   transform: translateX(5px);
+}
+
+.checkout-button:hover .button-icon {
+  transform: scale(1.1);
 }
 
 /* Payment Info */
