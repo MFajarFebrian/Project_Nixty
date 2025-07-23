@@ -133,6 +133,13 @@ export default defineEventHandler(async (event) => {
   // 3. Get Snap token from Midtrans
   let snapToken, midtransResponse;
   try {
+    console.log('Midtrans config being used:', {
+      isProduction: midtransConfig.isProduction,
+      serverKey: midtransConfig.serverKey ? midtransConfig.serverKey.substring(0, 10) + '...' : 'MISSING',
+      clientKey: midtransConfig.clientKey ? midtransConfig.clientKey.substring(0, 10) + '...' : 'MISSING'
+    });
+    console.log('Transaction parameter being sent to Midtrans:', JSON.stringify(parameter, null, 2));
+    
     snapToken = await snap.createTransactionToken(parameter);
     
     // Create initial response for database
