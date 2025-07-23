@@ -23,7 +23,7 @@ export const useAppHeader = (emit) => {
   // Helper function to check if a route is active
   const isActiveRoute = (path) => {
     // Exact match
-    if (currentRoute.value === path) {
+  if (currentRoute.value === '/' && !user.value?.account_type === 'admin') {
       return true;
     }
 

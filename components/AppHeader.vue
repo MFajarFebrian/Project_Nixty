@@ -4,7 +4,7 @@
     <template #fallback>
       <header class="app-header">
         <div class="logo">
-          <NuxtLink to="/">Nixty</NuxtLink>
+          <NuxtLink v-if="user?.account_type !== 'admin'" to="/">Nixty</NuxtLink>
         </div>
         <!-- Navigation hidden in fallback as it will be handled by AppHeaderCore -->
         <div class="header-actions">

@@ -193,6 +193,7 @@ import { adminFetch } from '~/utils/adminApi';
 
 const router = useRouter();
 const { user, initUser } = useAuth();
+const { $mobileSession } = useNuxtApp();
 
 // Set page meta
 definePageMeta({
@@ -589,9 +590,14 @@ onMounted(async () => {
   }
 
   // Redirect regular users to home
-  if (user.value && user.value.account_type !== 'admin') {
+  if (user.value && user.value.account_type === 'user') {
     router.push('/home');
     return;
+  }
+  
+  // Initialize mobile features
+  if ($mobileSession) {
+    await $mobileSession.initializeMobileFeatures();
   }
   
   // Load dashboard data
@@ -599,9 +605,31 @@ onMounted(async () => {
 });
 
 
-// Set page title
+// Set page title and mobile viewport
 useHead({
-  title: 'Admin Dashboard'
+  title: 'Admin Dashboard',
+  meta: [
+    {
+      name: 'viewport',
+      content: 'width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes'
+    },
+    {
+      name: 'format-detection',
+      content: 'telephone=no'
+    },
+    {
+      name: 'mobile-web-app-capable',
+      content: 'yes'
+    },
+    {
+      name: 'apple-mobile-web-app-capable',
+      content: 'yes'
+    },
+    {
+      name: 'theme-color',
+      content: '#1e2a3a'
+    }
+  ]
 });
 </script>
 

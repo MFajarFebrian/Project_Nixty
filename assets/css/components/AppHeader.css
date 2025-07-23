@@ -13,7 +13,8 @@
   backdrop-filter: blur(10px);
 }
 
-.logo a {
+.logo a,
+.logo .logo-text {
   font-size: 1.8rem;
   font-weight: bold;
   color: var(--galaxy-starlight);
@@ -22,6 +23,7 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  cursor: default;
 }
 
 .nav-links {

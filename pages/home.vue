@@ -74,12 +74,10 @@
 import { useImageLoader } from '~/composables/useImageLoader';
 import InfoSection from '~/components/InfoSection.vue';
 
-// Remove or comment out the definePageMeta middleware
-/* 
+// Apply user-only middleware to prevent admin access
 definePageMeta({
   middleware: 'user-only'
-}); 
-*/
+});
 
 const { getImageUrl, handleImageError, handleHeroImageError } = useImageLoader();
 
