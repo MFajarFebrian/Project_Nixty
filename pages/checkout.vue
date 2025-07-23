@@ -188,7 +188,7 @@
               <div class="payment-info">
                 <p>Secure payment processing by Midtrans</p>
                 <div class="payment-icons">
-                  <img src="/qris-logo.png" alt="QRIS" class="payment-icon qris-logo" />
+                  <img src="https://images.seeklogo.com/logo-png/39/1/quick-response-code-indonesia-standard-qris-logo-png_seeklogo-391791.png" alt="QRIS" class="payment-icon qris-logo" />
                   <!-- Add more payment icons -->
                 </div>
                 <p class="payment-note">Pay via QRIS, e-wallet, virtual account, or credit card</p>
