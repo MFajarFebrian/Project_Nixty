@@ -154,6 +154,7 @@
 <script setup>
 import { ref, onMounted, computed, reactive } from 'vue'
 import { useToast } from '~/composables/useToast'
+import { adminFetch } from '~/utils/adminApi'
 
 definePageMeta({
   layout: 'default',
@@ -186,7 +187,7 @@ const isAccountType = computed(() => form.value.license_type === 'email_password
 // Load products
 const loadProducts = async () => {
   try {
-    const response = await $fetch('/api/admin/tables/products')
+    const response = await adminFetch('/api/admin/tables/products')
     if (response && response.success) {
       products.value = response.data || []
     }
@@ -264,9 +265,9 @@ const onLicenseTypeChange = () => {
 // Handle form submission
 const handleAddLicense = async () => {
   isLoading.value = true
+  const toast = useToast()
   
   try {
-    const toast = useToast()
     
 // Validate inputs
   if (!form.value.product_id || !form.value.license_type) {
@@ -353,7 +354,7 @@ const handleAddLicense = async () => {
     }
 
     console.log('Sending license data:', licenseData);
-    const response = await $fetch('/api/admin/product-licenses', {
+    const response = await adminFetch('/api/admin/product-licenses', {
       method: 'POST',
       body: licenseData
     })

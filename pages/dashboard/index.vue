@@ -107,7 +107,7 @@
 
       <!-- Table Management Section -->
       <div class="dashboard-section dashboard-card">
-        <h2><i class="fas fa-database"></i> Data Management</h2>
+        <h2><i class="fas fa-database"></i> Data View</h2>
         <div class="table-selector">
           <select v-model="selectedTable" @change="loadTableData">
             <option value="">Select a table to manage</option>
