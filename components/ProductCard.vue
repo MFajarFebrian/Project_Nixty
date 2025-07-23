@@ -16,15 +16,6 @@
         <span v-if="product.status === 'active'" class="badge active-badge">ACTIVE</span>
       </div>
       
-      <!-- Checkout Button -->
-      <button class="checkout-button" @click="goToCheckout" title="Checkout">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="9" cy="21" r="1"></circle>
-          <circle cx="20" cy="21" r="1"></circle>
-          <path d="m1 1 4 4 2 11 5-2 6-8"></path>
-          <path d="M16 8h5l-1 4"></path>
-        </svg>
-      </button>
     </div>
 
     <!-- Product Info Section -->
@@ -43,6 +34,15 @@
                 class="original-price">{{ formatCurrency(product.price) }}</span>
           <span class="current-price">{{ formatCurrency(product.discount_price || product.price) }}</span>
         </div>
+        
+        <!-- Checkout Button -->
+        <button class="checkout-button" @click="goToCheckout" title="Add to Cart">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+        </button>
       </div>
     </div>
   </div>
@@ -155,10 +155,6 @@ const formatCurrency = (value) => {
   transform: scale(1.05);
 }
 
-.product-card:hover .checkout-button {
-  opacity: 1;
-  transform: scale(1);
-}
 
 .product-badges {
   position: absolute;
@@ -252,25 +248,19 @@ const formatCurrency = (value) => {
 }
 
 .checkout-button {
-  position: absolute;
-  bottom: var(--galaxy-space-md, 1rem);
-  right: var(--galaxy-space-md, 1rem);
   width: 40px;
   height: 40px;
   background: var(--galaxy-primary-gradient, linear-gradient(135deg, #1976d2, #42a5f5));
   border: none;
-  border-radius: 50%;
+  border-radius: 8px;
   color: var(--galaxy-starlight, #e8f4f8);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
   transition: all var(--galaxy-transition-fast, 0.2s ease);
   box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
-  z-index: 10;
-  opacity: 0;
-  transform: scale(0.8);
+  flex-shrink: 0;
 }
 
 .checkout-button:hover {
