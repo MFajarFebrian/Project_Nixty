@@ -83,9 +83,11 @@ export function useImageUpload() {
       console.log('Admin headers:', getAdminHeaders());
 
       // Upload using native fetch (better FormData support)
-      const headers = getAdminHeaders();
+      const headers = {
+        'x-user-id': getAdminHeaders()['x-user-id'],
+        'x-user-email': getAdminHeaders()['x-user-email']
+      };
       // Don't set Content-Type header for FormData - let browser set it with boundary
-      delete headers['Content-Type'];
 
       const response = await fetch('/api/admin/upload-image', {
         method: 'POST',

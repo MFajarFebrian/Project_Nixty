@@ -104,6 +104,7 @@
 import { ref, onMounted } from 'vue'
 import ImageUpload from '~/components/admin/ImageUpload.vue'
 import { useToast } from '~/composables/useToast'
+import { adminFetch } from '~/utils/adminApi'
 
 definePageMeta({
   layout: 'default',
@@ -131,7 +132,7 @@ const isCreatingCategory = ref(false)
 // Load categories
 const loadCategories = async () => {
   try {
-    const response = await $fetch('/api/admin/tables/categories')
+    const response = await adminFetch('/api/admin/tables/categories')
     if (response && response.success) {
       categories.value = response.data || []
     }
@@ -153,7 +154,7 @@ const createCategory = async () => {
     .trim()
 
   try {
-    const response = await $fetch('/api/admin/tables/categories', {
+    const response = await adminFetch('/api/admin/tables/categories', {
       method: 'POST',
       body: { name: newCategoryName.value, slug: slug }
     })
@@ -215,7 +216,7 @@ const handleAddProduct = async () => {
 
     console.log('Creating product with data:', productData)
     
-    const response = await $fetch('/api/admin/tables/products', {
+    const response = await adminFetch('/api/admin/tables/products', {
       method: 'POST',
       body: productData
     })
