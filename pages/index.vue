@@ -1,24 +1,18 @@
 <template>
-  <div>
-    Redirecting...
+  <div class="loading-container">
+    <div class="loading-content">
+      <h1>Welcome to Nixty</h1>
+      <p>Redirecting to home page...</p>
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, onBeforeMount } from 'vue';
-import { useRouter } from 'vue-router';
-
-const router = useRouter();
-
-onBeforeMount(() => {
-  // Try to immediately redirect during the setup phase
-  router.push('/home');
-});
-
-onMounted(() => {
-  // Ensure redirect happens even if onBeforeMount fails
-  window.location.href = '/home';
-});
+// Use server-side redirect for better performance
+await navigateTo('/home', { redirectCode: 301 })
 </script>
 
 <style scoped>
