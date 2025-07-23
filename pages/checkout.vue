@@ -37,7 +37,7 @@
         <!-- Product Content -->
         <div v-else-if="product" class="product-checkout-container">
           <div class="checkout-header">
-            <h1>Complete Your Purchase</h1>
+            <h1>Checkout</h1>
 <p class="product-name">{{ selectedVersionName }}</p>
           </div>
           
@@ -177,7 +177,7 @@
               </div>
               
               <button @click="initiatePayment" class="galaxy-button-primary pay-button" :disabled="isPaymentLoading">
-                <span v-if="!isPaymentLoading" class="button-text">Complete Purchase</span>
+                <span v-if="!isPaymentLoading" class="button-text">Payment</span>
                 <span v-else class="button-text loading-text">
                   <div class="button-spinner"></div>
                   Processing Payment...
@@ -194,11 +194,6 @@
                 <p class="payment-note">Pay via QRIS, e-wallet, virtual account, or credit card</p>
               </div>
               
-              <!-- Payment Loading Overlay -->
-              <div v-if="isPaymentLoading" class="payment-loading-overlay">
-                <div class="loading-spinner"></div>
-                <p>Opening payment popup...</p>
-              </div>
             </div>
           </div>
         </div>
