@@ -7220,6 +7220,13 @@ const uploadImage_post = defineEventHandler(async (event) => {
     const hash = createHash("md5").update(file.data).digest("hex").substring(0, 8);
     const extension = extname(file.filename || "") || getExtensionFromMimeType(fileType);
     const filename = `${timestamp}-${hash}${extension}`;
+    const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+    if (isServerless) {
+      throw createError({
+        statusCode: 501,
+        statusMessage: "File upload not supported in serverless environment. Please use external image hosting services like Imgur, Cloudinary, or GitHub for product images."
+      });
+    }
     const uploadDir = join(process.cwd(), "public", "uploads", "admin");
     try {
       await promises.access(uploadDir);

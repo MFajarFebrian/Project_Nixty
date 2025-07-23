@@ -54,10 +54,24 @@ const props = defineProps({
   }
 });
 
-const imageUrl = ref(props.product.image_url || '/placeholder-grey.svg');
+const imageUrl = ref(getValidImageUrl(props.product.image_url));
 const router = useRouter();
 
+// Function to get a valid image URL or fallback
+function getValidImageUrl(url) {
+  if (!url) return '/placeholder-grey.svg';
+  
+  // If it's a local upload path that might not work on Vercel, use placeholder
+  if (url.startsWith('/uploads/admin/')) {
+    console.warn('Local upload detected, using placeholder:', url);
+    return '/placeholder-grey.svg';
+  }
+  
+  return url;
+}
+
 const onImageError = () => {
+  console.warn('Image failed to load:', imageUrl.value);
   imageUrl.value = '/placeholder-grey.svg';
 };
 

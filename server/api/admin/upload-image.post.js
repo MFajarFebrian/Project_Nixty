@@ -99,7 +99,18 @@ export default defineEventHandler(async (event) => {
     const extension = extname(file.filename || '') || getExtensionFromMimeType(fileType);
     const filename = `${timestamp}-${hash}${extension}`;
 
-    // Create upload directory if it doesn't exist
+    // Check if we're in a serverless environment (like Vercel)
+    const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+    
+    if (isServerless) {
+      // In serverless environment, we can't save files to filesystem
+      throw createError({
+        statusCode: 501,
+        statusMessage: 'File upload not supported in serverless environment. Please use external image hosting services like Imgur, Cloudinary, or GitHub for product images.'
+      });
+    }
+
+    // Create upload directory if it doesn't exist (only for local development)
     const uploadDir = join(process.cwd(), 'public', 'uploads', 'admin');
     try {
       await fs.access(uploadDir);
