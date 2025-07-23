@@ -30,6 +30,9 @@ declare module "nitropack/types" {
     '/api/admin/cleanup-pending-transactions': {
       'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/cleanup-pending-transactions.get').default>>>>
     }
+    '/api/admin/debug-auth': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/debug-auth.get').default>>>>
+    }
     '/api/admin/delete-image': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/admin/delete-image.delete').default>>>>
     }

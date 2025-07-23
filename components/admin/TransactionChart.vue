@@ -102,6 +102,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue';
 import { useFetch } from '#app';
 import { useNuxtApp } from '#app';
+import { adminFetch } from '~/utils/adminApi';
 
 // Define emits
 const emit = defineEmits(['dateRangeChanged', 'metricsUpdated']);
@@ -248,9 +249,8 @@ const fetchTransactionStats = async () => {
       headers['x-admin-dev-bypass'] = 'true';
     }
     
-    const data = await $fetch('/api/admin/transactions/stats', { 
-      params,
-      headers
+    const data = await adminFetch('/api/admin/transactions/stats', { 
+      params
     });
     console.log('Transaction stats response:', data);
     

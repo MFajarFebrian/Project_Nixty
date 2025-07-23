@@ -152,6 +152,7 @@
 <script setup lang="js">
 import { onMounted, computed, ref, watch, nextTick } from 'vue';
 import TransactionChart from '~/components/admin/TransactionChart.vue';
+import { adminFetch } from '~/utils/adminApi';
 
 const router = useRouter();
 const { user, initUser } = useAuth();
@@ -318,7 +319,7 @@ const filteredData = computed(() => {
 // Load products data
 const loadProducts = async () => {
   try {
-    const response = await $fetch('/api/admin/tables/products');
+    const response = await adminFetch('/api/admin/tables/products');
     if (response && response.success) {
       products.value = response.data || [];
     }
@@ -330,7 +331,7 @@ const loadProducts = async () => {
 // Load transactions data (from orders table) - for table display
 const loadOrders = async () => {
   try {
-    const response = await $fetch('/api/admin/transactions');
+    const response = await adminFetch('/api/admin/transactions');
     if (response && response.success) {
       transactions.value = response.data || [];
     }
@@ -343,7 +344,7 @@ const loadOrders = async () => {
 // Load categories data
 const loadCategories = async () => {
   try {
-    const response = await $fetch('/api/admin/tables/categories');
+    const response = await adminFetch('/api/admin/tables/categories');
     if (response && response.success) {
       categories.value = response.data || [];
     }
@@ -356,7 +357,7 @@ const loadCategories = async () => {
 // Load users data
 const loadUsers = async () => {
   try {
-    const response = await $fetch('/api/admin/tables/users');
+    const response = await adminFetch('/api/admin/tables/users');
     if (response && response.success) {
       users.value = response.data || [];
     }

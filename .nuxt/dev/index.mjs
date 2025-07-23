@@ -1339,9 +1339,11 @@ _4HUMqFuC79FtDlpwbtGd_p1URZ11naDAxBUs6hl60
 const useSupabase = true;
 const useOnlineDB = false;
 const midtransConfig = {
-  isProduction: process.env.NUXT_PUBLIC_MIDTRANS_IS_PRODUCTION === "true",
-  serverKey: process.env.NUXT_MIDTRANS_SERVER_KEY || process.env.MIDTRANS_SERVER_KEY || "SB-Mid-server-0-XiKyaD4PwMJvSRl7JZbZDp",
-  clientKey: process.env.NUXT_PUBLIC_MIDTRANS_CLIENT_KEY || process.env.MIDTRANS_CLIENT_KEY || "SB-Mid-client-XZVBXJmESkGTZlFP"
+  isProduction: false,
+  // Always use sandbox for now
+  serverKey: "SB-Mid-server-0-XiKyaD4PwMJvSRl7JZbZDp",
+  clientKey: "SB-Mid-client-XZVBXJmESkGTZlFP",
+  merchantId: "G454677231"
 };
 
 const { Pool } = pkg;
@@ -2102,6 +2104,7 @@ const _lazy_cLWnZn = () => Promise.resolve().then(function () { return checkTran
 const _lazy_2MWlm4 = () => Promise.resolve().then(function () { return checkTransactionsTable_get$1; });
 const _lazy_7K0pU0 = () => Promise.resolve().then(function () { return cleanupNotFoundTransactions_get$1; });
 const _lazy_0FUp3i = () => Promise.resolve().then(function () { return cleanupPendingTransactions_get$1; });
+const _lazy_86JI9G = () => Promise.resolve().then(function () { return debugAuth_get$1; });
 const _lazy_G34eqs = () => Promise.resolve().then(function () { return deleteImage_delete$1; });
 const _lazy_MDjFuw = () => Promise.resolve().then(function () { return fixProductSlugs_get$1; });
 const _lazy_2anayJ = () => Promise.resolve().then(function () { return fixTransactionsTable_get$1; });
@@ -2190,6 +2193,7 @@ const handlers = [
   { route: '/api/admin/check-transactions-table', handler: _lazy_2MWlm4, lazy: true, middleware: false, method: "get" },
   { route: '/api/admin/cleanup-not-found-transactions', handler: _lazy_7K0pU0, lazy: true, middleware: false, method: "get" },
   { route: '/api/admin/cleanup-pending-transactions', handler: _lazy_0FUp3i, lazy: true, middleware: false, method: "get" },
+  { route: '/api/admin/debug-auth', handler: _lazy_86JI9G, lazy: true, middleware: false, method: "get" },
   { route: '/api/admin/delete-image', handler: _lazy_G34eqs, lazy: true, middleware: false, method: "delete" },
   { route: '/api/admin/fix-product-slugs', handler: _lazy_MDjFuw, lazy: true, middleware: false, method: "get" },
   { route: '/api/admin/fix-transactions-table', handler: _lazy_2anayJ, lazy: true, middleware: false, method: "get" },
@@ -3311,6 +3315,29 @@ const cleanupPendingTransactions_get = defineEventHandler(async (event) => {
 const cleanupPendingTransactions_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: cleanupPendingTransactions_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const debugAuth_get = defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
+  const headers = getHeaders(event);
+  return {
+    debug: "Admin Auth Debug Info",
+    environment: "development",
+    bypassAuth: config.public.bypassAdminAuth,
+    headers: {
+      hasUserId: !!headers["x-user-id"],
+      hasUserEmail: !!headers["x-user-email"],
+      userId: headers["x-user-id"] ? headers["x-user-id"].substring(0, 8) + "***" : "none",
+      userEmail: headers["x-user-email"] ? headers["x-user-email"].substring(0, 5) + "***" : "none",
+      allHeaders: Object.keys(headers)
+    },
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  };
+});
+
+const debugAuth_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: debugAuth_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const deleteImage_delete = defineEventHandler(async (event) => {
@@ -7536,6 +7563,12 @@ const initiate_post = defineEventHandler(async (event) => {
   };
   let snapToken, midtransResponse;
   try {
+    console.log("Midtrans config being used:", {
+      isProduction: midtransConfig.isProduction,
+      serverKey: midtransConfig.serverKey ? midtransConfig.serverKey.substring(0, 10) + "..." : "MISSING",
+      clientKey: midtransConfig.clientKey ? midtransConfig.clientKey.substring(0, 10) + "..." : "MISSING"
+    });
+    console.log("Transaction parameter being sent to Midtrans:", JSON.stringify(parameter, null, 2));
     snapToken = await snap.createTransactionToken(parameter);
     midtransResponse = {
       status_code: "201",
