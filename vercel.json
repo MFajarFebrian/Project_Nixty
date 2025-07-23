@@ -1,15 +1,7 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".output/public",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
   "framework": "nuxtjs",
-  "functions": {
-    ".output/server/index.mjs": {
-      "maxDuration": 30,
-      "memory": 1024
-    }
-  },
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "headers": [
     {
       "source": "/api/(.*)",
@@ -25,10 +17,6 @@
         {
           "key": "Access-Control-Allow-Headers",
           "value": "Content-Type, Authorization, x-user-id, x-user-email, x-user-session"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
         }
       ]
     },
