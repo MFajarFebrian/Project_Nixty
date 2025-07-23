@@ -176,8 +176,9 @@
                 </div>
               </div>
               
-              <button @click="initiatePayment" class="galaxy-button-primary pay-button">
-                <span class="button-text">Complete Purchase</span>
+              <button @click="initiatePayment" class="galaxy-button-primary pay-button" :disabled="isPaymentLoading">
+                <span v-if="!isPaymentLoading" class="button-text">Complete Purchase</span>
+                <span v-else class="button-text">Opening Payment...</span>
                 <span class="button-icon">→</span>
               </button>
               
@@ -188,6 +189,12 @@
                   <!-- Add more payment icons -->
                 </div>
                 <p class="payment-note">Pay via QRIS, e-wallet, virtual account, or credit card</p>
+              </div>
+              
+              <!-- Payment Loading Overlay -->
+              <div v-if="isPaymentLoading" class="payment-loading-overlay">
+                <div class="loading-spinner"></div>
+                <p>Opening payment popup...</p>
               </div>
             </div>
           </div>
@@ -456,6 +463,8 @@ const validateForm = () => {
   return true;
 };
 
+const isPaymentLoading = ref(false);
+
 const initiatePayment = async () => {
   console.log('🚀 Starting payment initiation...');
   
@@ -544,8 +553,11 @@ const initiatePayment = async () => {
         sessionStorage.setItem('currentOrderId', response.order_id);
       }
       
+isPaymentLoading.value = true;
+
       window.snap.pay(response.token, {
-        onSuccess: function(result){
+onSuccess: function(result) {
+          isPaymentLoading.value = false;
           console.log("Payment successful!", result);
           // Add 5-second delay before redirecting to payment finish page
           setTimeout(() => {
@@ -559,7 +571,8 @@ const initiatePayment = async () => {
             });
           }, 5000); // 5000ms = 5 seconds
         },
-        onPending: function(result){
+onPending: function(result) {
+          isPaymentLoading.value = false;
           console.log("Payment pending", result);
           router.push({
             path: '/payment/unfinish',
@@ -570,7 +583,8 @@ const initiatePayment = async () => {
             }
           });
         },
-        onError: function(result){
+onError: function(result) {
+          isPaymentLoading.value = false;
           console.error("Payment failed", result);
           router.push({
             path: '/payment/error',
@@ -581,7 +595,8 @@ const initiatePayment = async () => {
             }
           });
         },
-        onClose: function(){
+onClose: function() {
+          isPaymentLoading.value = false;
           console.log('Payment window closed by user.');
           const orderId = localStorage.getItem('currentOrderId');
           router.push({
@@ -594,11 +609,13 @@ const initiatePayment = async () => {
         }
       });
     } else {
-      alert('Failed to get payment token.');
+alert('Failed to get payment token.');
+      isPaymentLoading.value = false;
     }
   } catch (e) {
     console.error('Error initiating payment:', e);
-    alert('Error initiating payment: ' + (e.message || 'Unknown error'));
+alert('Error initiating payment: ' + (e.message || 'Unknown error'));
+    isPaymentLoading.value = false;
   }
 };
 
