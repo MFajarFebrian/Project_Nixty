@@ -120,7 +120,6 @@ export default defineEventHandler(async (event) => {
             plb.status as license_status,
             plb.notes,
             plb.max_usage,
-            plb.send_license,
             plk.product_key,
             pla.email,
             pla.password
@@ -139,7 +138,6 @@ export default defineEventHandler(async (event) => {
             status: license.license_status,
             notes: license.notes,
             max_usage: license.max_usage,
-            send_license: license.send_license,
             product_key: license.product_key || null,
             email: license.email || null,
             password: license.password || null,

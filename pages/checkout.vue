@@ -178,8 +178,11 @@
               
               <button @click="initiatePayment" class="galaxy-button-primary pay-button" :disabled="isPaymentLoading">
                 <span v-if="!isPaymentLoading" class="button-text">Complete Purchase</span>
-                <span v-else class="button-text">Opening Payment...</span>
-                <span class="button-icon">→</span>
+                <span v-else class="button-text loading-text">
+                  <div class="button-spinner"></div>
+                  Processing Payment...
+                </span>
+                <span v-if="!isPaymentLoading" class="button-icon">→</span>
               </button>
               
               <div class="payment-info">
@@ -518,6 +521,9 @@ const initiatePayment = async () => {
   }
 
   try {
+    // Set loading state before API call
+    isPaymentLoading.value = true;
+    
     const requestBody = {
       product: {
         id: selectedVersion.id,
@@ -552,8 +558,6 @@ const initiatePayment = async () => {
         localStorage.setItem('currentOrderId', response.order_id);
         sessionStorage.setItem('currentOrderId', response.order_id);
       }
-      
-isPaymentLoading.value = true;
 
       window.snap.pay(response.token, {
 onSuccess: function(result) {
@@ -1212,14 +1216,40 @@ onMounted(() => {
   align-items: center;
   gap: var(--galaxy-space-sm);
   margin-bottom: var(--galaxy-space-lg);
+  transition: var(--galaxy-transition-normal);
+}
+
+.pay-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .button-icon {
   transition: transform 0.3s ease;
 }
 
-.pay-button:hover .button-icon {
+.pay-button:hover:not(:disabled) .button-icon {
   transform: translateX(5px);
+}
+
+.loading-text {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-sm);
+}
+
+.button-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--galaxy-starlight);
+  animation: button-spin 1s infinite linear;
+}
+
+@keyframes button-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Payment Info */
