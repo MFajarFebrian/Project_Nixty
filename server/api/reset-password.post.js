@@ -1,4 +1,4 @@
-import pool from '../utils/db';
+import db from '../utils/db.js';
 import bcrypt from 'bcryptjs';
 
 export default defineEventHandler(async (event) => {
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Find user with this reset token
-    const [users] = await pool.execute(
+    const [users] = await db.query(
       'SELECT * FROM nixty.users WHERE reset_token = ?',
       [token]
     );
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     
     // Update user's password and clear reset token
-    await pool.execute(
+    await db.query(
       'UPDATE nixty.users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
       [hashedPassword, user.id]
     );

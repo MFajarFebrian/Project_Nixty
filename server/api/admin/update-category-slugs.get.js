@@ -1,4 +1,4 @@
-import pool from '../../utils/db';
+import db from '../../utils/db.js';
 import adminAuth from '../../middleware/admin-auth';
 
 /**
@@ -11,35 +11,35 @@ export default defineEventHandler(async (event) => {
     await adminAuth(event);
 
     // Ambil data kategori sebelum diubah
-    const [beforeCategories] = await pool.execute(`
+    const [beforeCategories] = await db.query(`
       SELECT id, name, slug
       FROM categories
       ORDER BY id
     `);
 
     // Update kategori Office
-    await pool.execute(`
+    await db.query(`
       UPDATE categories
       SET slug = 'office'
       WHERE id = 1
     `);
 
     // Update kategori Project
-    await pool.execute(`
+    await db.query(`
       UPDATE categories
       SET slug = 'project'
       WHERE id = 2
     `);
 
     // Update kategori Visio
-    await pool.execute(`
+    await db.query(`
       UPDATE categories
       SET slug = 'visio'
       WHERE id = 3
     `);
 
     // Ambil data kategori setelah diubah
-    const [afterCategories] = await pool.execute(`
+    const [afterCategories] = await db.query(`
       SELECT id, name, slug
       FROM categories
       ORDER BY id

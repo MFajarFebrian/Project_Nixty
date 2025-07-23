@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // First, verify the transaction exists, belongs to this user, and has the correct status
-    const [transactions] = await pool.execute(
+    const [transactions] = await db.query(
       `SELECT id, order_id, status, payment_gateway_status
        FROM transactions 
        WHERE id = ? AND user_id = ?`,
@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Delete the transaction
-    const [result] = await pool.execute(
+    const [result] = await db.query(
       `DELETE FROM transactions WHERE id = ? AND user_id = ?`,
       [transactionId, user.id]
     );

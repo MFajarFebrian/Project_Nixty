@@ -1,4 +1,4 @@
-import pool from '../../../utils/db';
+import db from '../../../utils/db.js';
 
 /**
  * GET /api/products/stock/:id
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Query to get the available stock for a product from the product_license_base table
-    const [result] = await pool.execute(`
+    const [result] = await db.query(`
       SELECT 
         COUNT(*) AS total_stock,
         SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) AS available_stock

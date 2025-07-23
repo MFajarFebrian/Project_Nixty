@@ -2,7 +2,7 @@ import pool from '../../utils/db.js';
 
 export default defineEventHandler(async (event) => {
   try {
-    const [rows] = await pool.execute(`
+    const [rows] = await db.query(`
       SELECT 
         h.*,
         p.name as product_name,

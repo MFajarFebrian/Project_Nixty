@@ -1,4 +1,4 @@
-import pool from '../utils/db';
+import db from '../utils/db.js';
 import { H3Event } from 'h3';
 import bcrypt from 'bcryptjs';
 
@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
       };
     }
     
-    const [existingUsers] = await pool.query(
+    const [existingUsers] = await db.query(
       'SELECT id FROM nixty.users WHERE email = $1',
       [email]
     );
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    const [result] = await pool.query(
+    const [result] = await db.query(
       'INSERT INTO nixty.users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name, account_type',
       [email, hashedPassword, name || null]
     );

@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     console.log('🧹 Starting auto-cleanup for user:', user.id);
     
     // Delete transactions that have been marked as "not found in gateway" for more than 1 hour
-    const [result] = await pool.execute(
+    const [result] = await db.query(
       `DELETE FROM transactions 
        WHERE user_id = $1 
        AND payment_gateway_status = 'not_found_in_gateway' 

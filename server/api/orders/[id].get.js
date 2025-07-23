@@ -1,4 +1,4 @@
-import pool from '../../utils/db';
+import db from '../../utils/db.js';
 import { requireAuth } from '../../utils/auth';
 
 export default defineEventHandler(async (event) => {
@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
       orderParams = [parseInt(orderId), user.id];
     }
     
-    const [orders] = await pool.query(orderQuery, orderParams);
+    const [orders] = await db.query(orderQuery, orderParams);
 
     if (orders.length === 0) {
       throw createError({
@@ -81,7 +81,7 @@ export default defineEventHandler(async (event) => {
 
     // Get payment gateway logs for this order
     // Use order_ref if available, otherwise use transaction_id for legacy support
-    const [paymentLogs] = await pool.query(
+    const [paymentLogs] = await db.query(
       `SELECT 
         id,
         key,
@@ -113,7 +113,7 @@ export default defineEventHandler(async (event) => {
     if (isCompleted) {
       try {
         // Get license information from the orders_license table and join with license details
-        const [orderLicenses] = await pool.query(
+        const [orderLicenses] = await db.query(
           `SELECT 
             ol.license_id,
             plb.license_type,

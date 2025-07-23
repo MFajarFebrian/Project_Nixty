@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
     sql += ' ORDER BY d.is_featured DESC, d.created_at DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), parseInt(offset));
 
-    const [rows] = await pool.execute(sql, params);
+    const [rows] = await db.query(sql, params);
 
     const deals = rows.map(row => ({
       id: row.id,

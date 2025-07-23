@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Get column information with proper ordering from database schema
-    const [columns] = await pool.execute(`
+    const [columns] = await db.query(`
       SELECT 
         COLUMN_NAME as name,
         DATA_TYPE as type,
@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
     const visibleColumns = processedColumns.filter(col => !col.isHidden);
     
     // Get table info
-    const [tableInfo] = await pool.execute(`
+    const [tableInfo] = await db.query(`
       SELECT 
         TABLE_COMMENT as comment,
         ENGINE as engine,

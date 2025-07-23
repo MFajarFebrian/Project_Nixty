@@ -1,4 +1,4 @@
-import pool from '../../utils/db';
+import db from '../../utils/db.js';
 import adminAuth from '../../middleware/admin-auth';
 import { generateProductSlug } from '../../utils/admin-validation';
 
@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     await adminAuth(event);
 
     // Get products before changes
-    const [beforeProducts] = await pool.execute(`
+    const [beforeProducts] = await db.query(`
       SELECT p.id, p.name, p.version, p.slug, c.name AS category_name, c.slug AS category_slug
       FROM products p
       JOIN categories c ON p.category_id = c.id
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     // Update each product's slug based on its name
     const updatePromises = beforeProducts.map(async (product) => {
       const newSlug = generateProductSlug(product.name);
-      await pool.execute(
+      await db.query(
         'UPDATE products SET slug = ? WHERE id = ?',
         [newSlug, product.id]
       );
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     await Promise.all(updatePromises);
 
     // Get products after changes
-    const [afterProducts] = await pool.execute(`
+    const [afterProducts] = await db.query(`
       SELECT p.id, p.name, p.version, p.slug, c.name AS category_name, c.slug AS category_slug
       FROM products p
       JOIN categories c ON p.category_id = c.id

@@ -1,4 +1,4 @@
-import pool from '../../utils/db';
+import db from '../../utils/db.js';
 import { requireAuth } from '../../utils/auth';
 import Midtrans from 'midtrans-client';
 import { midtransConfig } from '../../utils/config.js';
@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Verify the transaction belongs to this user and is in a valid state for repayment
-    const [transactions] = await pool.execute(
+    const [transactions] = await db.query(
       `SELECT 
         t.id, 
         t.order_id,
@@ -113,7 +113,7 @@ export default defineEventHandler(async (event) => {
     const transactionToken = await snap.createTransaction(parameter);
     
     // Update the transaction record to note the repayment attempt
-    await pool.execute(
+    await db.query(
       `UPDATE transactions 
        SET payment_gateway_payload = COALESCE(payment_gateway_payload, '{}')::jsonb || 
          jsonb_build_object(
@@ -126,7 +126,7 @@ export default defineEventHandler(async (event) => {
     );
     
     // Create a new transaction record for the repayment
-    await pool.execute(
+    await db.query(
       `INSERT INTO transactions (
         order_id, user_id, product_id, product_name, 
         customer_name, email, amount, quantity, status, 

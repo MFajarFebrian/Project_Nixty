@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Find the transaction ID by looking up the order_id directly in orders table
-    const [orders] = await pool.execute(
+    const [orders] = await db.query(
       `SELECT id FROM nixty.orders WHERE order_id = ?`,
       [order_id]
     );

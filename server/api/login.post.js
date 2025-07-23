@@ -1,4 +1,4 @@
-import pool from '../utils/db';
+import db from '../utils/db.js';
 import { H3Event } from 'h3';
 import bcrypt from 'bcryptjs';
 
@@ -13,12 +13,10 @@ export default defineEventHandler(async (event) => {
       };
     }
     
-    const [rows] = await pool.query(
-      'SELECT * FROM nixty.users WHERE email = $1',
+    const [users] = await db.query(
+      'SELECT * FROM nixty.users WHERE email = ?',
       [email]
     );
-    
-    const users = rows;
     if (users.length === 0) {
       return {
         success: false,

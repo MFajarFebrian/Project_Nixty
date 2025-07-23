@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
     const specificTransactionIds = (body && body.transactionIds) || [];
     
     // Get pending/failed orders that might need status update
-    const [orders] = await pool.execute(
+    const [orders] = await db.query(
       `SELECT id, status, created_at
        FROM nixty.orders 
        WHERE user_id = ? 
@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
       try {
         // Get order_id from payment_gateway_logs if exists, otherwise generate one
         let order_id;
-        const [existingOrderId] = await pool.execute(
+        const [existingOrderId] = await db.query(
           `SELECT value FROM nixty.payment_gateway_logs WHERE transaction_id = ? AND key = 'order_id' LIMIT 1`,
           [order.id]
         );
@@ -86,7 +86,7 @@ export default defineEventHandler(async (event) => {
         } else {
           order_id = `ORDER_${order.id}_${Date.now()}`;
           // Store the generated order_id
-          await pool.execute(
+          await db.query(
             `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
             [order.id, 'order_id', order_id]
           );
@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
             
             // Update only if status changed
             if (newStatus !== order.status) {
-              const [result] = await pool.execute(
+              const [result] = await db.query(
                 `UPDATE nixty.orders SET status = ? WHERE id = ? AND user_id = ?`,
                 [newStatus, order.id, user.id]
               );
@@ -117,13 +117,13 @@ export default defineEventHandler(async (event) => {
                 ];
                 
                 for (const [key, value] of gatewayLogs) {
-                  const [updateResult] = await pool.execute(
+                  const [updateResult] = await db.query(
                     `UPDATE nixty.payment_gateway_logs SET value = ? WHERE transaction_id = ? AND key = ?`,
                     [value, order.id, key]
                   );
                   
                   if (updateResult.affectedRows === 0) {
-                    await pool.execute(
+                    await db.query(
                       `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
                       [order.id, key, value]
                     );
@@ -156,20 +156,20 @@ export default defineEventHandler(async (event) => {
             console.log(`Order ${order.id} (${order_id}) not found in Midtrans - marking as failed`);
             
             // Mark order as failed since it doesn't exist in Midtrans
-            const [updateResult] = await pool.execute(
+            const [updateResult] = await db.query(
               `UPDATE nixty.orders SET status = 'failed' WHERE id = ? AND user_id = ?`,
               [order.id, user.id]
             );
             
             if (updateResult.affectedRows > 0) {
               // Store the not found status in payment_gateway_logs
-              const [logUpdateResult] = await pool.execute(
+              const [logUpdateResult] = await db.query(
                 `UPDATE nixty.payment_gateway_logs SET value = ? WHERE transaction_id = ? AND key = ?`,
                 ['not_found_in_gateway', order.id, 'payment_gateway_status']
               );
               
               if (logUpdateResult.affectedRows === 0) {
-                await pool.execute(
+                await db.query(
                   `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
                   [order.id, 'payment_gateway_status', 'not_found_in_gateway']
                 );
@@ -232,7 +232,7 @@ export default defineEventHandler(async (event) => {
 async function processLicensesIfNeeded(orderId) {
   try {
     // Check if order already has licenses
-    const [existingLicenses] = await pool.execute(
+    const [existingLicenses] = await db.query(
       `SELECT COUNT(*) as count FROM nixty.orders_license WHERE transaction_id = ?`,
       [orderId]
     );
@@ -241,7 +241,7 @@ async function processLicensesIfNeeded(orderId) {
       console.log(`Order ${orderId} completed but has no licenses. Processing now...`);
       
       // Get order details
-      const [orderDetails] = await pool.execute(
+      const [orderDetails] = await db.query(
         `SELECT product_id, quantity FROM nixty.orders WHERE id = ?`,
         [orderId]
       );
@@ -257,7 +257,7 @@ async function processLicensesIfNeeded(orderId) {
       // Process licenses directly using your schema
       for (let i = 0; i < quantity; i++) {
         // Get an available license for this product
-        const [availableLicense] = await pool.execute(
+        const [availableLicense] = await db.query(
           `SELECT id FROM nixty.product_license_base 
            WHERE product_id = ? AND status = 'available' 
            LIMIT 1`,
@@ -266,12 +266,12 @@ async function processLicensesIfNeeded(orderId) {
         
         if (availableLicense.length > 0) {
           // Mark license as used and link to order
-          await pool.execute(
+          await db.query(
             `UPDATE nixty.product_license_base SET status = 'used' WHERE id = ?`,
             [availableLicense[0].id]
           );
           
-          await pool.execute(
+          await db.query(
             `INSERT INTO nixty.orders_license (transaction_id, license_id) VALUES (?, ?)`,
             [orderId, availableLicense[0].id]
           );

@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
       if (midtransError.message && (midtransError.message.includes('404') || midtransError.message.includes('not found'))) {
         // Update transaction to mark as "not found in gateway"
         // Find transaction by order_id directly from orders table
-        const [orderResults] = await pool.execute(
+        const [orderResults] = await db.query(
           `SELECT id FROM nixty.orders WHERE order_id = ?`,
           [order_id]
         );
@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
         // transactionId is already set above
         
         // Verify the transaction belongs to the user
-        const [userCheck] = await pool.execute(
+        const [userCheck] = await db.query(
           `SELECT id FROM nixty.orders WHERE id = ? AND user_id = ?`,
           [transactionId, user.id]
         );
@@ -65,20 +65,20 @@ export default defineEventHandler(async (event) => {
         }
         
         // Store the not found status in payment_gateway_logs
-        const [updateResult] = await pool.execute(
+        const [updateResult] = await db.query(
           `UPDATE nixty.payment_gateway_logs SET value = ? WHERE transaction_id = ? AND key = ?`,
           ['not_found_in_gateway', transactionId, 'payment_gateway_status']
         );
         
         if (updateResult.affectedRows === 0) {
-          await pool.execute(
+          await db.query(
             `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
             [transactionId, 'payment_gateway_status', 'not_found_in_gateway']
           );
         }
         
         // Get updated transaction details with payment gateway info
-        const [updatedTransaction] = await pool.execute(
+        const [updatedTransaction] = await db.query(
           `SELECT 
             o.id, 
             o.product_id, 
@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
         );
         
         // Get payment gateway logs
-        const [gatewayLogs] = await pool.execute(
+        const [gatewayLogs] = await db.query(
           `SELECT key, value FROM nixty.payment_gateway_logs WHERE transaction_id = ?`,
           [transactionId]
         );
@@ -154,7 +154,7 @@ export default defineEventHandler(async (event) => {
     const newStatus = mapMidtransStatus(midtransResponse.transaction_status, midtransResponse.fraud_status);
     
     // Find the transaction by order_id directly from orders table
-    const [orderResults] = await pool.execute(
+    const [orderResults] = await db.query(
       `SELECT id FROM nixty.orders WHERE order_id = ?`,
       [order_id]
     );
@@ -169,7 +169,7 @@ export default defineEventHandler(async (event) => {
     const transactionId = orderResults[0].id;
     
     // Update transaction status in database
-    const [result] = await pool.execute(
+    const [result] = await db.query(
       `UPDATE nixty.orders SET status = ? WHERE id = ? AND user_id = ?`,
       [newStatus, transactionId, user.id]
     );
@@ -190,13 +190,13 @@ export default defineEventHandler(async (event) => {
     
     for (const [key, value] of gatewayLogs) {
       // First try to update, if no rows affected then insert
-      const [updateResult] = await pool.execute(
+      const [updateResult] = await db.query(
         `UPDATE nixty.payment_gateway_logs SET value = ? WHERE transaction_id = ? AND key = ?`,
         [value, transactionId, key]
       );
       
       if (updateResult.affectedRows === 0) {
-        await pool.execute(
+        await db.query(
           `INSERT INTO nixty.payment_gateway_logs (transaction_id, key, value) VALUES (?, ?, ?)`,
           [transactionId, key, value]
         );
@@ -204,7 +204,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Get updated transaction details with payment gateway info
-    const [updatedTransaction] = await pool.execute(
+    const [updatedTransaction] = await db.query(
       `SELECT 
         o.id, 
         o.product_id, 
@@ -220,7 +220,7 @@ export default defineEventHandler(async (event) => {
     );
     
     // Get payment gateway logs
-    const [allGatewayLogs] = await pool.execute(
+    const [allGatewayLogs] = await db.query(
       `SELECT key, value FROM nixty.payment_gateway_logs WHERE transaction_id = ?`,
       [transactionId]
     );

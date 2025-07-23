@@ -1,4 +1,4 @@
-import pool from '../../utils/db';
+import db from '../../utils/db.js';
 import { useSupabase } from '../../utils/config.js';
 
 export default defineEventHandler(async (event) => {
@@ -7,11 +7,11 @@ export default defineEventHandler(async (event) => {
     
     if (useSupabase) {
       // PostgreSQL queries for Supabase
-      const [dbResult] = await pool.query('SELECT current_database() as db_name');
+      const [dbResult] = await db.query('SELECT current_database() as db_name');
       dbName = dbResult[0].db_name;
       
       // Get tables from nixty schema (excluding system tables)
-      const [rows] = await pool.query(`
+      const [rows] = await db.query(`
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'nixty' 
@@ -22,11 +22,11 @@ export default defineEventHandler(async (event) => {
       tables = rows.map(row => row.table_name);
     } else {
       // MySQL queries for local/online MySQL
-      const [dbResult] = await pool.execute('SELECT DATABASE() as db_name');
+      const [dbResult] = await db.query('SELECT DATABASE() as db_name');
       dbName = dbResult[0].db_name;
       
       // Get tables from current database
-      const [rows] = await pool.execute('SHOW TABLES');
+      const [rows] = await db.query('SHOW TABLES');
       
       tables = rows.map(row => {
         return Object.values(row)[0];

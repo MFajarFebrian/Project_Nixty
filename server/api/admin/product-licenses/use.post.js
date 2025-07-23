@@ -1,4 +1,4 @@
-import pool from '../../../utils/db';
+import db from '../../../utils/db.js';
 
 /**
  * POST /api/admin/product-licenses/use
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Get current license information
-    const [licenseRows] = await pool.execute(`
+    const [licenseRows] = await db.query(`
       SELECT 
         pl.*,
         p.name as product_name,
@@ -91,7 +91,7 @@ export default defineEventHandler(async (event) => {
       WHERE id = ?
     `;
 
-    await pool.execute(updateQuery, [
+    await db.query(updateQuery, [
       newSendLicense,
       newSendLicense,
       newStatus,
@@ -101,7 +101,7 @@ export default defineEventHandler(async (event) => {
     ]);
 
     // Fetch updated license
-    const [updatedLicense] = await pool.execute(`
+    const [updatedLicense] = await db.query(`
       SELECT 
         pl.*,
         p.name as product_name,

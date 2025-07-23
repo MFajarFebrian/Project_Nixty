@@ -1,4 +1,4 @@
-import pool from '../utils/db';
+import db from '../utils/db.js';
 import { randomBytes } from 'crypto';
 
 export default defineEventHandler(async (event) => {
@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Check if user exists with this email
-    const [users] = await pool.execute(
+    const [users] = await db.query(
       'SELECT id, email, name FROM nixty.users WHERE email = ?',
       [email]
     );
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
     tokenExpiry.setHours(tokenExpiry.getHours() + 1); // Token expires in 1 hour
     
     // Store token in database
-    await pool.execute(
+    await db.query(
       'UPDATE nixty.users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
       [resetToken, tokenExpiry, user.id]
     );

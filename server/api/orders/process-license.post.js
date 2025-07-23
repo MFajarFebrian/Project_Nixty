@@ -1,4 +1,4 @@
-import pool from '../../utils/db';
+import db from '../../utils/db.js';
 import { requireAuth } from '../../utils/auth';
 import { processLicenseDelivery } from '../../utils/licenseService';
 import { sendLicenseEmail, sendMultipleLicenseEmail } from '../../utils/emailService.js';
@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Get transaction details
-    const [transactions] = await pool.execute(
+    const [transactions] = await db.query(
       `SELECT 
         t.id, 
         t.order_id, 
@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
     console.log(`Processing ${quantity} license(s) for transaction ${transactionId}`);
     
     // Get current stock before processing
-    const [beforeStock] = await pool.execute(
+    const [beforeStock] = await db.query(
       `SELECT available_stock FROM product_stock_view WHERE product_id = ?`,
       [transaction.product_id]
     );
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
     console.log(`Stock before processing: ${stockBefore}`);
     
     // Start database transaction
-    await pool.execute('START TRANSACTION');
+    await db.query('START TRANSACTION');
     
     try {
       // Process license for each quantity
@@ -95,7 +95,7 @@ export default defineEventHandler(async (event) => {
       }
       
       // Verify stock was properly reduced
-      const [afterStock] = await pool.execute(
+      const [afterStock] = await db.query(
         `SELECT available_stock FROM product_stock_view WHERE product_id = ?`,
         [transaction.product_id]
       );
@@ -112,7 +112,7 @@ export default defineEventHandler(async (event) => {
         // Force refresh stock view if needed
         if (actualStockReduction < expectedStockReduction) {
           console.log(`Attempting to refresh stock view...`);
-          await pool.execute(`
+          await db.query(`
             UPDATE product_licenses 
             SET updated_at = NOW() 
             WHERE product_id = ? AND status = 'used' AND used_by_transaction_id = ?
@@ -122,14 +122,14 @@ export default defineEventHandler(async (event) => {
       
       if (success) {
         // Store all licenses in transaction record
-        await pool.execute(
+        await db.query(
           `UPDATE transactions 
            SET license_info = ? 
            WHERE id = ?`,
           [JSON.stringify(licenses), transaction.id]
         );
         
-        await pool.execute('COMMIT');
+        await db.query('COMMIT');
         console.log(`Licenses stored in transaction ${transactionId}`);
         
         // Send email with license information
@@ -138,7 +138,7 @@ export default defineEventHandler(async (event) => {
           // Check if we have a custom email in payment_gateway_logs
           let customEmail = null;
           try {
-            const [customEmailLogs] = await pool.execute(
+            const [customEmailLogs] = await db.query(
               "SELECT log_value FROM payment_gateway_logs WHERE transaction_id = ? AND log_key = 'custom_email' LIMIT 1",
               [transactionId]
             );
@@ -183,11 +183,11 @@ export default defineEventHandler(async (event) => {
         }
         
       } else {
-        await pool.execute('ROLLBACK');
+        await db.query('ROLLBACK');
         console.log(`License processing failed for transaction ${transactionId}, rolling back`);
       }
     } catch (error) {
-      await pool.execute('ROLLBACK');
+      await db.query('ROLLBACK');
       console.error(`Error processing licenses: ${error.message}`);
       throw error;
     }

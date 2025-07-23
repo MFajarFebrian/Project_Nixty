@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     let totalUpdated = 0;
     
     for (const update of updates) {
-      const [result] = await pool.execute(
+      const [result] = await db.query(
         'UPDATE products SET slug = ? WHERE category_id = ?',
         [update.slug, update.categoryId]
       );
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Get updated products for verification
-    const [updatedProducts] = await pool.execute(`
+    const [updatedProducts] = await db.query(`
       SELECT p.id, p.name, p.version, p.slug, p.category_id, c.name as category_name, c.slug as category_slug 
       FROM products p 
       LEFT JOIN categories c ON p.category_id = c.id 

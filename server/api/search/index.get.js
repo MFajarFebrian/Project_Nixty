@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
       console.log('📝 Product SQL:', productSql);
       console.log('📝 Product Params:', [...productParams, parseInt(limit)]);
 
-      const [productRows] = await pool.execute(productSql, [...productParams, parseInt(limit)]);
+      const [productRows] = await db.query(productSql, [...productParams, parseInt(limit)]);
 
       console.log('📊 Product search results:', productRows.length, 'rows found');
 
@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
         LIMIT ?
       `;
 
-      const [dealRows] = await pool.execute(dealSql, [...dealParams, parseInt(limit)]);
+      const [dealRows] = await db.query(dealSql, [...dealParams, parseInt(limit)]);
       
       dealRows.forEach(row => {
         results.push({
@@ -144,7 +144,7 @@ export default defineEventHandler(async (event) => {
         LIMIT ?
       `;
 
-      const [newsRows] = await pool.execute(newsSql, [...newsParams, parseInt(limit)]);
+      const [newsRows] = await db.query(newsSql, [...newsParams, parseInt(limit)]);
       
       newsRows.forEach(row => {
         results.push({

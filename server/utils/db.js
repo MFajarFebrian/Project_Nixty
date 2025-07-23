@@ -2,6 +2,12 @@ import mysql from 'mysql2/promise';
 import pkg from 'pg';
 const { Pool } = pkg;
 import { useOnlineDB, useSupabase } from './config.js';
+import dotenv from 'dotenv';
+
+// Load environment variables
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 // MySQL configurations (for local development)
 const mysqlConfigs = {
@@ -33,9 +39,12 @@ const supabaseConfig = {
   ssl: { 
     rejectUnauthorized: false 
   },
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000, // Increased timeout for better reliability
+  max: 20, // Increased pool size
+  idleTimeoutMillis: 60000, // Increased idle timeout
+  connectionTimeoutMillis: 30000, // Significantly increased timeout
+  acquireTimeoutMillis: 60000, // Added acquire timeout
+  query_timeout: 30000, // Added query timeout
+  statement_timeout: 30000 // Added statement timeout
 };
 
 let pool;
@@ -73,11 +82,16 @@ function initializeDbConnection() {
         console.error('Unexpected PostgreSQL pool error:', err);
       });
       
-      // Test the connection
+      // Test the connection with retry logic
       pool.query('SELECT 1').then(() => {
         console.log('PostgreSQL connection successful');
       }).catch(err => {
         console.error('PostgreSQL connection test failed:', err);
+        // Attempt to reconnect after a delay
+        setTimeout(() => {
+          console.log('Attempting to reconnect to PostgreSQL...');
+          pool = new Pool(supabaseConfig);
+        }, 5000);
       });
     }
     
@@ -101,18 +115,36 @@ const db = {
         let paramIndex = 1;
         pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
 
-        // PostgreSQL query with enhanced error handling
+        // PostgreSQL query with enhanced error handling and retry logic
         let client;
-        try {
-          client = await pool.connect();
-        } catch (connError) {
-          console.error('Connection error:', connError);
-          // If we're in development mode and database fails, just log error and return empty result
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Development mode: returning empty result instead of failing');
-            return [[], []];
+        let retries = 3;
+        
+        while (retries > 0) {
+          try {
+            client = await Promise.race([
+              pool.connect(),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Connection timeout')), 15000)
+              )
+            ]);
+            break; // Connection successful, exit retry loop
+          } catch (connError) {
+            retries--;
+            console.error(`Connection attempt failed (${3 - retries}/3):`, connError.message);
+            
+            if (retries === 0) {
+              console.error('All connection attempts failed');
+              // If we're in development mode, return empty result instead of failing
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Development mode: returning empty result instead of failing');
+                return [[], []];
+              }
+              throw connError;
+            }
+            
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
-          throw connError;
         }
         
         try {

@@ -1,4 +1,4 @@
-import pool from '../../utils/db';
+import db from '../../utils/db.js';
 import { requireAuth } from '../../utils/auth';
 import { processLicenseDelivery } from '../../utils/licenseService';
 
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Verify the transaction belongs to this user
-    const [transactions] = await pool.execute(
+    const [transactions] = await db.query(
       `SELECT 
         t.id, 
         t.product_id,
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
     const allLicenses = [];
     
     // Start a transaction
-    await pool.execute('START TRANSACTION');
+    await db.query('START TRANSACTION');
     
     try {
       // Process license for the quantity
@@ -82,7 +82,7 @@ export default defineEventHandler(async (event) => {
           // Store license in transaction record for easy retrieval
           try {
             // Check if license_info exists
-            const [licenseInfoResult] = await pool.execute(
+            const [licenseInfoResult] = await db.query(
               `SELECT license_info FROM transactions WHERE id = ?`,
               [transaction.id]
             );
@@ -90,7 +90,7 @@ export default defineEventHandler(async (event) => {
             if (!licenseInfoResult[0].license_info) {
               // If license_info is NULL, initialize with a new array containing the license
               const licenseArray = [licenseResult.license];
-              await pool.execute(
+              await db.query(
                 `UPDATE transactions SET license_info = ? WHERE id = ?`,
                 [JSON.stringify(licenseArray), transaction.id]
               );
@@ -111,7 +111,7 @@ export default defineEventHandler(async (event) => {
               existingLicenses.push(licenseResult.license);
               
               // Update with the new array
-              await pool.execute(
+              await db.query(
                 `UPDATE transactions SET license_info = ? WHERE id = ?`,
                 [JSON.stringify(existingLicenses), transaction.id]
               );
@@ -127,10 +127,10 @@ export default defineEventHandler(async (event) => {
       }
       
       // Commit the transaction
-      await pool.execute('COMMIT');
+      await db.query('COMMIT');
       
       // If successful, retrieve the license_info from the transaction record
-      const [updatedTransaction] = await pool.execute(
+      const [updatedTransaction] = await db.query(
         `SELECT license_info FROM transactions WHERE id = ?`,
         [transaction.id]
       );
@@ -152,7 +152,7 @@ export default defineEventHandler(async (event) => {
       };
     } catch (error) {
       // Rollback transaction on error
-      await pool.execute('ROLLBACK');
+      await db.query('ROLLBACK');
       console.error('Error processing license delivery:', error);
       throw createError({
         statusCode: 500,

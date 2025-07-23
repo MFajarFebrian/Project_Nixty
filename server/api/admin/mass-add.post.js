@@ -1,5 +1,5 @@
 import { defineEventHandler, readBody } from 'h3';
-import pool from '../../utils/db';
+import db from '../../utils/db.js';
 
 export default defineEventHandler(async (event) => {
   const { table, records } = await readBody(event);

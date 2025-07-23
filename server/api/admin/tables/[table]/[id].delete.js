@@ -1,4 +1,4 @@
-import pool from '../../../../utils/db';
+import db from '../../../../utils/db.js';
 import { validateTableName, validateRecordId } from '../../../../utils/admin-validation';
 import { useSupabase } from '../../../../utils/config.js';
 
@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     const validRecordId = validateRecordId(recordId);
 
     // Check if record exists and get it before deletion
-    const [existingRecord] = await pool.execute(
+    const [existingRecord] = await db.query(
       `SELECT * FROM ${tableName} WHERE id = ?`,
       [validRecordId]
     );
@@ -49,8 +49,9 @@ export default defineEventHandler(async (event) => {
     if (tableName === 'users') {
       // Prevent deletion of admin users if it's the last admin
       if (existingRecord[0].account_type === 'admin') {
-        const [adminCount] = await pool.execute(
-          'SELECT COUNT(*) as count FROM users WHERE account_type = ?',
+        const schemaPrefix = useSupabase ? 'nixty.' : '';
+        const [adminCount] = await db.query(
+          `SELECT COUNT(*) as count FROM ${schemaPrefix}users WHERE account_type = ?`,
           ['admin']
         );
         
@@ -67,7 +68,7 @@ export default defineEventHandler(async (event) => {
     // Special handling for product deletion: delete related licenses first
     if (tableName === 'products') {
       try {
-        const [deleteLicensesResult] = await pool.execute(
+        const [deleteLicensesResult] = await db.query(
           'DELETE FROM product_licenses WHERE product_id = ?',
           [validRecordId]
         );
@@ -85,7 +86,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Delete the record
-    const [result] = await pool.execute(
+    const [result] = await db.query(
       `DELETE FROM ${tableName} WHERE id = ?`,
       [validRecordId]
     );

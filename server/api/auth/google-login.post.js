@@ -1,4 +1,4 @@
-import pool from '../../utils/db';
+import db from '../../utils/db.js';
 import { H3Event } from 'h3';
 import bcrypt from 'bcryptjs';
 
@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
       };
     }
     
-    const [existingUsers] = await pool.execute(
+    const [existingUsers] = await db.query(
       'SELECT * FROM users WHERE email = ?',
       [email]
     );
@@ -25,14 +25,14 @@ export default defineEventHandler(async (event) => {
       const randomPassword = Math.random().toString(36).substring(2, 15);
       const hashedPassword = await bcrypt.hash(randomPassword, 10);
       
-      const [result] = await pool.execute(
+      const [result] = await db.query(
         'INSERT INTO users (email, name, password, account_type, google_id, profile_picture) VALUES (?, ?, ?, ?, ?, ?)',
         [email, name, hashedPassword, 'user', google_id, picture]
       );
       
       const insertId = result.insertId;
       
-      const [newUsers] = await pool.execute(
+      const [newUsers] = await db.query(
         'SELECT * FROM users WHERE id = ?',
         [insertId]
       );
@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
       user = users[0];
       
       if (!user.google_id) {
-        await pool.execute(
+        await db.query(
           'UPDATE users SET google_id = ?, profile_picture = ? WHERE id = ?',
           [google_id, picture, user.id]
         );

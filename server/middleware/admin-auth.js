@@ -1,4 +1,4 @@
-import pool from '../utils/db';
+import db from '../utils/db.js';
 import { getHeaders, createError } from 'h3';
 
 /**
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
   
   // Check if user is an admin
   try {
-    const [users] = await pool.execute(
+    const [users] = await db.query(
       'SELECT account_type FROM nixty.users WHERE id = ? AND email = ? LIMIT 1', 
       [userId, userEmail]
     );

@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
       status = 'active'
     } = query;
 
-    const [rows] = await pool.query(`
+    const [rows] = await db.query(`
       SELECT *
       FROM nixty.announcements
       WHERE status = $1

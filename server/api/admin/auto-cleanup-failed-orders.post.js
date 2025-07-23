@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     
     // Find failed orders older than 1 week
-    const [failedOrders] = await pool.execute(
+    const [failedOrders] = await db.query(
       `SELECT id, user_id, product_id, status, created_at 
        FROM nixty.orders 
        WHERE status = 'failed' 
@@ -40,24 +40,24 @@ export default defineEventHandler(async (event) => {
         console.log(`🗑️ Cleaning up order ${order.id} (created: ${order.created_at})`);
         
         // Start database transaction
-        await pool.execute('START TRANSACTION');
+        await db.query('START TRANSACTION');
         
         // Delete related data first (foreign key constraints)
         
         // 1. Delete payment gateway logs
-        await pool.execute(
+        await db.query(
           'DELETE FROM nixty.payment_gateway_logs WHERE transaction_id = ?',
           [order.id]
         );
         
         // 2. Delete order licenses (if any)
-        await pool.execute(
+        await db.query(
           'DELETE FROM nixty.orders_license WHERE transaction_id = ?',
           [order.id]
         );
         
         // 3. Delete the order itself
-        const [deleteResult] = await pool.execute(
+        const [deleteResult] = await db.query(
           'DELETE FROM nixty.orders WHERE id = ?',
           [order.id]
         );
@@ -68,11 +68,11 @@ export default defineEventHandler(async (event) => {
         }
         
         // Commit transaction
-        await pool.execute('COMMIT');
+        await db.query('COMMIT');
         
       } catch (error) {
         // Rollback on error
-        await pool.execute('ROLLBACK');
+        await db.query('ROLLBACK');
         console.error(`❌ Error deleting order ${order.id}:`, error.message);
         errors.push({
           order_id: order.id,
@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
     
     // Rollback any pending transaction
     try {
-      await pool.execute('ROLLBACK');
+      await db.query('ROLLBACK');
     } catch (rollbackError) {
       console.error('Rollback error:', rollbackError);
     }

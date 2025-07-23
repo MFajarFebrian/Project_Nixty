@@ -1,4 +1,4 @@
-import pool from '../../utils/db';
+import db from '../../utils/db.js';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     console.log('Executing product query:', productQuery);
     console.log('With parameters:', params);
 
-    const [products] = await pool.execute(productQuery, params);
+    const [products] = await db.query(productQuery, params);
 
     if (products.length === 0) {
       throw createError({
@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
     product.period = period;
 
     // Fetch all versions of this product family
-    const [versions] = await pool.execute(
+    const [versions] = await db.query(
       `SELECT id, name, version, price, discount_price, image_url, is_subscription FROM products WHERE name = ? ORDER BY version DESC`,
       [product.name]
     );
