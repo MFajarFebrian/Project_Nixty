@@ -359,8 +359,15 @@
 .mobile-menu-toggle,
 .nav-overlay,
 .nav-container,
-.nav-header {
+.nav-header,
+.nav-items {
   display: none;
+}
+
+/* Show only desktop navigation links */
+.nav-links > div {
+  display: flex;
+  gap: var(--galaxy-space-xl);
 }
 
 /* Responsive adjustments */
@@ -427,6 +434,10 @@
     flex-direction: column;
     z-index: 1001;
     transform: translateX(0);
+  }
+  
+  .nav-items {
+    display: flex;
   }
   
   .nav-header {
