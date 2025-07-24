@@ -59,26 +59,29 @@ export const useAppHeader = (emit) => {
   // Mobile menu toggle methods
   const toggleMobileMenu = () => {
     isMobileMenuOpen.value = !isMobileMenuOpen.value;
+    
     // Close dropdowns when opening mobile menu
     if (isMobileMenuOpen.value) {
       isUserDropdownOpen.value = false;
       isGuestDropdownOpen.value = false;
     }
-    // Toggle body scroll lock and add class to body
-    if (isMobileMenuOpen.value) {
-      document.body.style.overflow = 'hidden';
-      document.body.classList.add('mobile-nav-open');
-    } else {
-      document.body.style.overflow = '';
-      document.body.classList.remove('mobile-nav-open');
-    }
+    
+    // Handle body scroll lock
+    updateBodyScrollLock();
   };
   
   const closeMobileMenu = () => {
     isMobileMenuOpen.value = false;
-    // Ensure proper cleanup
-    document.body.style.overflow = '';
-    document.body.classList.remove('mobile-nav-open');
+    updateBodyScrollLock();
+  };
+  
+  // Centralized function to handle body scroll state
+  const updateBodyScrollLock = () => {
+    if (isMobileMenuOpen.value) {
+      document.body.classList.add('mobile-nav-open');
+    } else {
+      document.body.classList.remove('mobile-nav-open');
+    }
   };
 
   // Close dropdown when clicking outside
@@ -158,7 +161,7 @@ export const useAppHeader = (emit) => {
     document.removeEventListener('click', handleClickOutside);
     window.removeEventListener('resize', handleWindowResize);
     // Clean up any mobile menu state on component unmount
-    document.body.style.overflow = '';
+    isMobileMenuOpen.value = false;
     document.body.classList.remove('mobile-nav-open');
   };
 
