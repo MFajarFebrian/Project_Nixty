@@ -356,27 +356,24 @@
 }
 
 /* Hide mobile navigation elements on desktop */
-.mobile-menu-toggle {
+.mobile-menu-toggle,
+.nav-overlay,
+.nav-container,
+.nav-header,
+.nav-items {
   display: none;
 }
 
-/* Desktop navigation links visible */
+/* Show only desktop navigation links */
 .nav-links {
   display: flex;
   gap: var(--galaxy-space-lg);
   transition: transform 0.3s ease-in-out;
 }
 
-/* Show only desktop navigation links */
 .nav-links > div {
   display: flex;
   gap: var(--galaxy-space-xl);
-}
-
-/* Hide mobile navigation elements on desktop */
-.nav-overlay,
-.nav-container {
-  display: none;
 }
 
 /* Responsive adjustments */
@@ -408,27 +405,16 @@
     width: 100%;
     height: 100vh;
     background: transparent;
+    transform: translateX(-100%);
+    transition: transform var(--galaxy-transition-normal);
     z-index: 1000;
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    visibility: hidden;
-    opacity: 0;
-    transition: visibility 0.3s, opacity 0.3s ease-in-out;
   }
   
   .nav-links.mobile-open {
-    visibility: visible;
-    opacity: 1;
-  }
-  
-  /* Hide hamburger menu when mobile navigation is open */
-  .mobile-menu-toggle--hidden,
-  .app-header.mobile-nav-open .mobile-menu-toggle {
-    opacity: 0;
-    pointer-events: none;
-    transform: scale(0.8);
-    transition: all 0.3s ease-in-out;
+    transform: translateX(0);
   }
   
   /* Show mobile navigation elements */
@@ -444,22 +430,15 @@
   }
   
   .nav-container {
-    display: flex;
     position: relative;
     background: var(--galaxy-hero-gradient);
     width: 280px;
     height: 100%;
     border-right: 1px solid var(--galaxy-asteroid-gray);
     box-shadow: var(--galaxy-shadow-large);
+    display: flex;
     flex-direction: column;
     z-index: 1001;
-    backdrop-filter: blur(10px);
-    /* Panel slides from left */
-    transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
-  }
-  
-  .nav-links.mobile-open .nav-container {
     transform: translateX(0);
   }
   
@@ -501,7 +480,7 @@
   
   .nav-items {
     flex: 1;
-    display: flex !important;
+    display: flex;
     flex-direction: column;
     padding: var(--galaxy-space-lg) 0;
     gap: var(--galaxy-space-sm);
