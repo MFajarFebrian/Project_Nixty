@@ -368,116 +368,10 @@
   }
 }
 
-/* Modal-style animations */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideIn {
-  from { 
-    opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Desktop Auth Buttons - Modal Style */
-.desktop-auth-buttons {
-  display: flex;
-  align-items: center;
-  margin-right: var(--galaxy-space-lg);
-}
-
-.auth-tab-buttons {
-  display: flex;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--galaxy-radius-lg);
-  padding: var(--galaxy-space-xs);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.auth-tab-btn {
-  padding: var(--galaxy-space-sm) var(--galaxy-space-lg);
-  background: transparent;
-  border: none;
-  color: var(--galaxy-light-gray);
-  border-radius: var(--galaxy-radius-md);
-  cursor: pointer;
-  transition: var(--galaxy-transition-normal);
-  font-size: 14px;
-  font-weight: 500;
-  min-width: 80px;
-}
-
-.auth-tab-btn:hover {
-  background: var(--galaxy-primary-gradient);
-  color: var(--galaxy-starlight);
-  box-shadow: var(--galaxy-glow-blue);
-  transform: translateY(-1px);
-}
-
-.auth-tab-btn:active {
-  transform: translateY(0);
-}
-
-/* Mobile Auth Section */
-.mobile-auth-section {
-  margin-top: var(--galaxy-space-xl);
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-.mobile-auth-buttons {
-  display: flex;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--galaxy-radius-lg);
-  padding: var(--galaxy-space-xs);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  width: 280px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
-
-.mobile-auth-btn {
-  flex: 1;
-  padding: var(--galaxy-space-md) var(--galaxy-space-lg);
-  background: transparent;
-  border: none;
-  color: var(--galaxy-light-gray);
-  border-radius: var(--galaxy-radius-md);
-  cursor: pointer;
-  transition: var(--galaxy-transition-normal);
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.mobile-auth-btn:hover,
-.mobile-auth-btn:active {
-  background: var(--galaxy-primary-gradient);
-  color: var(--galaxy-starlight);
-  box-shadow: var(--galaxy-glow-blue);
-}
-
-/* Guest account mobile - hide on desktop */
-.guest-account-mobile {
-  display: none;
-}
-
 /* Mobile Navigation */
 @media (max-width: 768px) {
-  .desktop-nav-links,
-  .desktop-auth-buttons {
+  .desktop-nav-links {
     display: none;
-  }
-  
-  .guest-account-mobile {
-    display: block;
   }
 
   .mobile-menu-toggle {
@@ -488,18 +382,19 @@
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(5px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 100%;
+    height: 100%;
     z-index: 1000;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.3s ease-out;
-    animation: fadeIn 0.3s ease-out;
+    background: linear-gradient(135deg, 
+      rgba(0, 0, 0, 0.85) 0%, 
+      rgba(26, 26, 46, 0.9) 30%, 
+      rgba(0, 0, 0, 0.9) 70%, 
+      rgba(26, 26, 46, 0.85) 100%);
+    backdrop-filter: blur(25px) saturate(1.2);
+    -webkit-backdrop-filter: blur(25px) saturate(1.2);
+    transition: opacity 0.3s ease-in-out;
   }
 
   .app-header.mobile-nav-open .nav-links {
@@ -508,17 +403,15 @@
   }
 
   .nav-container {
-    background: var(--galaxy-card-gradient);
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--galaxy-radius-xl);
-    box-shadow: var(--galaxy-shadow-large), var(--galaxy-glow-blue);
-    width: 90%;
-    max-width: 400px;
-    max-height: 80vh;
-    position: relative;
-    animation: slideIn 0.3s ease-out;
-    padding: var(--galaxy-space-2xl);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease-in-out;
   }
 
   .app-header.mobile-nav-open .nav-container {
@@ -541,16 +434,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 18px 40px;
+    padding: 20px 50px;
     color: var(--galaxy-starlight);
     text-decoration: none;
     font-weight: 600;
-    font-size: 1.6rem;
+    font-size: 1.8rem;
     border-radius: 15px;
     transition: all 0.3s ease;
     background: rgba(255, 255, 255, 0.12);
     border: 2px solid rgba(77, 208, 225, 0.4);
-    min-width: 240px;
+    min-width: 250px;
     backdrop-filter: blur(15px) saturate(1.3);
     -webkit-backdrop-filter: blur(15px) saturate(1.3);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);

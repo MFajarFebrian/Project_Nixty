@@ -25,7 +25,6 @@ type NuxtAppInjections =
   InjectionType<typeof import("../../plugins/cleanup-cache.client.js")> &
   InjectionType<typeof import("../../plugins/chart.client.js")> &
   InjectionType<typeof import("../../plugins/preload-optimizer.client.js")> &
-  InjectionType<typeof import("../../plugins/mobile-session.client.js")> &
   InjectionType<typeof import("../../plugins/auth.client.js")> &
   InjectionType<typeof import("../../plugins/resizable-columns.client.js")> &
   InjectionType<typeof import("../../plugins/toast.client.js")>
