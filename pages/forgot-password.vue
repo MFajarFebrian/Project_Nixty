@@ -29,7 +29,7 @@
       </form>
       
       <div class="back-link">
-        Remember your password? <NuxtLink to="/login">Back to Login</NuxtLink>
+        Remember your password? <NuxtLink to="/">Back to Home</NuxtLink>
       </div>
     </div>
     

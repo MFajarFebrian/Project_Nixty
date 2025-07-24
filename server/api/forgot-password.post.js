@@ -19,20 +19,31 @@ export default defineEventHandler(async (event) => {
       [email]
     );
     
+    // Generate reset token
+    const resetToken = randomBytes(32).toString('hex');
+    
+    // Generate reset URL with proper domain
+    const baseUrl = event.node.req.headers.origin || 
+                   event.node.req.headers.host?.includes('vercel.app') ? 
+                   `https://${event.node.req.headers.host}` : 
+                   'https://project-nixty.vercel.app';
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+    
     // Even if user doesn't exist, we'll return success
     // This is to prevent email enumeration attacks
     if (users.length === 0) {
       console.log(`Reset password requested for non-existent email: ${email}`);
       return {
         success: true,
-        message: 'If an account with this email exists, a password reset link has been sent.'
+        message: 'If an account with this email exists, a password reset link has been sent.',
+        // For demo purposes, show reset URL even for non-existent accounts
+        resetUrl: resetUrl
       };
     }
     
     const user = users[0];
     
-    // Generate reset token
-    const resetToken = randomBytes(32).toString('hex');
+    // Set token expiry
     const tokenExpiry = new Date();
     tokenExpiry.setHours(tokenExpiry.getHours() + 1); // Token expires in 1 hour
     
@@ -41,9 +52,6 @@ export default defineEventHandler(async (event) => {
       'UPDATE nixty.users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
       [resetToken, tokenExpiry, user.id]
     );
-    
-    // Generate reset URL
-    const resetUrl = `${event.node.req.headers.origin || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
     
     // In a real application, you would send an email with the reset link
     // For this example, we'll just return the link in the response (for testing/demo purposes)
