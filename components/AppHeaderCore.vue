@@ -26,6 +26,18 @@
         <div class="nav-items">
           <NuxtLink to="/home" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/home') }" @click="closeMobileMenu" aria-label="Go to Home page">Home</NuxtLink>
           <NuxtLink to="/products" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/products') }" @click="closeMobileMenu" aria-label="Browse Products">Products</NuxtLink>
+          
+          <!-- Mobile Auth Buttons (Guest only) -->
+          <div class="mobile-auth-section" v-if="!user">
+            <div class="mobile-auth-buttons">
+              <button class="mobile-auth-btn" @click="openAuthModal('login'); closeMobileMenu();">
+                Login
+              </button>
+              <button class="mobile-auth-btn" @click="openAuthModal('register'); closeMobileMenu();">
+                Register
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </nav>
@@ -34,6 +46,18 @@
     <div class="desktop-nav-links" v-if="!user || user.account_type !== 'admin'">
       <NuxtLink to="/home" :class="{ 'active': isActiveRoute('/home') }">Home</NuxtLink>
       <NuxtLink to="/products" :class="{ 'active': isActiveRoute('/products') }">Products</NuxtLink>
+    </div>
+
+    <!-- Desktop Auth Buttons (Guest only) -->
+    <div class="desktop-auth-buttons" v-if="!user">
+      <div class="auth-tab-buttons">
+        <button class="auth-tab-btn" @click="openAuthModal('login')">
+          Login
+        </button>
+        <button class="auth-tab-btn" @click="openAuthModal('register')">
+          Register
+        </button>
+      </div>
     </div>
 
     <!-- Account Actions -->
@@ -101,21 +125,11 @@
           </div>
         </div>
 
-        <!-- Guest account dropdown (when not logged in) -->
-        <div v-else class="guest-account-dropdown" ref="guestDropdownRef">
+        <!-- Guest account button (when not logged in) - Only visible on mobile -->
+        <div v-else class="guest-account-mobile" v-show="$route.path !== '/home' && $route.path !== '/products'">
           <button class="account-icon-btn login-btn" title="Login / Register" @click="openAuthModal('login')" aria-label="Open login and registration options">
             <i class="fas fa-user-circle"></i>
           </button>
-          <div class="account-dropdown-content" :class="{ 'show': isGuestDropdownOpen }">
-            <a href="#" class="dropdown-item" @click.prevent="openAuthModal('login')" aria-label="Login to your account">
-              <i class="fas fa-sign-in-alt"></i>
-              <span>Login</span>
-            </a>
-            <a href="#" class="dropdown-item" @click.prevent="openAuthModal('register')" aria-label="Create a new account">
-              <i class="fas fa-user-plus"></i>
-              <span>Register</span>
-            </a>
-          </div>
         </div>
       </div>
     </div>

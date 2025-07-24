@@ -1,5 +1,5 @@
-/// <reference types="@nuxtjs/supabase" />
 /// <reference types="@nuxt/telemetry" />
+/// <reference types="@nuxtjs/supabase" />
 /// <reference types="@nuxt/devtools" />
 /// <reference path="types/builder-env.d.ts" />
 /// <reference types="nuxt" />
