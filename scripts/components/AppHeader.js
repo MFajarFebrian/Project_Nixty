@@ -64,17 +64,21 @@ export const useAppHeader = (emit) => {
       isUserDropdownOpen.value = false;
       isGuestDropdownOpen.value = false;
     }
-    // Toggle body scroll lock
+    // Toggle body scroll lock and add class to body
     if (isMobileMenuOpen.value) {
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('mobile-nav-open');
     } else {
       document.body.style.overflow = '';
+      document.body.classList.remove('mobile-nav-open');
     }
   };
   
   const closeMobileMenu = () => {
     isMobileMenuOpen.value = false;
+    // Ensure proper cleanup
     document.body.style.overflow = '';
+    document.body.classList.remove('mobile-nav-open');
   };
 
   // Close dropdown when clicking outside
@@ -88,6 +92,13 @@ export const useAppHeader = (emit) => {
         isGuestDropdownOpen.value = false;
       }
     }, 10);
+  };
+
+  // Handle window resize to close mobile menu on desktop
+  const handleWindowResize = () => {
+    if (window.innerWidth > 768 && isMobileMenuOpen.value) {
+      closeMobileMenu();
+    }
   };
 
   // Override navigation methods to close dropdown
@@ -140,10 +151,15 @@ export const useAppHeader = (emit) => {
   const initializeComponent = () => {
     initUser();
     document.addEventListener('click', handleClickOutside);
+    window.addEventListener('resize', handleWindowResize);
   };
 
   const cleanupComponent = () => {
     document.removeEventListener('click', handleClickOutside);
+    window.removeEventListener('resize', handleWindowResize);
+    // Clean up any mobile menu state on component unmount
+    document.body.style.overflow = '';
+    document.body.classList.remove('mobile-nav-open');
   };
 
   return {

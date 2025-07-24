@@ -364,6 +364,31 @@
   display: none;
 }
 
+/* Body class for mobile navigation open state */
+body.mobile-nav-open {
+  overflow: hidden;
+}
+
+/* Ensure the navigation panel is not affected by body overflow */
+body.mobile-nav-open .nav-links {
+  overflow: visible !important;
+}
+
+body.mobile-nav-open .nav-container {
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
+/* Additional fallback to ensure mobile navigation is always visible */
+.nav-links.mobile-open {
+  overflow: visible !important;
+}
+
+.nav-links.mobile-open .nav-container {
+  overflow-y: auto !important;
+  overflow-x: visible !important;
+}
+
 /* Show only desktop navigation links */
 .nav-links {
   display: flex;
@@ -411,6 +436,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
+    overflow: visible !important;
   }
   
   .nav-links.mobile-open {
@@ -440,6 +466,8 @@
     flex-direction: column;
     z-index: 1001;
     transform: translateX(0);
+    overflow-y: auto;
+    overflow-x: visible;
   }
   
   .nav-header {
