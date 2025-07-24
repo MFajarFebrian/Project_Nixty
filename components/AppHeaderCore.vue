@@ -1,9 +1,46 @@
 <template>
-  <header class="app-header">
+  <header class="app-header" :class="{ 'mobile-nav-open': isMobileMenuOpen }">
     <div class="logo">
       <NuxtLink v-if="!user || user.account_type !== 'admin'" to="/">Nixty</NuxtLink>
       <span v-else class="logo-text">Nixty</span>
     </div>
+
+    <!-- Mobile Menu Toggle Button -->
+    <button 
+      class="mobile-menu-toggle" 
+      @click="toggleMobileMenu"
+      :class="{ 'mobile-menu-toggle--active': isMobileMenuOpen }"
+      v-if="!user || user.account_type !== 'admin'"
+      aria-label="Toggle navigation menu"
+      :aria-expanded="isMobileMenuOpen"
+    >
+      <span class="mobile-menu-toggle__line"></span>
+      <span class="mobile-menu-toggle__line"></span>
+      <span class="mobile-menu-toggle__line"></span>
+    </button>
+
+    <!-- Mobile Navigation Panel -->
+    <nav class="nav-links" :class="{ 'mobile-open': isMobileMenuOpen }" v-if="!user || user.account_type !== 'admin'">
+      <div class="nav-overlay" @click="closeMobileMenu"></div>
+      <div class="nav-container">
+        <div class="nav-header">
+          <span class="nav-title">Navigation</span>
+          <button class="nav-close" @click="closeMobileMenu" aria-label="Close navigation menu">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="nav-items">
+          <NuxtLink to="/home" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/home') }" @click="closeMobileMenu" aria-label="Go to Home page">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+          </NuxtLink>
+          <NuxtLink to="/products" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/products') }" @click="closeMobileMenu" aria-label="Browse Products">
+            <i class="fas fa-shopping-bag"></i>
+            <span>Products</span>
+          </NuxtLink>
+        </div>
+      </div>
+    </nav>
 
     <!-- Desktop Navigation Links -->
     <div class="desktop-nav-links" v-if="!user || user.account_type !== 'admin'">
@@ -103,9 +140,12 @@ const {
   isUserDropdownOpen,
   userDropdownRef,
   currentRoute,
+  isMobileMenuOpen,
 
   // Methods
   toggleUserDropdown,
+  toggleMobileMenu,
+  closeMobileMenu,
   navigateToProfile,
   navigateToOrders,
   navigateToDashboard,
