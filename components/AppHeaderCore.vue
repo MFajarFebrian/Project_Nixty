@@ -27,6 +27,7 @@
           <span class="nav-title">Navigation</span>
           <button class="nav-close" @click="closeMobileMenu" aria-label="Close navigation menu">
             <i class="fas fa-times"></i>
+            <span class="nav-close-fallback">×</span>
           </button>
         </div>
         <div class="nav-items">

@@ -356,12 +356,14 @@
 }
 
 /* Hide mobile navigation elements on desktop */
-.mobile-menu-toggle,
-.nav-overlay,
-.nav-container,
-.nav-header,
-.nav-items {
-  display: none;
+@media (min-width: 769px) {
+  .mobile-menu-toggle,
+  .nav-overlay,
+  .nav-container,
+  .nav-header,
+  .nav-items {
+    display: none !important;
+  }
 }
 
 /* Mobile navigation body lock */
@@ -384,8 +386,14 @@ body.mobile-nav-open {
   gap: var(--galaxy-space-xl);
 }
 
-/* Mobile Responsive Styles */
+/* Mobile-first: Show navigation elements on mobile by default */
 @media (max-width: 768px) {
+  .nav-overlay,
+  .nav-container,
+  .nav-header,
+  .nav-items {
+    display: block;
+  }
   .app-header {
     padding: var(--galaxy-space-sm) var(--galaxy-space-md);
     position: sticky;
@@ -415,8 +423,8 @@ body.mobile-nav-open {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
     visibility: hidden;
     opacity: 0;
     transition: all 0.3s ease-in-out;
@@ -448,7 +456,8 @@ body.mobile-nav-open {
     left: 0;
     width: 320px;
     height: 100vh;
-    background: var(--galaxy-hero-gradient);
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
+    backdrop-filter: blur(10px);
     border-right: 2px solid var(--galaxy-aurora-cyan);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     display: flex !important;
@@ -457,6 +466,7 @@ body.mobile-nav-open {
     transition: transform 0.3s ease-in-out;
     overflow-y: auto;
     overflow-x: hidden;
+    z-index: 10000;
   }
   
   .nav-links.mobile-open .nav-container {
@@ -498,6 +508,24 @@ body.mobile-nav-open {
     justify-content: center;
     border-radius: var(--galaxy-radius-sm);
     transition: all 0.2s ease;
+    position: relative;
+  }
+  
+  .nav-close i {
+    font-size: 14px;
+  }
+  
+  .nav-close-fallback {
+    display: none;
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1;
+  }
+  
+  /* Show fallback if FontAwesome fails to load */
+  .nav-close:not(:has(i[class*="fa-"])) .nav-close-fallback,
+  .nav-close i:empty + .nav-close-fallback {
+    display: block;
   }
   
   .nav-close:hover {
