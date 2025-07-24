@@ -1,4 +1,4 @@
-/* Existing styles below */
+/* App Header Component Styles */
 .app-header {
   display: flex;
   justify-content: space-between;
@@ -11,6 +11,12 @@
   z-index: 1000;
   box-shadow: var(--galaxy-shadow-medium);
   backdrop-filter: blur(10px);
+}
+
+/* Focus states for accessibility */
+.app-header *:focus {
+  outline: 2px solid var(--galaxy-aurora-cyan);
+  outline-offset: 2px;
 }
 
 .logo a,
@@ -456,7 +462,7 @@
     gap: var(--galaxy-space-sm);
   }
   
-  .nav-items a {
+  .nav-items__link {
     display: flex;
     align-items: center;
     padding: var(--galaxy-space-md) var(--galaxy-space-lg);
@@ -468,14 +474,17 @@
     border-left: 3px solid transparent;
   }
   
-  .nav-items a:hover {
+  .nav-items__link:hover,
+  .nav-items__link:focus {
     background: rgba(77, 208, 225, 0.1);
     color: var(--galaxy-starlight);
     border-left-color: var(--galaxy-aurora-cyan);
     transform: translateX(5px);
+    outline: 2px solid var(--galaxy-aurora-cyan);
+    outline-offset: -2px;
   }
   
-  .nav-items a.active {
+  .nav-items__link--active {
     background: rgba(77, 208, 225, 0.2);
     color: var(--galaxy-aurora-cyan);
     border-left-color: var(--galaxy-aurora-cyan);
