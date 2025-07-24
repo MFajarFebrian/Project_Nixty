@@ -25,9 +25,6 @@
       <div class="nav-container">
         <div class="nav-header">
           <span class="nav-title">Navigation</span>
-          <button class="nav-close" @click="closeMobileMenu" aria-label="Close navigation menu">
-            ×
-          </button>
         </div>
         <div class="nav-items">
           <NuxtLink to="/home" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/home') }" @click="closeMobileMenu" aria-label="Go to Home page">Home</NuxtLink>
