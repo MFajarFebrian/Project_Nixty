@@ -447,7 +447,7 @@
   /* Navigation header */
   .nav-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     padding: var(--galaxy-space-lg);
     border-bottom: 1px solid var(--galaxy-asteroid-gray);
@@ -458,27 +458,6 @@
     font-size: 1.2rem;
     font-weight: 600;
     color: var(--galaxy-starlight);
-  }
-  
-  .nav-close {
-    background: transparent;
-    border: none;
-    color: var(--galaxy-starlight);
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: var(--galaxy-space-xs);
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--galaxy-radius-sm);
-    transition: all var(--galaxy-transition-fast);
-  }
-  
-  .nav-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.1);
   }
   
   /* Navigation items */
