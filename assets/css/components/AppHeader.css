@@ -552,7 +552,6 @@
     display: none !important;
   }
   
-@media (max-width: 768px) {
   /* Also hide desktop navigation links when not open */
   .nav-links:not(.mobile-open) {
     display: none !important;
