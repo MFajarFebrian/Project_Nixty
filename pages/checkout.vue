@@ -172,7 +172,7 @@
               </div>
               
               <button @click="initiatePayment" class="galaxy-button-primary pay-button" :disabled="isPaymentLoading">
-                <span v-if="!isPaymentLoading" class="button-text">Payment</span>
+                <span v-if="!isPaymentLoading" class="button-text">Midtrans Payment</span>
                 <span v-else class="button-text loading-text">
                   <div class="button-spinner"></div>
                   Processing Payment...
