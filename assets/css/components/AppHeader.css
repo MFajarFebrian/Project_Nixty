@@ -356,18 +356,27 @@
 }
 
 /* Hide mobile navigation elements on desktop */
-.mobile-menu-toggle,
-.nav-overlay,
-.nav-container,
-.nav-header,
-.nav-items {
+.mobile-menu-toggle {
   display: none;
+}
+
+/* Desktop navigation links visible */
+.nav-links {
+  display: flex;
+  gap: var(--galaxy-space-lg);
+  transition: transform 0.3s ease-in-out;
 }
 
 /* Show only desktop navigation links */
 .nav-links > div {
   display: flex;
   gap: var(--galaxy-space-xl);
+}
+
+/* Hide mobile navigation elements on desktop */
+.nav-overlay,
+.nav-container {
+  display: none;
 }
 
 /* Responsive adjustments */
@@ -459,10 +468,6 @@
     transform: translateX(0);
   }
   
-  .nav-items {
-    display: flex;
-  }
-  
   .nav-header {
     display: flex !important; /* Override desktop hidden rule */
     justify-content: space-between;
@@ -501,7 +506,7 @@
   
   .nav-items {
     flex: 1;
-    display: flex;
+    display: flex !important;
     flex-direction: column;
     padding: var(--galaxy-space-lg) 0;
     gap: var(--galaxy-space-sm);
