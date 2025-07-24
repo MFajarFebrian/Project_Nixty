@@ -34,12 +34,13 @@
           <NuxtLink to="/products" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/products') }" @click="closeMobileMenu" aria-label="Browse Products">Products</NuxtLink>
         </div>
       </div>
-      <!-- Desktop Navigation Links -->
-      <div>
-        <NuxtLink to="/home" :class="{ 'active': isActiveRoute('/home') }">Home</NuxtLink>
-        <NuxtLink to="/products" :class="{ 'active': isActiveRoute('/products') }">Products</NuxtLink>
-      </div>
     </nav>
+
+    <!-- Desktop Navigation Links -->
+    <div class="desktop-nav-links" v-if="!user || user.account_type !== 'admin'">
+      <NuxtLink to="/home" :class="{ 'active': isActiveRoute('/home') }">Home</NuxtLink>
+      <NuxtLink to="/products" :class="{ 'active': isActiveRoute('/products') }">Products</NuxtLink>
+    </div>
 
     <!-- Account Actions -->
     <div class="header-actions">

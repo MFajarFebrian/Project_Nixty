@@ -22,27 +22,20 @@ export const useAppHeader = (emit) => {
 
   // Helper function to check if a route is active
   const isActiveRoute = (path) => {
-    // Exact match
-  if (currentRoute.value === '/' && !user.value?.account_type === 'admin') {
+    const current = currentRoute.value;
+
+    // Handle homepage special case
+    if (path === '/home' && current === '/') {
       return true;
     }
-
-    // Home page special case
-    if (path === '/home' && currentRoute.value === '/') {
-      return true;
+    
+    // Handle other paths
+    if (path !== '/') {
+      return current.startsWith(path + '/') || current === path;
     }
-
-    // Dashboard routes special handling
-    if (path === '/dashboard' && currentRoute.value.startsWith('/dashboard')) {
-      return true;
-    }
-
-    // General sub-route matching (but not for dashboard to avoid conflicts)
-    if (path !== '/dashboard' && currentRoute.value.startsWith(path + '/')) {
-      return true;
-    }
-
-    return false;
+    
+    // Handle root path
+    return current === path;
   };
 
   // Dropdown toggle methods
@@ -58,7 +51,6 @@ export const useAppHeader = (emit) => {
   
   // Mobile menu toggle methods
   const toggleMobileMenu = () => {
-    console.log('Toggle mobile menu:', !isMobileMenuOpen.value);
     isMobileMenuOpen.value = !isMobileMenuOpen.value;
     
     // Close dropdowns when opening mobile menu
@@ -66,30 +58,24 @@ export const useAppHeader = (emit) => {
       isUserDropdownOpen.value = false;
       isGuestDropdownOpen.value = false;
       document.body.style.overflow = 'hidden';
-      console.log('Mobile menu opened');
     } else {
       document.body.style.overflow = '';
-      console.log('Mobile menu closed');
     }
   };
   
   const closeMobileMenu = () => {
-    console.log('Close mobile menu');
     isMobileMenuOpen.value = false;
     document.body.style.overflow = '';
   };
 
   // Close dropdown when clicking outside
   const handleClickOutside = (event) => {
-    // Add a small delay to ensure the click event has been processed
-    setTimeout(() => {
-      if (userDropdownRef.value && !userDropdownRef.value.contains(event.target)) {
-        isUserDropdownOpen.value = false;
-      }
-      if (guestDropdownRef.value && !guestDropdownRef.value.contains(event.target)) {
-        isGuestDropdownOpen.value = false;
-      }
-    }, 10);
+    if (userDropdownRef.value && !userDropdownRef.value.contains(event.target)) {
+      isUserDropdownOpen.value = false;
+    }
+    if (guestDropdownRef.value && !guestDropdownRef.value.contains(event.target)) {
+      isGuestDropdownOpen.value = false;
+    }
   };
 
   // Handle window resize to close mobile menu on desktop
