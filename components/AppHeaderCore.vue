@@ -20,19 +20,24 @@
     </button>
     
     <!-- Navigation Links - Hidden for admin users -->
-    <nav class="nav" :class="{ 'nav--mobile-open': isMobileMenuOpen }" v-if="!user || user.account_type !== 'admin'">
-      <div class="nav__overlay" @click="closeMobileMenu"></div>
-      <div class="nav__container">
-        <div class="nav__header">
-          <span class="nav__title">Navigation</span>
-          <button class="nav__close-btn" @click="closeMobileMenu" aria-label="Close navigation menu">
+    <nav class="nav-links" :class="{ 'mobile-open': isMobileMenuOpen }" v-if="!user || user.account_type !== 'admin'">
+      <div class="nav-overlay" @click="closeMobileMenu"></div>
+      <div class="nav-container">
+        <div class="nav-header">
+          <span class="nav-title">Navigation</span>
+          <button class="nav-close" @click="closeMobileMenu" aria-label="Close navigation menu">
             <i class="fas fa-times"></i>
           </button>
         </div>
-        <div class="nav__items">
-          <NuxtLink to="/home" class="nav__link" :class="{ 'nav__link--active': isActiveRoute('/home') }" @click="closeMobileMenu" aria-label="Go to Home page">Home</NuxtLink>
-          <NuxtLink to="/products" class="nav__link" :class="{ 'nav__link--active': isActiveRoute('/products') }" @click="closeMobileMenu" aria-label="Browse Products">Products</NuxtLink>
+        <div class="nav-items">
+          <NuxtLink to="/home" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/home') }" @click="closeMobileMenu" aria-label="Go to Home page">Home</NuxtLink>
+          <NuxtLink to="/products" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/products') }" @click="closeMobileMenu" aria-label="Browse Products">Products</NuxtLink>
         </div>
+      </div>
+      <!-- Desktop Navigation Links -->
+      <div>
+        <NuxtLink to="/home" :class="{ 'active': isActiveRoute('/home') }">Home</NuxtLink>
+        <NuxtLink to="/products" :class="{ 'active': isActiveRoute('/products') }">Products</NuxtLink>
       </div>
     </nav>
 
