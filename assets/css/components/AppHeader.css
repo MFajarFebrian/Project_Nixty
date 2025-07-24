@@ -306,41 +306,6 @@
   background-color: rgba(255, 99, 132, 0.1);
 }
 
-/* Mobile Menu Toggle Button */
-.mobile-menu-toggle {
-  display: none; /* Hidden by default, shown on mobile */
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 40px;
-  height: 40px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  z-index: 1002; /* Higher z-index to stay on top */
-  position: relative;
-}
-
-.mobile-menu-toggle__line {
-  width: 24px;
-  height: 2px;
-  background: var(--galaxy-starlight);
-  border-radius: 2px;
-  transition: all 0.3s ease;
-  margin: 3px 0;
-  transform-origin: center;
-}
-
-/* Animation for hamburger to 'X' */
-.app-header.mobile-nav-open .mobile-menu-toggle__line:nth-child(1) {
-  transform: translateY(8px) rotate(45deg);
-}
-.app-header.mobile-nav-open .mobile-menu-toggle__line:nth-child(2) {
-  opacity: 0;
-}
-.app-header.mobile-nav-open .mobile-menu-toggle__line:nth-child(3) {
-  transform: translateY(-8px) rotate(-45deg);
-}
 
 /* Desktop Navigation */
 @media (min-width: 769px) {

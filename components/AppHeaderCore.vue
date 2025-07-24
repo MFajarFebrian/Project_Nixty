@@ -1,34 +1,9 @@
 <template>
-  <header class="app-header" :class="{ 'mobile-nav-open': isMobileMenuOpen }">
+  <header class="app-header">
     <div class="logo">
       <NuxtLink v-if="!user || user.account_type !== 'admin'" to="/">Nixty</NuxtLink>
       <span v-else class="logo-text">Nixty</span>
     </div>
-    
-    <!-- Mobile Menu Toggle Button -->
-    <button 
-      class="mobile-menu-toggle" 
-      @click="toggleMobileMenu"
-      :class="{ 'mobile-menu-toggle--active': isMobileMenuOpen, 'mobile-menu-toggle--hidden': isMobileMenuOpen }"
-      v-if="!user || user.account_type !== 'admin'"
-      aria-label="Toggle navigation menu"
-      :aria-expanded="isMobileMenuOpen"
-    >
-      <span class="mobile-menu-toggle__line"></span>
-      <span class="mobile-menu-toggle__line"></span>
-      <span class="mobile-menu-toggle__line"></span>
-    </button>
-    
-    <!-- Navigation Links - Hidden for admin users -->
-    <nav class="nav-links" :class="{ 'mobile-open': isMobileMenuOpen }" v-if="!user || user.account_type !== 'admin'">
-      <div class="nav-overlay" @click="closeMobileMenu"></div>
-      <div class="nav-container">
-        <div class="nav-items">
-          <NuxtLink to="/home" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/home') }" @click="closeMobileMenu" aria-label="Go to Home page">Home</NuxtLink>
-          <NuxtLink to="/products" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/products') }" @click="closeMobileMenu" aria-label="Browse Products">Products</NuxtLink>
-        </div>
-      </div>
-    </nav>
 
     <!-- Desktop Navigation Links -->
     <div class="desktop-nav-links" v-if="!user || user.account_type !== 'admin'">
@@ -101,21 +76,11 @@
           </div>
         </div>
 
-        <!-- Guest account dropdown (when not logged in) -->
-        <div v-else class="guest-account-dropdown" ref="guestDropdownRef">
+        <!-- Guest account button (when not logged in) -->
+        <div v-else class="guest-account">
           <button class="account-icon-btn login-btn" title="Login / Register" @click="openAuthModal('login')" aria-label="Open login and registration options">
             <i class="fas fa-user-circle"></i>
           </button>
-          <div class="account-dropdown-content" :class="{ 'show': isGuestDropdownOpen }">
-            <a href="#" class="dropdown-item" @click.prevent="openAuthModal('login')" aria-label="Login to your account">
-              <i class="fas fa-sign-in-alt"></i>
-              <span>Login</span>
-            </a>
-            <a href="#" class="dropdown-item" @click.prevent="openAuthModal('register')" aria-label="Create a new account">
-              <i class="fas fa-user-plus"></i>
-              <span>Register</span>
-            </a>
-          </div>
         </div>
       </div>
     </div>
@@ -136,17 +101,11 @@ const {
   // State
   user,
   isUserDropdownOpen,
-  isGuestDropdownOpen,
   userDropdownRef,
-  guestDropdownRef,
   currentRoute,
-  isMobileMenuOpen,
 
   // Methods
   toggleUserDropdown,
-  toggleGuestDropdown,
-  toggleMobileMenu,
-  closeMobileMenu,
   navigateToProfile,
   navigateToOrders,
   navigateToDashboard,
