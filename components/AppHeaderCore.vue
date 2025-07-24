@@ -1,5 +1,5 @@
 <template>
-  <header class="app-header">
+  <header class="app-header" :class="{ 'mobile-nav-open': isMobileMenuOpen }">
     <div class="logo">
       <NuxtLink v-if="!user || user.account_type !== 'admin'" to="/">Nixty</NuxtLink>
       <span v-else class="logo-text">Nixty</span>
@@ -9,7 +9,7 @@
     <button 
       class="mobile-menu-toggle" 
       @click="toggleMobileMenu"
-      :class="{ 'mobile-menu-toggle--active': isMobileMenuOpen }"
+      :class="{ 'mobile-menu-toggle--active': isMobileMenuOpen, 'mobile-menu-toggle--hidden': isMobileMenuOpen }"
       v-if="!user || user.account_type !== 'admin'"
       aria-label="Toggle navigation menu"
       :aria-expanded="isMobileMenuOpen"
