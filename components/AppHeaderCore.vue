@@ -23,9 +23,6 @@
     <nav class="nav-links" :class="{ 'mobile-open': isMobileMenuOpen }" v-if="!user || user.account_type !== 'admin'">
       <div class="nav-overlay" @click="closeMobileMenu"></div>
       <div class="nav-container">
-        <div class="nav-header">
-          <span class="nav-title">Navigation</span>
-        </div>
         <div class="nav-items">
           <NuxtLink to="/home" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/home') }" @click="closeMobileMenu" aria-label="Go to Home page">Home</NuxtLink>
           <NuxtLink to="/products" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/products') }" @click="closeMobileMenu" aria-label="Browse Products">Products</NuxtLink>
