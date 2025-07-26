@@ -1,1 +1,0 @@
-import{_ as o,h as t,i as n,j as s,c,o as r}from"./BxhkHZUn.js";const a={__name:"index",setup(_){const e=n();return t(()=>{e.push("/home")}),s(()=>{window.location.href="/home"}),(d,u)=>(r(),c("div",null," Redirecting... "))}},p=o(a,[["__scopeId","data-v-cb8d5d15"]]);export{p as default};

@@ -157,22 +157,6 @@
   color: var(--galaxy-cloud-gray);
 }
 
-.forgot-password {
-  text-align: right;
-  margin-bottom: var(--galaxy-space-lg);
-}
-
-.forgot-password a {
-  color: var(--galaxy-aurora-cyan);
-  text-decoration: none;
-  font-size: 14px;
-  transition: var(--galaxy-transition-normal);
-}
-
-.forgot-password a:hover {
-  color: var(--galaxy-comet-green);
-  text-shadow: var(--galaxy-glow-cyan);
-}
 
 .auth-btn {
   width: 100%;

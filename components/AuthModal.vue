@@ -42,9 +42,6 @@
               <label for="loginPassword">Password:</label>
               <input type="password" id="loginPassword" v-model="loginPassword" required />
             </div>
-            <div class="forgot-password">
-              <NuxtLink to="/forgot-password" @click="closeModal">Forgot password?</NuxtLink>
-            </div>
             <button type="submit" class="auth-btn" :disabled="isLoading">
               {{ isLoading ? 'Logging in...' : 'Login' }}
             </button>
