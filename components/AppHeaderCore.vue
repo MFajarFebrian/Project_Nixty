@@ -54,7 +54,7 @@
           <button class="account-icon-btn profile-btn" title="Account" @click="toggleUserDropdown" aria-label="Open user account menu">
             <div class="profile-picture-container">
               <ProfilePicture
-                :src="user.profile_picture"
+                :src="null"
                 :alt="user.name"
                 :userName="user.name"
                 :userId="user.id"
@@ -67,7 +67,7 @@
             <div class="user-info-section">
               <div class="user-avatar">
                 <ProfilePicture
-                  :src="user.profile_picture"
+                  :src="null"
                   :alt="user.name"
                   :userName="user.name"
                   :userId="user.id"

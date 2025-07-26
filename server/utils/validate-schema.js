@@ -34,7 +34,7 @@ async function validateDatabaseSchema() {
     const [usersColumns] = await pool.execute('DESCRIBE users');
     const userRequiredColumns = [
       'id', 'email', 'password', 'name', 'created_at', 
-      'account_type', 'google_id', 'profile_picture'
+      'account_type', 'phone'
     ];
     
     const userColumnNames = usersColumns.map(col => col.Field);

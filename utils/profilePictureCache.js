@@ -82,12 +82,8 @@ export const profilePictureCache = {
 export function getProfilePictureUrl(user) {
   if (!user) return null;
   
-  // Jika ada profile picture dari server
-  if (user.profile_picture) {
-    // Simpan ke cache untuk backup
-    profilePictureCache.save(user.id, user.profile_picture);
-    return user.profile_picture;
-  }
+  // Since Google login is removed, we no longer check for user.profile_picture
+  // This function now mainly serves as a placeholder for future profile picture functionality
   
   // Coba ambil dari cache
   const cachedUrl = profilePictureCache.get(user.id);
@@ -95,7 +91,7 @@ export function getProfilePictureUrl(user) {
     return cachedUrl;
   }
   
-  // Tidak ada profile picture
+  // Tidak ada profile picture - akan menggunakan auto-generated initials
   return null;
 }
 

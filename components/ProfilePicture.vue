@@ -56,18 +56,7 @@ const processedSrc = computed(() => {
   let url = props.src;
   console.log('ProfilePicture: Processing URL:', url);
   
-  // Jika URL Google, optimasi untuk ukuran dan parameter
-  if (url.includes('googleusercontent.com')) {
-    // Remove existing size parameter
-    url = url.replace(/[?&]s=\d+/, '');
-    url = url.replace(/[?&]sz=\d+/, '');
-    
-    // Add size parameter yang tepat
-    const separator = url.includes('?') ? '&' : '?';
-    url = `${url}${separator}sz=200`;
-    
-    console.log('ProfilePicture: Google URL processed:', url);
-  }
+  // Process any custom profile picture URLs here if needed in the future
   
   return url;
 });
@@ -84,23 +73,6 @@ const userInitial = computed(() => {
 // Methods
 const handleImageError = () => {
   console.warn('ProfilePicture: Image failed to load:', processedSrc.value);
-  
-  // Coba alternatif URL untuk Google jika ada
-  if (props.src && props.src.includes('googleusercontent.com')) {
-    console.log('ProfilePicture: Trying alternative Google URL approaches...');
-    
-    // Coba dengan parameter yang berbeda
-    const baseUrl = props.src.split('?')[0].split('=s')[0];
-    const alternativeUrls = [
-      `${baseUrl}=s200-c`,
-      `${baseUrl}=s96-c`, 
-      `${baseUrl}?sz=200`,
-      baseUrl // URL asli tanpa parameter
-    ];
-    
-    console.log('ProfilePicture: Available alternatives:', alternativeUrls);
-  }
-  
   imageError.value = true;
 };
 
