@@ -1,4 +1,5 @@
 import midtransClient from 'midtrans-client';
+import { getHeaders } from 'h3';
 import { midtransConfig } from '../../utils/config.js';
 import db from '../../utils/db.js';
 import { requireAuth } from '../../utils/auth.js';
@@ -6,6 +7,20 @@ import { generateOrderIdWithProduct } from '../../utils/order-id-generator.js';
 
 // Get runtime config for baseUrl
 const { public: { baseUrl } } = useRuntimeConfig();
+
+// Function to get current domain from request
+function getCurrentDomain(event) {
+  const headers = getHeaders(event);
+  const host = headers.host || headers['x-forwarded-host'];
+  const protocol = headers['x-forwarded-proto'] || (host && host.includes('localhost') ? 'http' : 'https');
+  
+  if (host) {
+    return `${protocol}://${host}`;
+  }
+  
+  // Fallback to config baseUrl
+  return baseUrl;
+}
 
 // Initialize Midtrans Snap client
 const snap = new midtransClient.Snap({
@@ -119,12 +134,15 @@ export default defineEventHandler(async (event) => {
     // enabled_payments will be determined by Midtrans dashboard settings
   };
 
-  // Add dynamic callback URLs
+  // Add dynamic callback URLs using current domain
+  const currentDomain = getCurrentDomain(event);
   parameter.callbacks = {
-    finish: `${baseUrl}/payment/finish`,
-    unfinish: `${baseUrl}/payment/unfinish`,
-    error: `${baseUrl}/payment/error`
+    finish: `${currentDomain}/payment/finish`,
+    unfinish: `${currentDomain}/payment/unfinish`,
+    error: `${currentDomain}/payment/error`
   };
+  
+  console.log('Using callback URLs for domain:', currentDomain);
 
   // 3. Get Snap token from Midtrans
   let snapToken, midtransResponse;
