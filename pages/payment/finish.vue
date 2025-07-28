@@ -36,7 +36,7 @@
       </div>
       
       <div class="finish-actions">
-        <NuxtLink :to="`/orders/${transactionId}`" class="galaxy-button-primary" v-if="isSuccess && transactionId">
+        <NuxtLink :to="`/orders/${orderData.order_id}`" class="galaxy-button-primary" v-if="isSuccess && orderData.order_id">
           <i class="fas fa-eye"></i> Detail Order
         </NuxtLink>
         <NuxtLink to="/orders" class="galaxy-button-primary" v-else-if="isSuccess">
@@ -62,8 +62,7 @@ const orderData = reactive({
 // Loading state for license processing
 const isProcessingLicense = ref(false)
 
-// Transaction ID for detail page link
-const transactionId = ref(null)
+// No longer need transactionId since we use orderData.order_id directly
 
 // Determine status based on transaction_status
 const statusInfo = computed(() => {
@@ -146,26 +145,7 @@ const isSuccess = computed(() => statusInfo.value.isSuccess)
 // Log the received data for debugging
 console.log('Payment finish page - Received data:', orderData)
 
-// Get transaction ID from order_id
-const getTransactionId = async () => {
-  if (orderData.order_id) {
-    try {
-      const response = await $fetch('/api/orders/get-transaction-id', {
-        method: 'POST',
-        body: {
-          order_id: orderData.order_id
-        }
-      })
-      
-      if (response.success && response.transaction_id) {
-        transactionId.value = response.transaction_id
-        console.log('Transaction ID found:', transactionId.value)
-      }
-    } catch (error) {
-      console.error('Failed to get transaction ID:', error)
-    }
-  }
-}
+// Removed getTransactionId function - no longer needed since we use orderData.order_id directly
 
 // Auto-process license for successful payments
 const autoProcessLicense = async () => {
@@ -239,9 +219,6 @@ const showPaymentStatusNotification = () => {
 // Run auto-processing on page load
 onMounted(async () => {
   if (orderData.order_id && orderData.transaction_status) {
-    // First get the transaction ID
-    await getTransactionId()
-    
     // Show notification for success/failure
     if (orderData.transaction_status === 'settlement' || orderData.transaction_status === 'capture') {
       // Process license for successful payments
