@@ -31,7 +31,7 @@
                     <input 
                       v-model="selectedStartDate" 
                       type="date" 
-                      @change="validateAndUpdateChart"
+                      @change="debouncedUpdateChart"
                       class="date-input"
                       :max="maxDate"
                     />
@@ -42,7 +42,7 @@
                     <input 
                       v-model="selectedEndDate" 
                       type="date" 
-                      @change="validateAndUpdateChart"
+                      @change="debouncedUpdateChart"
                       class="date-input"
                       :max="maxDate"
                     />
@@ -127,6 +127,7 @@ const showTransactions = ref(true);
 const showRevenue = ref(true);
 const dateRangeError = ref('');
 const showDatePicker = ref(false);
+const isInitialized = ref(false); // Flag to track if component is initialized
 const isSingleDayView = computed(() => selectedStartDate.value && selectedEndDate.value && selectedStartDate.value === selectedEndDate.value);
 
 // Check if date range is 1-2 days for hourly view
@@ -187,7 +188,7 @@ const validateAndUpdateChart = () => {
   
   if (!selectedStartDate.value || !selectedEndDate.value) {
     dateRangeError.value = 'Please select a start and end date';
-    return;
+    return false;
   }
   
   const startDate = new Date(selectedStartDate.value);
@@ -196,7 +197,7 @@ const validateAndUpdateChart = () => {
   // Check if start date is not after end date
   if (startDate > endDate) {
     dateRangeError.value = 'Start date cannot be after end date';
-    return;
+    return false;
   }
   
   const diffTime = Math.abs(endDate - startDate);
@@ -204,11 +205,33 @@ const validateAndUpdateChart = () => {
 
   if (diffDays > 30) {
     dateRangeError.value = 'The maximum date range is 31 days';
+    return false;
+  }
+
+  return true;
+};
+
+// Debounced chart update function to prevent rapid updates
+const debouncedUpdateChart = () => {
+  // Skip update if not initialized
+  if (!isInitialized.value) {
     return;
   }
   
-  // If all validations pass, update the chart
-  updateChart();
+  // Validate the date range first
+  if (!validateAndUpdateChart()) {
+    return;
+  }
+  
+  // Clear any existing timeout
+  if (window.chartUpdateTimeout) {
+    clearTimeout(window.chartUpdateTimeout);
+  }
+  
+  // Set a new timeout to prevent rapid updates
+  window.chartUpdateTimeout = setTimeout(() => {
+    updateChart();
+  }, 300); // Increased debounce time
 };
 
 // Helper function to ensure dates are sent as UTC to prevent timezone shifts
@@ -622,6 +645,11 @@ const formatDateRange = (startDate, endDate) => {
 
 // Methods
 const updateChart = async () => {
+  // Prevent updates during initialization
+  if (!isInitialized.value) {
+    return;
+  }
+  
   // Store previous data to compare
   const previousData = { ...transactionStats.value };
   
@@ -986,7 +1014,10 @@ onMounted(async () => {
   if (!process.client) return;
   
   console.log('TransactionChart component mounted');
+if (!isInitialized.value) {
   initializeDefaultDate();
+  isInitialized.value = true;
+}
   
   // Try to load Chart.js
   try {
@@ -1034,6 +1065,13 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside);
+  
+  // Clear any pending timeouts
+  if (window.chartUpdateTimeout) {
+    clearTimeout(window.chartUpdateTimeout);
+    window.chartUpdateTimeout = null;
+  }
+  
   if (chartInstance) {
     try {
     chartInstance.destroy();

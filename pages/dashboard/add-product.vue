@@ -3,7 +3,7 @@
     <div class="page-header">
       <h1><i class="fas fa-plus-circle"></i> Add New Product</h1>
       <button @click="goBack" class="back-btn">
-        <i class="fas fa-arrow-left"></i> Back to Dashboard
+        <i class="fas fa-arrow-left"></i> Back
       </button>
     </div>
 
@@ -68,7 +68,7 @@
                 <span v-if="isCreatingCategory">
                   <i class="fas fa-spinner fa-spin"></i> Creating...
                 </span>
-                <span v-else>Add Category</span>
+                <span v-else>Add</span>
               </button>
             </div>
           </div>
@@ -91,7 +91,7 @@
               <i class="fas fa-spinner fa-spin"></i> Creating...
             </span>
             <span v-else>
-              <i class="fas fa-plus"></i> Create Product
+              <i class="fas fa-plus"></i> Create
             </span>
           </button>
         </div>

@@ -28,6 +28,20 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    // Remove any fields that don't exist in the database schema
+    const allowedFields = ['product_id', 'license_type', 'status', 'max_usage', 'license_key', 'email', 'password'];
+    const cleanBody = {};
+    for (const [key, value] of Object.entries(body)) {
+      if (allowedFields.includes(key)) {
+        cleanBody[key] = value;
+      } else {
+        console.warn(`Ignoring unknown field: ${key}`);
+      }
+    }
+    // Replace body with cleaned version
+    Object.keys(body).forEach(key => delete body[key]);
+    Object.assign(body, cleanBody);
+
     // Validate required fields
     if (!body.product_id || !body.license_type) {
       throw createError({
@@ -57,14 +71,15 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Create base license record
+    // Create base license record - only include fields that exist in the database schema
     const baseLicenseData = {
       product_id: body.product_id,
       license_type: body.license_type,
       status: body.status || 'available',
-      notes: body.notes || null,
-      max_usage: body.license_type === 'product_key' ? 5 : 1
+      max_usage: body.max_usage || (body.license_type === 'product_key' ? 5 : 1)
     };
+
+    console.log('Base license data to insert:', baseLicenseData);
 
     const baseLicense = await db.insert('product_license_base', baseLicenseData);
     const licenseId = baseLicense.id;
@@ -96,7 +111,7 @@ export default defineEventHandler(async (event) => {
     if (body.license_type === 'product_key') {
       const [rows] = await db.query(`
         SELECT 
-          plb.id, plb.product_id, plb.license_type, plb.status, plb.notes,
+          plb.id, plb.product_id, plb.license_type, plb.status, plb.max_usage,
           plk.product_key as license_key,
           p.name as product_name
         FROM nixty.product_license_base plb
@@ -108,7 +123,7 @@ export default defineEventHandler(async (event) => {
     } else {
       const [rows] = await db.query(`
         SELECT 
-          plb.id, plb.product_id, plb.license_type, plb.status, plb.notes,
+          plb.id, plb.product_id, plb.license_type, plb.status, plb.max_usage,
           pla.email, pla.password,
           p.name as product_name
         FROM nixty.product_license_base plb

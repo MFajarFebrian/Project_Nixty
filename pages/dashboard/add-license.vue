@@ -3,7 +3,7 @@
     <div class="page-header">
       <h1><i class="fas fa-key"></i> Add New License</h1>
       <button @click="goBack" class="back-btn">
-        <i class="fas fa-arrow-left"></i> Back to Dashboard
+        <i class="fas fa-arrow-left"></i> Back
       </button>
     </div>
 
@@ -142,7 +142,7 @@
             </span>
             <span v-else>
               <i class="fas fa-key"></i>
-              Create {{ form.quantity > 1 ? `${form.quantity} Licenses` : 'License' }}
+              Create
             </span>
           </button>
         </div>

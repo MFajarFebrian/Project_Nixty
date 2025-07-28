@@ -118,7 +118,6 @@ export default defineEventHandler(async (event) => {
             ol.license_id,
             plb.license_type,
             plb.status as license_status,
-            plb.notes,
             plb.max_usage,
             plk.product_key,
             pla.email,
@@ -136,7 +135,6 @@ export default defineEventHandler(async (event) => {
           licenseData = orderLicenses.map(license => ({
             license_type: license.license_type,
             status: license.license_status,
-            notes: license.notes,
             max_usage: license.max_usage,
             product_key: license.product_key || null,
             email: license.email || null,
