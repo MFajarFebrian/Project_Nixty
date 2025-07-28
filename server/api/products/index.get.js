@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
     const page = query.page ? parseInt(query.page) : 1;
     const offset = (page - 1) * limit;
     
-    // Use the database to fetch products with pagination - using nixty schema
+    // Use the database to fetch products with pagination
     const productsQuery = `
       SELECT p.*, c.name as category_name, c.slug as category_slug
       FROM nixty.products p

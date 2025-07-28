@@ -74,7 +74,7 @@ onMounted(() => {
 // Use Nuxt's useHead correctly
 useHead({
   titleTemplate: (titleChunk) => {
-    return titleChunk ? `${titleChunk} - Nixty Demo` : 'Nixty Demo';
+    return titleChunk ? `${titleChunk} - Nixty` : 'Nixty';
   },
   link: [
     {
