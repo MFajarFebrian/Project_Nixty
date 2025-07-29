@@ -5,7 +5,7 @@
         <div class="logo-section">
           <i class="fas fa-shield-alt"></i>
           <h1>Admin Login</h1>
-          <p>Masuk ke panel administrasi</p>
+          <p>Access administrative panel</p>
         </div>
       </div>
 
@@ -19,7 +19,7 @@
                 id="email"
                 v-model="loginForm.email"
                 type="email"
-                placeholder="Masukkan email admin"
+                placeholder="Enter admin email"
                 required
                 :disabled="isLoading"
                 autocomplete="email"
@@ -35,7 +35,7 @@
                 id="password"
                 v-model="loginForm.password"
                 type="password"
-                placeholder="Masukkan password"
+                placeholder="Enter password"
                 required
                 :disabled="isLoading"
                 autocomplete="current-password"
@@ -47,7 +47,7 @@
             type="submit"
             class="login-btn"
             :disabled="isLoading || !isFormValid"
-            :title="isLoading ? 'Sedang masuk...' : 'Masuk'"
+            :title="isLoading ? 'Signing in...' : 'Sign In'"
           >
             <i v-if="isLoading" class="fas fa-spinner fa-spin"></i>
             <i v-else class="fas fa-sign-in-alt"></i>
@@ -63,14 +63,8 @@
       <div class="login-footer">
         <p>
           <i class="fas fa-info-circle"></i>
-          Panel admin hanya untuk pengelola sistem
+          Admin panel is restricted to system administrators only
         </p>
-        <div class="back-to-home">
-          <NuxtLink to="/" class="back-link">
-            <i class="fas fa-arrow-left"></i>
-            Kembali ke beranda
-          </NuxtLink>
-        </div>
       </div>
     </div>
 
