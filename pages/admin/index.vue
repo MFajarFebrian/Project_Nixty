@@ -84,7 +84,7 @@ import { useToast } from '~/composables/useToast'
 
 // Set page meta
 definePageMeta({
-  layout: 'default',
+  layout: false,
   title: 'Admin Login',
   middleware: 'admin-login'
 })
@@ -123,20 +123,20 @@ const handleLogin = async () => {
     if (result.success) {
       // Check if user is admin
       if (result.user && result.user.account_type === 'admin') {
-        success('Login berhasil! Mengarahkan ke dashboard...')
+        success('Login successful! Redirecting to dashboard...')
         // Redirect to admin dashboard
         await router.push('/dashboard')
       } else {
-        errorMessage.value = 'Akses ditolak. Hanya admin yang dapat mengakses panel ini.'
+        errorMessage.value = 'Access denied. Only administrators can access this panel.'
         // Clear form for security
         loginForm.value.password = ''
       }
     } else {
-      errorMessage.value = result.message || 'Email atau password salah'
+      errorMessage.value = result.message || 'Invalid email or password'
     }
   } catch (err) {
     console.error('Login error:', err)
-    errorMessage.value = 'Terjadi kesalahan saat login. Silakan coba lagi.'
+    errorMessage.value = 'An error occurred during login. Please try again.'
   } finally {
     isLoading.value = false
   }
@@ -158,7 +158,7 @@ useHead({
   meta: [
     {
       name: 'description',
-      content: 'Panel login untuk administrator Nixty'
+      content: 'Administrator login panel for Nixty'
     },
     {
       name: 'robots',
