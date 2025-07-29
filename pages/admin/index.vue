@@ -34,20 +34,12 @@
               <input
                 id="password"
                 v-model="loginForm.password"
-                :type="showPassword ? 'text' : 'password'"
+                type="password"
                 placeholder="Masukkan password"
                 required
                 :disabled="isLoading"
                 autocomplete="current-password"
               />
-              <button
-                type="button"
-                class="password-toggle"
-                @click="showPassword = !showPassword"
-                :disabled="isLoading"
-              >
-                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-              </button>
             </div>
           </div>
 
