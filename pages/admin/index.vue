@@ -399,24 +399,6 @@ useHead({
   gap: var(--galaxy-space-sm);
 }
 
-.back-to-home {
-  margin-top: var(--galaxy-space-lg);
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--galaxy-space-sm);
-  color: var(--galaxy-aurora-cyan);
-  text-decoration: none;
-  font-size: 0.9rem;
-  transition: var(--galaxy-transition-normal);
-}
-
-.back-link:hover {
-  color: var(--galaxy-comet-green);
-  transform: translateX(-3px);
-}
 
 /* Background decorations */
 .bg-decorations {
