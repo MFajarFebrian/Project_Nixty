@@ -55,10 +55,10 @@
             type="submit"
             class="login-btn"
             :disabled="isLoading || !isFormValid"
+            :title="isLoading ? 'Sedang masuk...' : 'Masuk'"
           >
             <i v-if="isLoading" class="fas fa-spinner fa-spin"></i>
             <i v-else class="fas fa-sign-in-alt"></i>
-            {{ isLoading ? 'Sedang masuk...' : 'Masuk' }}
           </button>
 
           <div v-if="errorMessage" class="error-message">
@@ -316,7 +316,7 @@ useHead({
 
 .password-toggle {
   position: absolute;
-  right: var(--galaxy-space-md);
+  right: calc(var(--galaxy-space-md) + 8px);
   background: none;
   border: none;
   color: var(--galaxy-cloud-gray);
@@ -341,18 +341,21 @@ useHead({
   align-items: center;
   justify-content: center;
   gap: var(--galaxy-space-sm);
-  padding: var(--galaxy-space-lg) var(--galaxy-space-xl);
+  padding: var(--galaxy-space-lg);
+  width: 60px;
+  height: 60px;
   background: linear-gradient(135deg, var(--galaxy-stellar-blue), var(--galaxy-aurora-cyan));
   border: none;
   border-radius: var(--galaxy-radius-lg);
   color: var(--galaxy-starlight);
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-weight: 600;
   cursor: pointer;
   transition: var(--galaxy-transition-normal);
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  margin: 0 auto;
 }
 
 .login-btn::before {
