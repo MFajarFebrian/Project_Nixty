@@ -1,0 +1,12 @@
+/* Dashboard Main CSS - Import all components */
+
+/* Import global variables */
+@import '~/assets/css/global/variables.css';
+
+/* Import dashboard components */
+@import './base.css';
+@import './header.css';
+@import './stock.css';
+@import './charts.css';
+@import './tables.css';
+@import './responsive.css';
