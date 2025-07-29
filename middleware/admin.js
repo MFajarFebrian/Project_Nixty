@@ -30,11 +30,11 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       userType: user.value?.account_type
     })
 
-    // Jika user belum login, redirect ke halaman home dengan modal login
+    // Jika user belum login, redirect ke halaman login admin
     if (!user.value) {
-      console.log('Admin middleware: No user found, redirecting to login')
+      console.log('Admin middleware: No user found, redirecting to admin login')
       error('Please login first to access admin dashboard')
-      return navigateTo('/?modal=login')
+      return navigateTo('/admin')
     }
 
     // Jika user sudah login tapi bukan admin, redirect ke home
