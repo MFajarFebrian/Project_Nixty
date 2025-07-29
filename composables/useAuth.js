@@ -112,6 +112,38 @@ export function useAuth() {
     }
   };
 
+  const login = async (email, password) => {
+    try {
+      const response = await $fetch('/api/login', {
+        method: 'POST',
+        body: { 
+          email: email, 
+          password: password 
+        }
+      });
+      
+      if (response.success && response.user) {
+        setUser(response.user);
+        return {
+          success: true,
+          user: response.user,
+          message: response.message
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Login failed'
+        };
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      return {
+        success: false,
+        message: 'An error occurred during login'
+      };
+    }
+  };
+
   const logout = async () => {
     if (process.client) {
       // Log out from Supabase using the official composable
@@ -140,6 +172,7 @@ export function useAuth() {
     isLoggedIn,
     initUser,
     setUser,
+    login,
     logout
   };
 }
