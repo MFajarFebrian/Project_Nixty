@@ -28,9 +28,9 @@
             <div class="order-info">
               <h2>Order #{{ order.order_id || order.id }}</h2>
               <p class="order-date">{{ formatDate(order.created_at) }}</p>
-              <p v-if="order.status === 'failed' && order.midtrans_order_id" class="midtrans-order-id">
+              <p v-if="order.status === 'failed' && order.order_id" class="midtrans-order-id">
                 <i class="fas fa-exclamation-triangle"></i>
-                Midtrans Order: {{ order.midtrans_order_id }}
+                Midtrans ID: {{ order.order_id }}
               </p>
             </div>
             <div class="status-badge" :class="getStatusClass(order.status)">

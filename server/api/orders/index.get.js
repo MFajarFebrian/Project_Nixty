@@ -54,32 +54,24 @@ export default defineEventHandler(async (event) => {
 
     // Get Midtrans order IDs for failed orders
     const failedOrderIds = orders.filter(o => o.status === 'failed').map(o => o.id);
-    let midtransOrderIds = {};
-    
+    const midtransOrderIds = {};
+
     if (failedOrderIds.length > 0) {
       const [paymentLogs] = await db.query(
-        `SELECT 
-          transaction_id,
-          key,
-          value
-        FROM nixty.payment_gateway_logs
-        WHERE transaction_id = ANY($1)
-        AND (key = 'order_id' OR key = 'midtrans_order_id' OR key = 'transaction_id')`,
+        `SELECT transaction_id, value
+         FROM nixty.payment_gateway_logs
+         WHERE transaction_id = ANY($1) AND key = 'midtrans_order_id'`,
         [failedOrderIds]
       );
       
-      // Map Midtrans order IDs to order IDs
       paymentLogs.forEach(log => {
-        if (!midtransOrderIds[log.transaction_id]) {
-          midtransOrderIds[log.transaction_id] = log.value;
-        }
+        midtransOrderIds[log.transaction_id] = log.value;
       });
     }
 
     // Transform orders to include proper formatting
     const transformedOrders = orders.map(order => ({
-      id: order.order_id || order.id, // Use custom order_id if available
-      numeric_id: order.id, // Keep numeric ID for internal reference
+      id: order.id,
       order_id: order.order_id, // Custom Midtrans-style order ID
       user_id: order.user_id,
       product_id: order.product_id,

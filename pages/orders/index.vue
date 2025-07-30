@@ -57,9 +57,9 @@
                 {{ transaction.license_count }} License{{ transaction.license_count > 1 ? 's' : '' }} Available
               </p>
               <p class="price">Total: {{ formatCurrency(transaction.total) }}</p>
-              <p v-if="transaction.status === 'failed' && transaction.midtrans_order_id" class="midtrans-id">
+              <p v-if="transaction.status === 'failed' && transaction.order_id" class="midtrans-id">
                 <i class="fas fa-exclamation-triangle"></i>
-                Midtrans Order: {{ transaction.midtrans_order_id }}
+                Midtrans ID: {{ transaction.order_id }}
               </p>
             </div>
           </div>
@@ -173,16 +173,16 @@ const fetchTransactions = async () => {
 }
 
 // Check Midtrans status function
-const checkMidtransStatus = async (orderId) => {
+const checkMidtransStatus = async (transactionId) => {
   if (!user.value) return
   
   try {
-    isCheckingStatus[orderId] = true
+    isCheckingStatus[transactionId] = true
     
     const response = await $fetch('/api/orders/update-status', {
       method: 'POST',
       body: {
-        order_id: orderId
+        order_id: transactionId
       },
       headers: {
         'x-user-session': JSON.stringify(user.value)
@@ -196,7 +196,7 @@ const checkMidtransStatus = async (orderId) => {
   } catch (err) {
     console.error('Error checking status:', err)
   } finally {
-    isCheckingStatus[orderId] = false
+    isCheckingStatus[transactionId] = false
   }
 }
 
