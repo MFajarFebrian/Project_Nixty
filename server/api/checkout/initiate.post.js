@@ -138,8 +138,8 @@ export default defineEventHandler(async (event) => {
   const currentDomain = getCurrentDomain(event);
   parameter.callbacks = {
     finish: `${currentDomain}/payment/finish`,
-    unfinish: `${currentDomain}/payment/unfinish`,
-    error: `${currentDomain}/payment/error`
+    unfinish: `${currentDomain}/products`,
+    error: `${currentDomain}/products`
   };
   
   console.log('Using callback URLs for domain:', currentDomain);

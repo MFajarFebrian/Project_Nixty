@@ -104,8 +104,8 @@ export default defineEventHandler(async (event) => {
       },
       callbacks: {
         finish: `${process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/payment/finish`,
-        unfinish: `${process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/payment/unfinish`,
-        error: `${process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/payment/error`,
+        unfinish: `${process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/products`,
+        error: `${process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/products`,
       },
     };
 

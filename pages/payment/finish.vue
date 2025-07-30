@@ -224,9 +224,16 @@ onMounted(async () => {
       // Process license for successful payments
       autoProcessLicense()
     } else {
-      // Show notification for failed/pending payments
+      // For non-success payments, show notification and redirect to products
       showPaymentStatusNotification()
+      // Redirect to products page after 3 seconds
+      setTimeout(() => {
+        navigateTo('/products')
+      }, 3000)
     }
+  } else {
+    // If no order data, redirect to products immediately
+    navigateTo('/products')
   }
 })
 </script>

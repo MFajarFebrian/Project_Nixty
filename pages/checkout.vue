@@ -612,14 +612,8 @@ const initiatePayment = async () => {
             })
           }
           
-          router.push({
-            path: '/payment/unfinish',
-            query: {
-              order_id: result.order_id,
-              status_code: result.status_code,
-              transaction_status: result.transaction_status
-            }
-          });
+          // Redirect to products page instead of payment/unfinish
+          router.push('/products');
         },
         onError: function(result) {
           isPaymentLoading.value = false;
@@ -631,14 +625,8 @@ const initiatePayment = async () => {
             $mobileSession.releaseWakeLock()
           }
           
-          router.push({
-            path: '/payment/error',
-            query: {
-              order_id: result.order_id,
-              status_code: result.status_code,
-              transaction_status: result.transaction_status
-            }
-          });
+          // Redirect to products page instead of payment/error
+          router.push('/products');
         },
         onClose: function() {
           isPaymentLoading.value = false;
@@ -654,14 +642,8 @@ const initiatePayment = async () => {
             })
           }
           
-          const orderId = localStorage.getItem('currentOrderId');
-          router.push({
-            path: '/payment/unfinish',
-            query: {
-              order_id: orderId || '',
-              reason: 'user_closed_popup'
-            }
-          });
+          // Redirect to products page instead of payment/unfinish
+          router.push('/products');
         }
       });
     } else {
