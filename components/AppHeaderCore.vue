@@ -24,6 +24,16 @@
       <div class="nav-container">
         <div class="nav-header">
           <span class="nav-title">Navigation</span>
+          <button 
+            class="mobile-menu-close" 
+            @click="closeMobileMenu"
+            :class="{ 'mobile-menu-close--active': isMobileMenuOpen }"
+            aria-label="Close navigation menu"
+          >
+            <span class="mobile-menu-close__line"></span>
+            <span class="mobile-menu-close__line"></span>
+            <span class="mobile-menu-close__line"></span>
+          </button>
         </div>
         <div class="nav-items">
           <NuxtLink to="/home" class="nav-items__link" :class="{ 'nav-items__link--active': isActiveRoute('/home') }" @click="closeMobileMenu" aria-label="Go to Home page">
