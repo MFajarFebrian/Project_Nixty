@@ -43,6 +43,7 @@ async function fetchHomePageData() {
     SELECT 
       p.id, p.name, p.version, p.slug, p.short_description, p.price,
       p.image_url, p.is_featured, p.is_trending, p.discount_price,
+      (SELECT COUNT(*) FROM nixty.product_license_base plb WHERE plb.product_id = p.id AND plb.status = 'available') as available_stock,
       p.tags, p.is_multi_license,
       c.slug as category_slug, c.name as category_name
     FROM nixty.products p
@@ -74,7 +75,8 @@ async function fetchHomePageData() {
     imageUrl: category.image_url || '/placeholder-product.png'
   }));
 
-  const processedProducts = allProducts.map(product => {
+    const processedProducts = allProducts.map(product => {
+      const isOutOfStock = product.available_stock === 0;
     const originalPrice = parseFloat(product.price) || 0;
     const discountPrice = parseFloat(product.discount_price) || 0;
     let discountPercentage = 0;
@@ -85,6 +87,7 @@ async function fetchHomePageData() {
     
     return {
       ...product,
+      status: isOutOfStock ? 'out_of_stock' : product.status,
       discount_percentage: discountPercentage
     };
   });

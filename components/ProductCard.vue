@@ -1,5 +1,5 @@
 <template>
-  <div class="product-card">
+  <div class="product-card" :class="{ 'out-of-stock': isOutOfStock }">
     <!-- Product Image Section -->
     <div class="product-image-wrapper">
        <img 
@@ -14,6 +14,7 @@
       <div class="product-badges">
         <!-- Simplified badges - no complex features from old schema -->
         <span v-if="product.status === 'active'" class="badge active-badge">ACTIVE</span>
+        <span v-if="isOutOfStock" class="badge out-of-stock-badge">OUT OF STOCK</span>
       </div>
       
     </div>
@@ -36,7 +37,7 @@
         </div>
         
         <!-- Checkout Button -->
-        <button class="checkout-button" @click="goToCheckout" title="Add to Cart">
+        <button class="checkout-button" @click="goToCheckout" title="Add to Cart" :disabled="isOutOfStock">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
             <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -94,7 +95,17 @@ const fullProductName = computed(() => {
   return props.product.name + (props.product.version ? ` ${props.product.version}` : '');
 });
 
+const isOutOfStock = computed(() => {
+  return props.product.status === 'out_of_stock' || props.product.available_stock === 0;
+});
+
 const goToCheckout = () => {
+  // Prevent checkout if product is out of stock
+  if (isOutOfStock.value) {
+    console.warn('Cannot checkout out of stock product');
+    return;
+  }
+  
   console.log('ProductCard clicked! Product data:', props.product);
   console.log('Category slug:', props.product.category_slug);
   console.log('Product ID:', props.product.id);
@@ -185,6 +196,11 @@ const formatCurrency = (value) => {
   background: var(--galaxy-stellar-green, #4caf50);
 }
 
+.out-of-stock-badge {
+  background: var(--galaxy-cloud-gray, #666);
+  color: var(--galaxy-starlight, #fff);
+}
+
 .product-info {
   padding: var(--galaxy-space-md, 1rem);
   display: flex;
@@ -271,5 +287,38 @@ const formatCurrency = (value) => {
 
 .checkout-button:active {
   transform: scale(0.95);
+}
+
+.checkout-button:disabled {
+  background: var(--galaxy-cloud-gray, #666) !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.checkout-button:disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Out of Stock Styling */
+.product-card.out-of-stock {
+  opacity: 0.6;
+  filter: grayscale(100%);
+}
+
+.product-card.out-of-stock .product-image {
+  filter: grayscale(100%) brightness(0.8);
+}
+
+.product-card.out-of-stock .product-title,
+.product-card.out-of-stock .current-price,
+.product-card.out-of-stock .original-price {
+  color: var(--galaxy-cloud-gray, #888) !important;
+}
+
+.product-card.out-of-stock:hover {
+  transform: none;
+  box-shadow: var(--galaxy-shadow-medium, 0 4px 16px rgba(0,0,0,0.4));
+  border-color: var(--galaxy-asteroid-gray, #2c2c54);
 }
 </style>

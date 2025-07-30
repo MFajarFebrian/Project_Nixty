@@ -22,6 +22,7 @@ export default defineEventHandler(async (event) => {
         p.currency, p.discount_price, p.image_url, p.is_featured, p.is_trending, 
         p.tags, p.is_multi_license, p.is_subscription, p.is_digital_download, p.status,
         p.created_at, p.updated_at,
+        (SELECT COUNT(*) FROM nixty.product_license_base plb WHERE plb.product_id = p.id AND plb.status = 'available') as available_stock,
         c.name as category_name, c.slug as category_slug
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
@@ -49,6 +50,12 @@ export default defineEventHandler(async (event) => {
     }
 
     const product = products[0];
+    
+    // Set out of stock status if no available stock
+    const isOutOfStock = product.available_stock === 0;
+    if (isOutOfStock) {
+      product.status = 'out_of_stock';
+    }
     
     // Calculate discount percentage if discount_price exists
     if (product.discount_price && product.price) {
@@ -89,12 +96,23 @@ export default defineEventHandler(async (event) => {
 
     // Fetch all versions of this product family
     const [versions] = await db.query(
-      `SELECT id, name, version, price, discount_price, image_url, is_subscription FROM products WHERE name = ? ORDER BY version DESC`,
+      `SELECT 
+        p.id, p.name, p.version, p.price, p.discount_price, p.image_url, p.is_subscription,
+        (SELECT COUNT(*) FROM nixty.product_license_base plb WHERE plb.product_id = p.id AND plb.status = 'available') as available_stock
+      FROM products p 
+      WHERE p.name = ? 
+      ORDER BY p.version DESC`,
       [product.name]
     );
     
     // Calculate discount percentage and add period logic for all versions
     const processedVersions = versions.map(version => {
+      // Set out of stock status if no available stock
+      const isOutOfStock = version.available_stock === 0;
+      if (isOutOfStock) {
+        version.status = 'out_of_stock';
+      }
+      
       const originalPrice = parseFloat(version.price) || 0;
       const discountPrice = parseFloat(version.discount_price) || 0;
       let discountPercentage = 0;

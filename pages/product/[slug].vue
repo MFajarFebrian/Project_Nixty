@@ -17,11 +17,14 @@
 
       <!-- Version Cards Grid -->
       <div class="version-grid">
-        <div v-for="product in products" :key="product.id" class="version-card galaxy-card">
+        <div v-for="product in products" :key="product.id" class="version-card galaxy-card" :class="{ 'out-of-stock': isProductOutOfStock(product) }">
           <!-- Version Header -->
           <div class="version-header">
             <h2 class="version-title">{{ product.version }}</h2>
-            <span v-if="product.is_new" class="badge new-badge">NEW</span>
+            <div class="badge-container">
+              <span v-if="product.is_new" class="badge new-badge">NEW</span>
+              <span v-if="isProductOutOfStock(product)" class="badge out-of-stock-badge">OUT OF STOCK</span>
+            </div>
           </div>
 
           <!-- Product Image -->
@@ -43,9 +46,9 @@
 
           <!-- Action Buttons -->
           <div class="version-actions">
-            <button class="buy-now-btn galaxy-button-primary" @click="goToCheckout(product)">
-              Buy Now
-              <span class="icon">&#10148;</span>
+            <button class="buy-now-btn galaxy-button-primary" @click="goToCheckout(product)" :disabled="isProductOutOfStock(product)">
+              {{ isProductOutOfStock(product) ? 'Out of Stock' : 'Buy Now' }}
+              <span v-if="!isProductOutOfStock(product)" class="icon">&#10148;</span>
             </button>
             <button class="details-btn galaxy-button-secondary" @click="showDetails(product)">
               View Details
@@ -130,6 +133,10 @@ const fetchProductData = async () => {
   }
 };
 
+const isProductOutOfStock = (product) => {
+  return product.status === 'out_of_stock' || product.available_stock === 0;
+};
+
 const showDetails = (product) => {
   selectedProduct.value = product;
   // Smooth scroll to details section
@@ -137,6 +144,12 @@ const showDetails = (product) => {
 };
 
 const goToCheckout = (product) => {
+  // Prevent checkout if product is out of stock
+  if (isProductOutOfStock(product)) {
+    console.warn('Cannot checkout out of stock product');
+    return;
+  }
+  
   // Use the main product slug if available, otherwise use the current route slug
   const productSlug = product.slug || route.params.slug;
   router.push(`/product/${productSlug}/checkout`);
@@ -218,8 +231,22 @@ onMounted(fetchProductData);
   color: var(--galaxy-starlight);
 }
 
+.badge-container {
+  display: flex;
+  gap: var(--galaxy-space-xs);
+}
+
 .badge.new-badge {
   background: var(--galaxy-primary-gradient);
+  color: var(--galaxy-starlight);
+  padding: var(--galaxy-space-xs) var(--galaxy-space-sm);
+  border-radius: var(--galaxy-radius-full);
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.badge.out-of-stock-badge {
+  background: var(--galaxy-cloud-gray, #666);
   color: var(--galaxy-starlight);
   padding: var(--galaxy-space-xs) var(--galaxy-space-sm);
   border-radius: var(--galaxy-radius-full);
@@ -300,6 +327,17 @@ onMounted(fetchProductData);
   border: none;
 }
 
+.buy-now-btn:disabled {
+  background: var(--galaxy-cloud-gray, #666) !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.buy-now-btn:disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 .details-btn {
   background: transparent;
   border: 1px solid var(--galaxy-aurora-cyan);
@@ -313,6 +351,28 @@ onMounted(fetchProductData);
 
 .details-btn:hover {
   background: rgba(77, 208, 225, 0.1);
+}
+
+/* Out of Stock Styling */
+.version-card.out-of-stock {
+  opacity: 0.6;
+  filter: grayscale(100%);
+}
+
+.version-card.out-of-stock .version-image {
+  filter: grayscale(100%) brightness(0.8);
+}
+
+.version-card.out-of-stock .version-title,
+.version-card.out-of-stock .price-amount,
+.version-card.out-of-stock .version-description {
+  color: var(--galaxy-cloud-gray, #888) !important;
+}
+
+.version-card.out-of-stock:hover {
+  transform: none;
+  border-color: var(--galaxy-asteroid-gray);
+  box-shadow: none;
 }
 
 .product-details {

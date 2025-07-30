@@ -12,7 +12,8 @@ export default defineEventHandler(async (event) => {
     
     // Use the database to fetch products with pagination
     const productsQuery = `
-      SELECT p.*, c.name as category_name, c.slug as category_slug
+      SELECT p.*, c.name as category_name, c.slug as category_slug,
+        (SELECT COUNT(*) FROM nixty.product_license_base plb WHERE plb.product_id = p.id AND plb.status = 'available') as available_stock
       FROM nixty.products p
       LEFT JOIN nixty.categories c ON p.category_id = c.id
       WHERE p.status = 'active'
@@ -31,13 +32,22 @@ export default defineEventHandler(async (event) => {
       db.query(countQuery)
     ]);
     
-    console.log(`Found ${products.length} products`);
+    // Process products to add out of stock status
+    const processedProducts = products.map(product => {
+      const isOutOfStock = product.available_stock === 0;
+      return {
+        ...product,
+        status: isOutOfStock ? 'out_of_stock' : product.status
+      };
+    });
+    
+    console.log(`Found ${processedProducts.length} products`);
     
     const total = countResult[0]?.total || 0;
     const totalPages = Math.ceil(total / limit);
     
     return {
-      products,
+      products: processedProducts,
       pagination: {
         total,
         per_page: limit,
