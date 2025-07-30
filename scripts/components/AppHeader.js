@@ -19,6 +19,11 @@ export const useAppHeader = (emit) => {
 
   // Active route detection
   const currentRoute = computed(() => route.path);
+  
+  // Check if current route is admin page
+  const isAdminRoute = computed(() => {
+    return currentRoute.value === '/admin';
+  });
 
   // Helper function to check if a route is active
   const isActiveRoute = (path) => {
@@ -155,6 +160,7 @@ export const useAppHeader = (emit) => {
     guestDropdownRef,
     currentRoute,
     isMobileMenuOpen,
+    isAdminRoute,
 
     // Methods
     toggleUserDropdown,

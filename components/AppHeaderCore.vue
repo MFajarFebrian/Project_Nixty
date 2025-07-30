@@ -10,7 +10,7 @@
       class="mobile-menu-toggle" 
       @click="toggleMobileMenu"
       :class="{ 'mobile-menu-toggle--active': isMobileMenuOpen }"
-      v-if="!user || user.account_type !== 'admin'"
+      v-if="!isAdminRoute && (!user || user.account_type !== 'admin')"
       aria-label="Toggle navigation menu"
       :aria-expanded="isMobileMenuOpen"
     >
@@ -20,7 +20,7 @@
     </button>
 
     <!-- Mobile Navigation Panel -->
-    <nav class="nav-links" :class="{ 'mobile-open': isMobileMenuOpen }" v-if="!user || user.account_type !== 'admin'">
+    <nav class="nav-links" :class="{ 'mobile-open': isMobileMenuOpen }" v-if="!isAdminRoute && (!user || user.account_type !== 'admin')">
       <div class="nav-overlay" @click="closeMobileMenu"></div>
       <div class="nav-container">
         <div class="nav-header">
@@ -40,13 +40,13 @@
     </nav>
 
     <!-- Desktop Navigation Links -->
-    <div class="desktop-nav-links" v-if="!user || user.account_type !== 'admin'">
+    <div class="desktop-nav-links" v-if="!isAdminRoute && (!user || user.account_type !== 'admin')">
       <NuxtLink to="/home" :class="{ 'active': isActiveRoute('/home') }">Home</NuxtLink>
       <NuxtLink to="/products" :class="{ 'active': isActiveRoute('/products') }">Products</NuxtLink>
     </div>
 
     <!-- Account Actions -->
-    <div class="header-actions">
+    <div class="header-actions" v-if="!isAdminRoute">
       <!-- Account Actions -->
       <div class="auth-actions">
         <!-- User account dropdown (when logged in) -->
@@ -138,6 +138,7 @@ const {
   userDropdownRef,
   currentRoute,
   isMobileMenuOpen,
+  isAdminRoute,
 
   // Methods
   toggleUserDropdown,
