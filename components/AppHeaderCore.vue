@@ -1,8 +1,7 @@
 <template>
   <header class="app-header" :class="{ 'mobile-nav-open': isMobileMenuOpen }">
     <div class="logo">
-      <NuxtLink v-if="!user || user.account_type !== 'admin'" to="/">Nixty</NuxtLink>
-      <span v-else class="logo-text">Nixty</span>
+      <span class="logo-text">Nixty</span>
     </div>
 
     <!-- Mobile Menu Toggle Button -->
