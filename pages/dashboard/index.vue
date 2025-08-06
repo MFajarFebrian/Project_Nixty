@@ -49,14 +49,14 @@
               </div>
             </div>
             
-            <!-- Right side: Horizontal License Chart -->
+            <!-- Right side: Horizontal Stock Chart -->
             <div class="license-chart-right" v-if="!loadingCharts && safeChartData.length > 0">
-              <h3><i class="fas fa-chart-bar"></i> License Distribution</h3>
+              <h3><i class="fas fa-chart-bar"></i> Stock Distribution</h3>
               <div class="license-bars-horizontal">
                 <div v-for="(item, index) in safeChartData" :key="index" class="license-bar-horizontal">
                   <div class="license-product-label-left">
                     <span class="license-product-name-full">{{ item.productName }}</span>
-                    <span class="license-count-text">{{ item.totalLicenses }} licenses</span>
+                    <span class="license-count-text">{{ item.totalLicenses }} units</span>
                   </div>
                   <div class="license-bar-horizontal-container">
                     <div class="license-bar-horizontal-fill" :style="{ width: item.percentage + '%' }"></div>
@@ -267,30 +267,33 @@ const lowStockProducts = computed(() => {
   }).slice(0, 10); // Show max 10
 });
 
-// License distribution chart data
+// License distribution chart data - using actual stock instead of total licenses
 const licenseChartData = computed(() => {
   if (!products.value.length) return [];
   
-  // Get products with license data
-  const productsWithLicenses = products.value
-    .filter(p => (p.total_licenses || 0) > 0)
-    .map(p => ({
-      name: p.name,
-      total: p.total_licenses || 0,
-      available: p.stock || p.available_stock || 0
-    }));
+  // Get products with actual stock data (same logic as Products Requiring Attention)
+  const productsWithStock = products.value
+    .map(p => {
+      const stock = p.stock || p.available_stock || 0;
+      return {
+        name: p.name,
+        total: stock, // Use actual stock instead of total_licenses
+        available: stock
+      };
+    })
+    .filter(p => p.total >= 0); // Include all products, even with 0 stock
   
-  if (!productsWithLicenses.length) return [];
+  if (!productsWithStock.length) return [];
   
-  // Calculate percentages based on max licenses
-  const maxLicenses = Math.max(...productsWithLicenses.map(p => p.total));
+  // Calculate percentages based on max stock
+  const maxStock = Math.max(...productsWithStock.map(p => p.total), 1); // Ensure at least 1 for percentage calculation
   
-  return productsWithLicenses
-    .sort((a, b) => b.total - a.total) // Sort by total licenses desc
+  return productsWithStock
+    .sort((a, b) => b.total - a.total) // Sort by actual stock desc
     .slice(0, 10) // Show top 10 products
     .map(product => ({
       ...product,
-      percentage: Math.max((product.total / maxLicenses) * 100, 5) // Minimum 5% width
+      percentage: Math.max((product.total / maxStock) * 100, 5) // Minimum 5% width
     }));
 });
 
@@ -318,7 +321,7 @@ const safeChartData = computed(() => {
   }
   return licenseChartData.value.map(item => ({
     productName: item.name || 'Unknown',
-    totalLicenses: item.total || 0,
+    totalLicenses: item.total || 0, // Now represents actual stock, not licenses
     percentage: item.percentage || 0
   }));
 });
