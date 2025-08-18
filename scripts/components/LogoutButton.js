@@ -13,17 +13,20 @@ export const useLogoutButton = (props) => {
     };
   });
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     const isAdmin = user.value?.account_type === 'admin';
     
-    // Use the logout function from useAuth
-    logout();
+    // Use the logout function from useAuth and wait for it to complete
+    await logout();
+    
+    // Small delay to ensure logout is processed
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Redirect admin to admin login page, others to specified redirectTo or default
     if (isAdmin) {
-      router.push('/admin');
+      await router.push('/admin');
     } else {
-      router.push(props.redirectTo);
+      await router.push(props.redirectTo);
     }
   };
 

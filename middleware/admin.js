@@ -14,14 +14,22 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     console.log('Admin middleware: Checking access...', {
       isReady: isReady.value,
       hasUser: !!user.value,
-      userType: user.value?.account_type
+      userType: user.value?.account_type,
+      fromPath: from?.path,
+      toPath: to?.path
     })
+
+    // If we're coming from a logout action (navigating to /admin), don't interfere
+    if (to.path === '/admin' && from?.path?.startsWith('/dashboard')) {
+      console.log('Admin middleware: Logout navigation detected, allowing through')
+      return
+    }
 
     // Initialize user if not ready
     if (!isReady.value) {
-      initUser()
-      // Wait longer for initialization
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await initUser()
+      // Wait for initialization
+      await new Promise(resolve => setTimeout(resolve, 200))
     }
 
     console.log('Admin middleware: After init check...', {
@@ -33,12 +41,14 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     // Jika user belum login, redirect ke halaman login admin
     if (!user.value) {
       console.log('Admin middleware: No user found, redirecting to admin login')
-      error('Please login first to access admin dashboard')
-      return navigateTo('/admin')
+      if (to.path !== '/admin') {
+        error('Please login first to access admin dashboard')
+        return navigateTo('/admin')
+      }
     }
 
     // Jika user sudah login tapi bukan admin, redirect ke home
-    if (user.value.account_type !== 'admin') {
+    if (user.value && user.value.account_type !== 'admin') {
       console.log('Admin middleware: User is not admin, redirecting to home')
       error('Access denied. Admin privileges required.')
       return navigateTo('/home')

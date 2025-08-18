@@ -118,18 +118,24 @@ export const useAppHeader = (emit) => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     const isAdmin = user.value?.account_type === 'admin';
-    logout();
+    
+    // Close dropdown first
+    isUserDropdownOpen.value = false;
+    
+    // Wait for logout to complete
+    await logout();
+    
+    // Small delay to ensure logout is processed
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Redirect admin to admin login page, regular users to home
     if (isAdmin) {
-      router.push('/admin');
+      await router.push('/admin');
     } else {
-      router.push('/');
+      await router.push('/');
     }
-    
-    isUserDropdownOpen.value = false;
   };
 
 
