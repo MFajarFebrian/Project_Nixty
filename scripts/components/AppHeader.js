@@ -122,9 +122,9 @@ export const useAppHeader = (emit) => {
     const isAdmin = user.value?.account_type === 'admin';
     logout();
     
-    // Redirect admin to home with login modal, regular users to home
+    // Redirect admin to admin login page, regular users to home
     if (isAdmin) {
-      router.push('/?modal=login');
+      router.push('/admin');
     } else {
       router.push('/');
     }

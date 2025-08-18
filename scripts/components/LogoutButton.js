@@ -2,7 +2,7 @@ import { computed } from 'vue';
 
 export const useLogoutButton = (props) => {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   // Compute CSS class based on size prop
   const buttonSize = computed(() => {
@@ -14,11 +14,17 @@ export const useLogoutButton = (props) => {
   });
 
   const handleLogout = () => {
+    const isAdmin = user.value?.account_type === 'admin';
+    
     // Use the logout function from useAuth
     logout();
     
-    // Redirect to the specified page (default is login)
-    router.push(props.redirectTo);
+    // Redirect admin to admin login page, others to specified redirectTo or default
+    if (isAdmin) {
+      router.push('/admin');
+    } else {
+      router.push(props.redirectTo);
+    }
   };
 
   return {
