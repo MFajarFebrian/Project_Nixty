@@ -9,16 +9,16 @@
         <button @click="fetchProductData" class="galaxy-button-secondary">Try Again</button>
     </div>
     <div v-else class="product-content">
-      <!-- Product Header -->
+      
       <div class="product-header galaxy-card">
         <h1 class="product-title galaxy-gradient-text">{{ productFamily }}</h1>
         <p class="product-subtitle">Choose the version that suits your needs</p>
       </div>
 
-      <!-- Version Cards Grid -->
+      
       <div class="version-grid">
         <div v-for="product in products" :key="product.id" class="version-card galaxy-card" :class="{ 'out-of-stock': isProductOutOfStock(product) }">
-          <!-- Version Header -->
+          
           <div class="version-header">
             <h2 class="version-title">{{ product.version }}</h2>
             <div class="badge-container">
@@ -27,14 +27,14 @@
             </div>
           </div>
 
-          <!-- Product Image -->
+          
           <div class="version-image-container">
             <img :src="product.image_url || '/placeholder-product.png'" 
                  :alt="product.name" 
                  class="version-image" />
           </div>
 
-          <!-- Version Details -->
+          
           <div class="version-details">
             <p class="version-description">{{ product.short_description }}</p>
             <div class="price-section">
@@ -44,7 +44,7 @@
             </div>
           </div>
 
-          <!-- Action Buttons -->
+          
           <div class="version-actions">
             <button class="buy-now-btn galaxy-button-primary" @click="goToCheckout(product)" :disabled="isProductOutOfStock(product)">
               {{ isProductOutOfStock(product) ? 'Out of Stock' : 'Buy Now' }}
@@ -57,7 +57,7 @@
         </div>
       </div>
 
-      <!-- Product Description -->
+      
       <div v-if="selectedProduct" class="product-details galaxy-card">
         <h3 class="details-title">Product Details</h3>
         <div v-html="selectedProduct.description" class="details-content"></div>
@@ -78,7 +78,7 @@ const isLoading = ref(true);
 const error = ref(null);
 const product = ref(null);
 
-// Compute the product family name (without version)
+
 const productFamily = computed(() => {
   if (products.value.length === 0) return '';
   return products.value[0].name.split(' ').slice(0, -1).join(' ');
@@ -99,20 +99,20 @@ const fetchProductData = async () => {
     });
     console.log('API Response:', response);
 
-    // Handle different response formats
+
     if (response.success && response.product && Array.isArray(response.versions)) {
-      // New API format
+
       product.value = response.product;
       products.value = response.versions;
     } else if (response.product && Array.isArray(response.versions)) {
-      // Direct format
+
       product.value = response.product;
       products.value = response.versions;
     } else {
       throw new Error('Invalid product data received');
     }
 
-    // Set the newest version as selected by default or based on productId
+
     if (route.query.productId) {
       const targetVersion = products.value.find(v => v.id == route.query.productId);
       if (targetVersion) {
@@ -139,18 +139,18 @@ const isProductOutOfStock = (product) => {
 
 const showDetails = (product) => {
   selectedProduct.value = product;
-  // Smooth scroll to details section
+
   document.querySelector('.product-details')?.scrollIntoView({ behavior: 'smooth' });
 };
 
 const goToCheckout = (product) => {
-  // Prevent checkout if product is out of stock
+
   if (isProductOutOfStock(product)) {
     console.warn('Cannot checkout out of stock product');
     return;
   }
   
-  // Use the main product slug if available, otherwise use the current route slug
+
   const productSlug = product.slug || route.params.slug;
   router.push(`/product/${productSlug}/checkout`);
 };

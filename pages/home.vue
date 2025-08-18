@@ -1,7 +1,6 @@
 <template>
   <div class="home-page">
     <div class="hero-announcements-container">
-      <!-- Static Hero Section -->
       <div class="hero-carousel-container">
         <div class="hero-carousel">
           <div class="carousel-slide active">
@@ -19,7 +18,6 @@
         </div>
       </div>
 
-      <!-- Announcements Section (40% right) -->
       <div class="announcements-section">
         <div class="section-header">
           <h2 class="section-title">Latest Updates</h2>
@@ -37,7 +35,7 @@
       </div>
     </div>
 
-    <!-- FAQ Section -->
+    
     <InfoSection title="FAQ">
       <div class="faq-content">
         <div class="faq-block">
@@ -74,7 +72,6 @@
 import { useImageLoader } from '~/composables/useImageLoader';
 import InfoSection from '~/components/InfoSection.vue';
 
-// Apply user-only middleware to prevent admin access
 definePageMeta({
   middleware: 'user-only'
 });

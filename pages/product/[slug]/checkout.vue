@@ -281,9 +281,20 @@ const initiatePayment = async () => {
     if (response.token) {
       window.snap.pay(response.token, {
         onSuccess: function(result){
-          alert("Payment successful!");
-          console.log(result);
-          router.push('/');
+          console.log("Payment successful!", result);
+          alert("Payment successful! Redirecting...");
+          
+          // Add delay before redirecting to allow user to see the success message
+          setTimeout(() => {
+            router.push({
+              path: '/payment/finish',
+              query: {
+                order_id: result.order_id,
+                status_code: result.status_code,
+                transaction_status: result.transaction_status
+              }
+            });
+          }, 2000);
         },
         onPending: function(result){
           alert("Payment pending. Please complete your payment.");
@@ -294,7 +305,7 @@ const initiatePayment = async () => {
           console.log(result);
         },
         onClose: function(){
-          alert('Payment window closed. Your order is not complete.');
+          console.log('Payment window closed. Your order is not complete.');
         }
       });
     } else {

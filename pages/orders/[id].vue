@@ -8,20 +8,17 @@
         </NuxtLink>
       </div>
 
-      <!-- Loading State -->
       <div v-if="isLoading" class="loading-container">
         <div class="loading-spinner"></div>
         <p>Loading order details...</p>
       </div>
-
-      <!-- Error State -->
+ 
       <div v-else-if="error" class="error-container">
         <i class="fas fa-exclamation-triangle"></i>
         <p>{{ error }}</p>
         <button @click="fetchOrderDetails" class="galaxy-button-primary">Try Again</button>
       </div>
 
-      <!-- Order Details -->
       <div v-else-if="order" class="order-details-container">
         <div class="order-card galaxy-card">
           <div class="order-header">
@@ -65,11 +62,9 @@
               </div>
             </div>
 
-            <!-- License Information -->
             <div class="section" v-if="order.status === 'completed' && order.licenses && order.licenses.length > 0">
               <h3>License Information ({{ order.licenses.length }} License{{ order.licenses.length > 1 ? 's' : '' }})</h3>
               
-              <!-- Loop through each license -->
               <div v-for="(license, index) in order.licenses" :key="index" class="license-card" :class="{ 'multiple-license': order.licenses.length > 1 }">
                 <div class="license-status">
                   <i class="fas fa-key"></i>
@@ -91,7 +86,6 @@
                   </div>
                 </div>
 
-                <!-- License Details based on type -->
                 <div v-if="license.license_type === 'product_key' && license.product_key" class="license-details">
                   <div class="license-key-section">
                     <h4>Product Key</h4>
@@ -136,7 +130,6 @@
               </div>
             </div>
 
-            <!-- No License Information for Completed Orders -->
             <div class="section" v-if="order.status === 'completed' && (!order.licenses || order.licenses.length === 0)">
               <h3>License Information</h3>
               <div class="license-card">
@@ -150,7 +143,6 @@
               </div>
             </div>
 
-            <!-- Payment Gateway Logs -->
             <div class="section" v-if="filteredPaymentLogs.length > 0">
               <h3>Payment Information</h3>
               <div class="payment-logs">
@@ -161,7 +153,6 @@
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>
@@ -188,7 +179,7 @@ const error = ref(null)
 const showLicenseKey = ref({}) // Change to object for multiple licenses
 const showPassword = ref({}) // Change to object for multiple licenses
 
-// Filter payment logs to exclude unwanted fields
+
 const filteredPaymentLogs = computed(() => {
   const excludedKeys = [
     'midtrans_response', 
@@ -200,7 +191,7 @@ const filteredPaymentLogs = computed(() => {
   return paymentLogs.value.filter(log => !excludedKeys.includes(log.key))
 })
 
-// Format date helper
+
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -212,7 +203,7 @@ const formatDate = (dateString) => {
   })
 }
 
-// Get status class helper
+
 const getStatusClass = (status) => {
   switch (status) {
     case 'completed': return 'status-success'
@@ -222,7 +213,7 @@ const getStatusClass = (status) => {
   }
 }
 
-// Get status text helper
+
 const getStatusText = (status) => {
   switch (status) {
     case 'completed': return 'Completed'
@@ -232,7 +223,7 @@ const getStatusText = (status) => {
   }
 }
 
-// Format license type
+
 const formatLicenseType = (type) => {
   switch (type) {
     case 'product_key': return 'Product Key'
@@ -242,9 +233,9 @@ const formatLicenseType = (type) => {
 }
 
 
-// Format log key
+
 const formatLogKey = (key) => {
-  // Special handling for specific keys
+
   if (key === 'midtrans_order_id') {
     return 'Order ID'
   }
@@ -252,17 +243,17 @@ const formatLogKey = (key) => {
   return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 
-// Toggle license key visibility for specific license
+
 const toggleLicenseKey = (index) => {
   showLicenseKey.value[index] = !showLicenseKey.value[index]
 }
 
-// Toggle password visibility for specific license
+
 const togglePassword = (index) => {
   showPassword.value[index] = !showPassword.value[index]
 }
 
-// Copy to clipboard
+
 const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text)
@@ -272,7 +263,7 @@ const copyToClipboard = async (text) => {
   }
 }
 
-// Fetch order details
+
 const fetchOrderDetails = async () => {
   if (!user.value) {
     error.value = 'Please log in to view order details'
@@ -305,7 +296,7 @@ const fetchOrderDetails = async () => {
 }
 
 
-// Initialize on mount
+
 onMounted(async () => {
   try {
     isLoading.value = true
@@ -323,7 +314,7 @@ onMounted(async () => {
   }
 })
 
-// Set page title
+
 useHead({
   title: `Order #${orderId}`
 })

@@ -549,12 +549,21 @@
       const originalPay = window.snap.pay;
       
       window.snap.pay = function(token, options) {
-        // Store current transaction info
+        // Store current transaction info and preserve original callbacks
         if (options && options.onSuccess) {
           const originalOnSuccess = options.onSuccess;
           options.onSuccess = function(result) {
             window.snap.currentTransaction = result;
             return originalOnSuccess(result);
+          };
+        }
+        
+        // Preserve original onClose callback behavior
+        if (options && options.onClose) {
+          const originalOnClose = options.onClose;
+          options.onClose = function() {
+            console.log('Midtrans modal closed by user');
+            return originalOnClose();
           };
         }
         

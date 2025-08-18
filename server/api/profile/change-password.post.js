@@ -27,15 +27,6 @@ export default defineEventHandler(async (event) => {
       });
     }
     
-    // Check password complexity (at least one uppercase, one lowercase, one number)
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-    if (!passwordRegex.test(newPassword)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'New password must contain at least one uppercase letter, one lowercase letter, and one number'
-      });
-    }
-    
     // Get current user data including password
     const [rows] = await db.query(
       'SELECT password FROM nixty.users WHERE id = ?',

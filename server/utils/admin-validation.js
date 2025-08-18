@@ -20,7 +20,7 @@ export const TABLE_VALIDATION_RULES = {
     required: ['email'],
     email: ['email'],
     minLength: {
-      password: 6,
+      password: 8,
       name: 2
     },
     maxLength: {
@@ -131,7 +131,7 @@ export const TABLE_VALIDATION_RULES = {
     minLength: {
       product_key: 5,
       email: 5,
-      password: 6,
+      password: 8,
       product_name: 2
     },
     maxLength: {

@@ -108,3 +108,14 @@ a:hover {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--galaxy-aurora-cyan);
 }
+
+/* Text selection styling */
+::selection {
+  background: var(--galaxy-cosmic-blue);
+  color: var(--galaxy-starlight);
+}
+
+::-moz-selection {
+  background: var(--galaxy-cosmic-blue);
+  color: var(--galaxy-starlight);
+}

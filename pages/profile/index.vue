@@ -40,7 +40,7 @@
         <div class="profile-details">
           <h3>Account Details</h3>
           
-          <!-- Name Field -->
+          
           <div class="detail-item editable">
             <span class="detail-label">Name:</span>
             <div class="detail-value-container">
@@ -69,7 +69,7 @@
             </div>
           </div>
           
-          <!-- Email Field -->
+          
           <div class="detail-item editable">
             <span class="detail-label">Email:</span>
             <div class="detail-value-container">
@@ -99,7 +99,7 @@
             </div>
           </div>
           
-          <!-- Phone Field -->
+          
           <div class="detail-item editable">
             <span class="detail-label">Phone Number:</span>
             <div class="detail-value-container">
@@ -129,33 +129,57 @@
             </div>
           </div>
           
-          <!-- Change Password Field -->
+          
           <div class="detail-item editable">
             <span class="detail-label">Change Password:</span>
             <div class="detail-value-container">
-              <input 
-                v-if="editingField === 'changePassword'" 
-                v-model="editValues.changePassword" 
-                @blur="saveField('changePassword')"
-                @keyup.enter="$event.target.blur()"
-                @keyup.escape="cancelEdit('changePassword')"
-                class="edit-input"
-                :class="{ 'saving': savingField === 'changePassword' }"
-                :disabled="savingField === 'changePassword'"
-                type="password"
-                placeholder="Enter new password"
-                ref="changePasswordInput"
-              />
+              <div v-if="editingField === 'changePassword'" class="password-change-form">
+                <input 
+                  v-model="editValues.currentPassword" 
+                  class="edit-input password-input"
+                  :class="{ 'saving': savingField === 'changePassword' }"
+                  :disabled="savingField === 'changePassword'"
+                  type="password"
+                  placeholder="Current password"
+                  ref="currentPasswordInput"
+                />
+                <input 
+                  v-model="editValues.newPassword" 
+                  class="edit-input password-input"
+                  :class="{ 'saving': savingField === 'changePassword' }"
+                  :disabled="savingField === 'changePassword'"
+                  type="password"
+                  placeholder="New password"
+                  ref="newPasswordInput"
+                />
+                <div class="password-actions">
+                  <button 
+                    @click="saveField('changePassword')"
+                    class="password-save-btn"
+                    :disabled="savingField === 'changePassword' || !editValues.currentPassword || !editValues.newPassword"
+                  >
+                    <i v-if="savingField === 'changePassword'" class="fas fa-spinner fa-spin"></i>
+                    <i v-else class="fas fa-check"></i>
+                    Save
+                  </button>
+                  <button 
+                    @click="cancelEdit('changePassword')"
+                    class="password-cancel-btn"
+                    :disabled="savingField === 'changePassword'"
+                  >
+                    <i class="fas fa-times"></i>
+                    Cancel
+                  </button>
+                </div>
+              </div>
               <span v-else class="detail-value">••••••••</span>
               <button 
+                v-if="editingField !== 'changePassword'"
                 @click="startEdit('changePassword')"
                 class="edit-icon-btn"
-                :class="{ 'saving': savingField === 'changePassword' }"
-                :disabled="savingField === 'changePassword' || editingField === 'changePassword'"
-                :title="savingField === 'changePassword' ? 'Saving...' : 'Change password'"
+                :title="'Change password'"
               >
-                <i v-if="savingField === 'changePassword'" class="fas fa-spinner fa-spin"></i>
-                <i v-else class="fas fa-edit"></i>
+                <i class="fas fa-edit"></i>
               </button>
             </div>
           </div>
@@ -170,7 +194,7 @@
       </template>
     </ClientOnly>
 
-    <!-- Auth Modal -->
+    
     <AuthModal
       v-if="isAuthModalOpen"
       :is-open="isAuthModalOpen"
@@ -196,18 +220,20 @@ const isLoading = ref(true);
 const error = ref(null);
 const isAuthModalOpen = ref(false);
 
-// Editing functionality
+
 const editingField = ref(null);
 const editValues = ref({
-  changePassword: ''
+  currentPassword: '',
+  newPassword: ''
 });
 const savingField = ref(null);
 const nameInput = ref(null);
 const emailInput = ref(null);
 const phoneInput = ref(null);
-const changePasswordInput = ref(null);
+const currentPasswordInput = ref(null);
+const newPasswordInput = ref(null);
 
-// Start editing a field
+
 const startEdit = async (field) => {
   if (editingField.value && editingField.value !== field) {
     cancelEdit(editingField.value);
@@ -215,57 +241,61 @@ const startEdit = async (field) => {
   
   editingField.value = field;
   
-  // Initialize edit value based on field type
+
   if (field === 'changePassword') {
-    editValues.value.changePassword = '';
+    editValues.value.currentPassword = '';
+    editValues.value.newPassword = '';
   } else {
     editValues.value[field] = user.value[field] || '';
   }
   
   await nextTick();
   
-  // Focus the input based on field
+
   if (field === 'name' && nameInput.value) {
     nameInput.value.focus();
   } else if (field === 'email' && emailInput.value) {
     emailInput.value.focus();
   } else if (field === 'phone' && phoneInput.value) {
     phoneInput.value.focus();
-  } else if (field === 'changePassword' && changePasswordInput.value) {
-    changePasswordInput.value.focus();
+  } else if (field === 'changePassword' && currentPasswordInput.value) {
+    currentPasswordInput.value.focus();
   }
 };
 
-// Cancel editing a field
+
 const cancelEdit = (field) => {
   if (editingField.value === field) {
     editingField.value = null;
     if (field === 'changePassword') {
-      editValues.value.changePassword = '';
+      editValues.value.currentPassword = '';
+      editValues.value.newPassword = '';
     } else {
       editValues.value[field] = user.value[field] || '';
     }
   }
 };
 
-// Save a field
+
 const saveField = async (field) => {
-  // Prevent duplicate saves
+
   if (savingField.value === field) {
     return;
   }
   
-  // Set saving state for the field being edited
+
   savingField.value = field;
   
   try {
-    // Handle password change separately
+
     if (field === 'changePassword') {
-      if (!validatePassword(editValues.value.changePassword)) {
-        showError('Password must be at least 6 characters long');
-        // Exit edit mode on validation failure
-        editingField.value = null;
-        editValues.value.changePassword = '';
+      if (!editValues.value.currentPassword) {
+        showError('Current password is required');
+        return;
+      }
+      
+      if (!validatePassword(editValues.value.newPassword)) {
+        showError('New password must be at least 8 characters long');
         return;
       }
       
@@ -276,41 +306,40 @@ const saveField = async (field) => {
           'x-user-session': JSON.stringify(user.value)
         },
         body: {
-          newPassword: editValues.value.changePassword
+          currentPassword: editValues.value.currentPassword,
+          newPassword: editValues.value.newPassword
         }
       });
       
       if (response.success) {
         success('🔐 Password changed successfully!');
         editingField.value = null;
-        editValues.value.changePassword = '';
+        editValues.value.currentPassword = '';
+        editValues.value.newPassword = '';
       } else {
         showError(response.message || 'Failed to change password');
-        // Exit edit mode on API failure
-        editingField.value = null;
-        editValues.value.changePassword = '';
       }
       return;
     }
     
-    // Handle regular fields - validate before making API call
+
     if (!editValues.value[field] && field !== 'phone') {
       showError(`${field.charAt(0).toUpperCase() + field.slice(1)} cannot be empty`);
-      // Exit edit mode and restore original value on validation failure
+
       cancelEdit(field);
       return;
     }
     
     if (field === 'email' && !validateEmail(editValues.value[field])) {
       showError('Please enter a valid email address');
-      // Exit edit mode and restore original value on validation failure
+
       cancelEdit(field);
       return;
     }
     
-    // Check if value actually changed
+
     if (editValues.value[field] === user.value[field]) {
-      // No change, just exit edit mode
+
       editingField.value = null;
       return;
     }
@@ -327,12 +356,12 @@ const saveField = async (field) => {
     });
     
     if (response.success) {
-      // Update local user data
+
       const updatedUser = { ...user.value, [field]: editValues.value[field] };
       setUser(updatedUser);
       editingField.value = null;
       
-      // Show success message based on field type
+
       const fieldMessages = {
         'name': '👤 Name updated successfully!',
         'email': '📧 Email updated successfully!',
@@ -341,29 +370,29 @@ const saveField = async (field) => {
       success(fieldMessages[field] || 'Profile updated successfully!');
     } else {
       showError(response.message || 'Failed to update profile');
-      // Restore original value and exit edit mode on API failure
+
       cancelEdit(field);
     }
   } catch (err) {
     console.error('Error updating profile:', err);
     showError('An error occurred while updating your profile');
-    // Restore original value and exit edit mode on error
+
     cancelEdit(field);
   } finally {
-    // Clear saving state
+
     savingField.value = null;
   }
 };
 
-// Validate email format
+
 const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
 
-// Validate password
+
 const validatePassword = (newPassword) => {
-  return newPassword && newPassword.length >= 6;
+  return newPassword && newPassword.length >= 8;
 };
 
 const fetchProfileData = async () => {
@@ -372,11 +401,11 @@ const fetchProfileData = async () => {
   try {
     initUser(); // Ensure user data is loaded from session storage
     if (!user.value) {
-      // If user is still null after initUser, it means not logged in
+
       return;
     }
     
-    // Fetch fresh user data from database
+
     const response = await $fetch('/api/profile', {
       method: 'GET',
       headers: {
@@ -385,7 +414,7 @@ const fetchProfileData = async () => {
     });
     
     if (response.success) {
-      // Update user data with fresh data from database
+
       setUser(response.user);
     } else {
       error.value = response.message || 'Failed to fetch profile data';
@@ -400,7 +429,7 @@ const fetchProfileData = async () => {
 
 const handleLogout = () => {
   logout();
-  // Redirect to home or login page after logout
+
   navigateTo('/');
 };
 
@@ -410,11 +439,11 @@ const openAuthModal = () => {
 
 const closeAuthModal = () => {
   isAuthModalOpen.value = false;
-  // Re-fetch profile data in case user logged in
+
   fetchProfileData();
 };
 
-// Set page title
+
 useHead({
   title: 'Profile'
 });
@@ -574,8 +603,8 @@ onMounted(() => {
 
 .edit-input:focus {
   outline: none;
-  border-color: var(--galaxy-pulsar-pink);
-  box-shadow: 0 0 0 2px rgba(255, 102, 204, 0.2);
+  border-color: var(--galaxy-cosmic-blue);
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.3);
 }
 
 .edit-input.error {
@@ -624,6 +653,66 @@ onMounted(() => {
 .edit-input:disabled {
   background: rgba(255, 255, 255, 0.05);
   color: var(--galaxy-cloud-gray);
+  cursor: not-allowed;
+}
+
+.password-change-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--galaxy-space-sm);
+  align-items: flex-end;
+}
+
+.password-input {
+  width: 200px;
+}
+
+.password-actions {
+  display: flex;
+  gap: var(--galaxy-space-xs);
+}
+
+.password-save-btn,
+.password-cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--galaxy-space-xs);
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: var(--galaxy-radius-sm);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all var(--galaxy-transition-fast);
+}
+
+.password-save-btn {
+  background: var(--galaxy-comet-green);
+  color: var(--galaxy-starlight);
+}
+
+.password-save-btn:hover:not(:disabled) {
+  background: rgba(77, 208, 113, 0.8);
+  transform: translateY(-1px);
+}
+
+.password-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.password-cancel-btn {
+  background: var(--galaxy-pulsar-pink);
+  color: var(--galaxy-starlight);
+}
+
+.password-cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 102, 204, 0.8);
+  transform: translateY(-1px);
+}
+
+.password-cancel-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 

@@ -14,27 +14,24 @@
       </button>
     </div>
     
-    <!-- Loading State -->
     <div v-if="isLoading" class="loading-container">
       <div class="loading-spinner"></div>
       <p>Loading your orders...</p>
     </div>
-    
-    <!-- Error State -->
+  
     <div v-else-if="error" class="error-container">
       <i class="fas fa-exclamation-triangle"></i>
       <p>{{ error }}</p>
       <button @click="fetchTransactions" class="galaxy-button-primary">Try Again</button>
     </div>
     
-    <!-- No Orders State -->
     <div v-else-if="transactions.length === 0" class="no-transactions">
       <i class="fas fa-shopping-cart"></i>
       <h3>No Orders Yet</h3>
       <p>You don't have any orders yet. Start shopping to see your orders here.</p>
     </div>
     
-    <!-- Orders List -->
+    
     <div v-else class="transactions-list">
       <div v-for="transaction in transactions" :key="transaction.id" class="transaction-card galaxy-card">
         <div class="transaction-header">
@@ -97,7 +94,7 @@ import { useUtils } from '~/composables/useUtils'
 const { user, initUser } = useAuth()
 const { formatCurrency } = useUtils()
 
-// Reactive data
+
 const transactions = ref([])
 const isLoading = ref(true)
 const error = ref(null)
@@ -105,7 +102,7 @@ const isSyncing = ref(false)
 const isCheckingStatus = reactive({})
 const isRepaying = reactive({})
 
-// Format date helper
+
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -117,7 +114,7 @@ const formatDate = (dateString) => {
   })
 }
 
-// Get status class helper
+
 const getStatusClass = (status) => {
   switch (status) {
     case 'completed': return 'status-success'
@@ -127,7 +124,7 @@ const getStatusClass = (status) => {
   }
 }
 
-// Get status text helper
+
 const getStatusText = (status) => {
   switch (status) {
     case 'completed': return 'Completed'
@@ -137,15 +134,15 @@ const getStatusText = (status) => {
   }
 }
 
-// Get product name helper
+
 const getProductName = (transaction) => {
-  // Try to get product name from different possible sources
+
   if (transaction.product_name) return transaction.product_name
   if (transaction.product && transaction.product.name) return transaction.product.name
   return `Product #${transaction.product_id}`
 }
 
-// Fetch transactions function
+
 const fetchTransactions = async () => {
   if (!user.value) {
     error.value = 'Please log in to view your orders'
@@ -172,7 +169,7 @@ const fetchTransactions = async () => {
   }
 }
 
-// Check Midtrans status function
+
 const checkMidtransStatus = async (transactionId) => {
   if (!user.value) return
   
@@ -190,7 +187,7 @@ const checkMidtransStatus = async (transactionId) => {
     })
     
     if (response.success) {
-      // Refresh transactions to get updated status
+
       await fetchTransactions()
     }
   } catch (err) {
@@ -200,7 +197,7 @@ const checkMidtransStatus = async (transactionId) => {
   }
 }
 
-// Sync all transactions function
+
 const syncAllTransactions = async (autoSync = false) => {
   if (!user.value) return
   
@@ -215,7 +212,7 @@ const syncAllTransactions = async (autoSync = false) => {
     })
     
     if (response.success) {
-      // Refresh transactions to get updated statuses
+
       await fetchTransactions()
     }
   } catch (err) {
@@ -227,7 +224,7 @@ const syncAllTransactions = async (autoSync = false) => {
 
 
 
-// Initialize on mount
+
 onMounted(async () => {
   await initUser()
   if (user.value) {
@@ -238,7 +235,7 @@ onMounted(async () => {
   }
 })
 
-// Set page title
+
 useHead({
   title: 'My Orders'
 })

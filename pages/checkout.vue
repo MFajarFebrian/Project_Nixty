@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- Login warning modal -->
+    
     <div v-if="showLoginWarning" class="modal-overlay">
       <div class="modal-content">
         <h2>Login Required</h2>
@@ -9,7 +9,7 @@
       </div>
     </div>
 
-    <!-- Auth Modal -->
+    
     <AuthModal
       v-if="isAuthModalOpen"
       :is-open="isAuthModalOpen"
@@ -17,16 +17,16 @@
       @close="closeAuthModal"
     />
 
-    <!-- Other checkout content -->
+    
     <div v-if="!showLoginWarning">
       <div class="checkout-page">
-        <!-- Loading State -->
+        
         <div v-if="isLoading" class="loading-state">
           <div class="loading-spinner"></div>
           <p>Loading product details...</p>
         </div>
         
-        <!-- Error State -->
+        
         <div v-else-if="error" class="error-state">
           <div class="error-icon">!</div>
           <h2>Error</h2>
@@ -34,10 +34,10 @@
           <button class="galaxy-button-primary retry-btn" @click="fetchProductDetails">Try Again</button>
         </div>
         
-        <!-- Product Content -->
+        
         <div v-else-if="product" class="product-checkout-container">
           <div class="checkout-grid">
-            <!-- Product Info Section -->
+            
             <div class="product-info galaxy-card">
               <div class="product-image-container">
                 <img 
@@ -62,11 +62,11 @@
               </div>
             </div>
             
-            <!-- Checkout Form Section -->
+            
             <div class="checkout-form galaxy-card">
               <h2>Order Summary</h2>
               
-              <!-- Version Selection -->
+              
               <div class="form-group" v-if="availableVersions.length > 0">
                 <label for="version">Select Version</label>
                 <div class="version-options">
@@ -83,7 +83,7 @@
                 </div>
               </div>
               
-              <!-- Email Field -->
+              
               <div class="form-group">
                 <label for="emailInput">Email for License Delivery</label>
                 <input 
@@ -97,7 +97,7 @@
                   :disabled="!useCustomEmail"
                 />
                 
-                <!-- Simple Checkbox -->
+                
                 <div class="simple-checkbox">
                   <input 
                     type="checkbox" 
@@ -184,7 +184,7 @@
                 <p>Secure payment processing by Midtrans</p>
                 <div class="payment-icons">
                   <img src="https://images.seeklogo.com/logo-png/39/1/quick-response-code-indonesia-standard-qris-logo-png_seeklogo-391791.png" alt="QRIS" class="payment-icon qris-logo" />
-                  <!-- Add more payment icons -->
+                  
                 </div>
               </div>
               
@@ -192,7 +192,7 @@
           </div>
         </div>
         
-        <!-- No Product Found -->
+        
         <div v-else class="no-product-found">
           <p>Product not found.</p>
           <button class="galaxy-button-secondary" @click="$router.push('/')">Return to Home</button>
@@ -220,18 +220,18 @@ const quantity = ref(1);
 const selectedVersionId = ref(null);
 const availableVersions = ref([]);
 const customEmail = ref('');
-const useCustomEmail = ref(false); // Toggle for custom email
+const useCustomEmail = ref(false);
 const emailError = ref('');
 const isCalculating = ref(false);
 
-// Handle email input changes
+
 const handleEmailInput = (event) => {
   if (useCustomEmail.value) {
     customEmail.value = event.target.value;
   }
 };
 
-// Log route parameters for debugging
+
 console.log('Checkout page loaded with route query:', route.query);
 
 async function fetchProductDetails() {
@@ -249,7 +249,7 @@ async function fetchProductDetails() {
     console.log('Fetching product details for:', productId ? `ID: ${productId}` : `Slug: ${productSlug}`);
     
     try {
-      // Always use the checkout endpoint with either slug or productId
+
       const response = await $fetch('/api/products/checkout', {
         params: { 
           slug: productSlug,
@@ -265,21 +265,21 @@ async function fetchProductDetails() {
       
       product.value = response.product;
       
-      // Set available versions
+
       if (response.product.versions && response.product.versions.length > 0) {
         availableVersions.value = response.product.versions;
         
-        // If productId is provided, select that specific version
+
         if (productId) {
           const targetVersion = response.product.versions.find(v => v.id === productId);
           if (targetVersion) {
             selectedVersionId.value = targetVersion.id;
           } else {
-            // Fallback to first version if productId not found
+
             selectedVersionId.value = response.product.versions[0].id;
           }
         } else {
-          // Default to first version if no productId
+
           selectedVersionId.value = response.product.versions[0].id;
         }
       } else {
@@ -287,7 +287,7 @@ async function fetchProductDetails() {
           id: product.value.id,
           name: product.value.name,
           version: product.value.version,
-          description: product.value.description, // Add description for fallback version
+          description: product.value.description,
           price: product.value.price,
           image_url: product.value.image_url
         }];
@@ -299,7 +299,7 @@ async function fetchProductDetails() {
       throw new Error(`API error: ${apiError.message || 'Unknown error'}`);
     }
     
-    // Don't parse features globally anymore - will be handled per version
+
     
     console.log('Product data fetched:', product.value);
   } catch (e) {
@@ -318,7 +318,7 @@ const selectedVersionPrice = computed(() => {
   return selectedVersion ? selectedVersion.price : 0;
 });
 
-// Computed property for selected version description
+
 const selectedVersionDescription = computed(() => {
   if (!selectedVersionId.value || !availableVersions.value.length) {
     return product.value?.description || '';
@@ -327,7 +327,7 @@ const selectedVersionDescription = computed(() => {
   return selectedVersion ? (selectedVersion.description || '') : (product.value?.description || '');
 });
 
-// Computed property for selected version image
+
 const selectedVersionImage = computed(() => {
   if (!selectedVersionId.value || !availableVersions.value.length) {
     return product.value?.image_url || '/placeholder-grey.svg';
@@ -336,7 +336,7 @@ const selectedVersionImage = computed(() => {
   return selectedVersion ? selectedVersion.image_url || product.value?.image_url || '/placeholder-grey.svg' : product.value?.image_url || '/placeholder-grey.svg';
 });
 
-// Computed property for selected version name
+
 const selectedVersionName = computed(() => {
   if (!selectedVersionId.value || !availableVersions.value.length) {
     return product.value?.name || '';
@@ -345,7 +345,7 @@ const selectedVersionName = computed(() => {
   return selectedVersion ? selectedVersion.name : product.value?.name || '';
 });
 
-// Computed property for selected version features
+
 const selectedVersionFeatures = computed(() => {
   if (!selectedVersionId.value || !availableVersions.value.length) {
     return [];
@@ -370,14 +370,14 @@ const currentStock = computed(() => {
   return selectedVersion ? selectedVersion.available_stock || 0 : 0;
 });
 
-// Watch for changes in route query
+
 watch(() => route.query, (newQuery) => {
   if (newQuery.productId || newQuery.slug) {
     fetchProductDetails();
   }
 }, { immediate: true });
 
-// Watch for price changes to update total (but only when not in calculating state)
+
 watch(selectedVersionPrice, () => {
   if (!isCalculating.value) {
     updateTotalPrice();
@@ -386,11 +386,11 @@ watch(selectedVersionPrice, () => {
 
 const selectVersion = (version) => {
   selectedVersionId.value = version.id;
-  // Reset quantity when version changes and check stock
+
   if (quantity.value > version.available_stock) {
     quantity.value = Math.max(1, version.available_stock);
   }
-  // Update total price when version changes
+
   updateTotalPrice();
 };
 
@@ -409,14 +409,14 @@ const decreaseQuantity = () => {
 };
 
 const updateTotalPrice = () => {
-  // Ensure quantity is within valid range
+
   if (quantity.value < 1) {
     quantity.value = 1;
   } else if (quantity.value > currentStock.value) {
     quantity.value = currentStock.value;
   }
   
-  // Update display values
+
   displayQuantity.value = quantity.value;
   totalPrice.value = selectedVersionPrice.value * quantity.value;
   isCalculating.value = false;
@@ -427,7 +427,7 @@ const onQuantityFocus = () => {
 };
 
 const onQuantityInput = () => {
-  // Show visual feedback that calculation is pending
+
   isCalculating.value = true;
 };
 
@@ -439,7 +439,7 @@ const validateEmail = (email) => {
 const validateForm = () => {
   emailError.value = '';
   
-  // Only validate custom email if custom email is enabled
+
   if (useCustomEmail.value) {
     if (!customEmail.value.trim()) {
       emailError.value = 'Custom email is required when this option is selected';
@@ -460,7 +460,7 @@ const isPaymentLoading = ref(false);
 const initiatePayment = async () => {
   console.log('🚀 Starting payment initiation...');
   
-  // Check if user is authenticated
+
   if (!user.value) {
     console.error('❌ No user data found - authentication required');
     alert('You must be logged in to complete a purchase. Please log in first.');
@@ -482,7 +482,7 @@ const initiatePayment = async () => {
     return;
   }
   
-  // Check stock availability
+
   if (currentStock.value <= 0) {
     console.error('❌ Product out of stock');
     alert('This product is currently out of stock.');
@@ -495,13 +495,13 @@ const initiatePayment = async () => {
     return;
   }
   
-  // Validate form including email
+
   if (!validateForm()) {
     console.error('❌ Form validation failed');
     return;
   }
   
-  // Get the selected version details
+
   const selectedVersion = availableVersions.value.find(v => v.id === selectedVersionId.value);
   if (!selectedVersion) {
     console.error('❌ No valid product version selected');
@@ -510,10 +510,10 @@ const initiatePayment = async () => {
   }
 
   try {
-    // Set loading state before API call
+
     isPaymentLoading.value = true;
     
-    // Enable mobile session protection
+
     if ($mobileSession) {
       $mobileSession.saveTransactionState({
         active: true,
@@ -523,7 +523,7 @@ const initiatePayment = async () => {
       })
       $mobileSession.preventNavigation(true)
       
-      // Request wake lock on mobile to keep screen active
+
       if (isMobile.value) {
         await $mobileSession.requestWakeLock()
       }
@@ -558,13 +558,13 @@ const initiatePayment = async () => {
     });
 
     if (response.token) {
-      // Store order ID for the custom status checker
+
       if (response.order_id) {
         localStorage.setItem('currentOrderId', response.order_id);
         sessionStorage.setItem('currentOrderId', response.order_id);
       }
 
-      // Update transaction state before opening Midtrans
+
       if ($mobileSession) {
         $mobileSession.saveTransactionState({
           active: true,
@@ -580,13 +580,13 @@ const initiatePayment = async () => {
           isPaymentLoading.value = false;
           console.log("Payment successful!", result);
           
-          // Clean up mobile session on success
+
           if ($mobileSession) {
             $mobileSession.clearTransactionState()
             $mobileSession.releaseWakeLock()
           }
           
-          // Add 5-second delay before redirecting to payment finish page
+
           setTimeout(() => {
             router.push({
               path: '/payment/finish',
@@ -602,7 +602,7 @@ const initiatePayment = async () => {
           isPaymentLoading.value = false;
           console.log("Payment pending", result);
           
-          // Update transaction state for pending
+
           if ($mobileSession) {
             $mobileSession.saveTransactionState({
               active: true,
@@ -612,27 +612,27 @@ const initiatePayment = async () => {
             })
           }
           
-          // Redirect to products page instead of payment/unfinish
-          router.push('/products');
+
+          alert('Payment is pending. Please complete your payment or check your payment status.');
         },
         onError: function(result) {
           isPaymentLoading.value = false;
           console.error("Payment failed", result);
           
-          // Clean up mobile session on error
+
           if ($mobileSession) {
             $mobileSession.clearTransactionState()
             $mobileSession.releaseWakeLock()
           }
           
-          // Redirect to products page instead of payment/error
-          router.push('/products');
+
+          alert('Payment failed. Please try again or choose a different payment method.');
         },
         onClose: function() {
           isPaymentLoading.value = false;
           console.log('Payment window closed by user.');
           
-          // Keep transaction state active on close (user may reopen)
+
           if ($mobileSession) {
             $mobileSession.saveTransactionState({
               active: true,
@@ -642,8 +642,8 @@ const initiatePayment = async () => {
             })
           }
           
-          // Redirect to products page instead of payment/unfinish
-          router.push('/products');
+
+          console.log('User closed payment modal, staying on checkout page');
         }
       });
     } else {
@@ -662,7 +662,7 @@ const { $mobileSession } = useNuxtApp()
 const showLoginWarning = ref(false)
 const isAuthModalOpen = ref(false)
 
-// Mobile session management
+
 let autoSaveCleanup = null
 const isMobile = computed(() => $mobileSession?.isMobile() || false)
 
@@ -671,28 +671,28 @@ const openAuthModal = () => {
 }
 const closeAuthModal = () => {
   isAuthModalOpen.value = false
-  // If user is logged in after modal is closed, hide the warning
+
   if (user.value) showLoginWarning.value = false
 }
 
-// Set page title
+
 useHead({
   title: 'Checkout'
 });
 
 onMounted(async () => {
-  // Initialize mobile features first
+
   if ($mobileSession) {
     await $mobileSession.initializeMobileFeatures()
     
-    // Check for existing transaction state
+
     const transactionState = $mobileSession.getTransactionState()
     if (transactionState.active) {
       console.log('Found active transaction state:', transactionState)
-      // Show resume notification or modal if needed
+
     }
     
-    // Setup auto-save for form data on mobile
+
     if (isMobile.value) {
       autoSaveCleanup = $mobileSession.setupAutoSave(() => ({
         selectedVersionId: selectedVersionId.value,
@@ -700,7 +700,7 @@ onMounted(async () => {
         useCustomEmail: useCustomEmail.value,
         customEmail: customEmail.value,
         totalPrice: totalPrice.value
-      }), 3000) // Save every 3 seconds
+      }), 3000) 
     }
   }
   
@@ -708,16 +708,16 @@ onMounted(async () => {
   if (!user.value) {
     showLoginWarning.value = true
   } else {
-    // Initialize email options
-    useCustomEmail.value = false; // Default to user's email
+
+    useCustomEmail.value = false;
     customEmail.value = '';
     
-    // Try to restore checkout state if available
+
     if ($mobileSession) {
       const savedState = $mobileSession.getCheckoutState()
       if (savedState && savedState.isMobile) {
         console.log('Restoring checkout state:', savedState)
-        // Restore form values if they match current product
+
         if (savedState.selectedVersionId) {
           selectedVersionId.value = savedState.selectedVersionId
         }
@@ -735,7 +735,7 @@ onMounted(async () => {
   }
   fetchProductDetails();
 
-  // Load Midtrans Snap.js only once
+
   if (!document.getElementById('midtrans-snap-script')) {
     const midtransScriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
     const config = useRuntimeConfig();
@@ -748,7 +748,7 @@ onMounted(async () => {
     document.body.appendChild(script);
   }
   
-  // Load official Midtrans enhancement script only once
+
   if (!document.getElementById('midtrans-official-script')) {
     const customScript = document.createElement('script');
     customScript.id = 'midtrans-official-script';

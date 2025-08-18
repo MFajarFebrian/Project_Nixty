@@ -54,7 +54,7 @@
           </div>
         </div>
 
-        <!-- Additional email/password fields for account type -->
+        
         <div v-if="form.quantity > 1 && isAccountType" v-for="index in (form.quantity - 1)" :key="'account-' + index">
           <div class="form-row">
             <div class="form-group">
@@ -101,7 +101,7 @@
           />
         </div>
 
-        <!-- Additional license key fields for product key type -->
+        
         <div v-if="form.quantity > 1 && isProductKeyType" v-for="index in (form.quantity - 1)" :key="'key-' + index" class="form-group">
           <label :for="'licenseKey' + (index + 1)">License Key #{{ index + 1 }} *</label>
           <input 

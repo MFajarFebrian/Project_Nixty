@@ -13,7 +13,6 @@
         <p>Welcome, {{ currentUser?.name || 'Admin' }}!</p>
       </div>
 
-      <!-- Stock Management Section -->
       <div class="dashboard-section dashboard-card">
         <div class="section-header">
           <h2><i class="fas fa-boxes"></i> Stock Overview</h2>
@@ -27,11 +26,8 @@
           </div>
         </div>
         
-        <!-- Stock Overview Container -->
         <div class="stock-overview-container">
-          <!-- Stock Overview Layout -->
           <div class="stock-overview-layout">
-            <!-- Left side: Stats -->
             <div class="stock-stats-left">
               <div class="stock-stats">
                 <div class="stat-item">
@@ -49,7 +45,6 @@
               </div>
             </div>
             
-            <!-- Right side: Horizontal Stock Chart -->
             <div class="license-chart-right" v-if="!loadingCharts && safeChartData.length > 0">
               <h3><i class="fas fa-chart-bar"></i> Stock Distribution</h3>
               <div class="license-bars-horizontal">
@@ -80,7 +75,6 @@
         </div>
       </div>
 
-      <!-- Transaction Chart Section -->
       <div class="dashboard-section dashboard-card">
         <h2><i class="fas fa-chart-line"></i> Transaction Analytics</h2>
         <div class="chart-container" v-if="!loadingCharts">
@@ -99,13 +93,11 @@
             </div>
           </div>
           
-          <!-- Use the existing TransactionChart component with metrics sync -->
           <TransactionChart ref="transactionChartRef" @metrics-updated="handleMetricsUpdate" />
         </div>
         <div v-else class="loading-message">Loading analytics...</div>
       </div>
 
-      <!-- Table Management Section -->
       <div class="dashboard-section dashboard-card">
         <h2><i class="fas fa-database"></i> Data View</h2>
         <div class="table-selector">
@@ -139,7 +131,6 @@
             </table>
           </div>
           
-          <!-- Pagination Controls -->
           <div v-if="totalPages > 1" class="pagination-container">
             <div class="pagination-info">
               <span>Showing {{ paginationInfo.startItem }}-{{ paginationInfo.endItem }} of {{ paginationInfo.totalItems }} records</span>
@@ -195,26 +186,21 @@ const router = useRouter();
 const { user, initUser } = useAuth();
 const { $mobileSession } = useNuxtApp();
 
-// Set page meta
 definePageMeta({
   layout: 'default',
   middleware: 'admin'
 });
 
-// Reactive state
 const products = ref([]);
 const transactions = ref([]);
 const categories = ref([]);
 const users = ref([]);
 
-// Loading states
 const loadingCharts = ref(false);
 const loadingTable = ref(false);
 
-// Chart component reference
 const transactionChartRef = ref(null);
 
-// Table management
 const selectedTable = ref('');
 const tableData = ref([]);
 const tableColumns = ref([]);
@@ -222,7 +208,6 @@ const searchQuery = ref('');
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-// Format currency to Indonesian Rupiah
 const formatRupiah = (amount) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -232,17 +217,16 @@ const formatRupiah = (amount) => {
   }).format(amount);
 };
 
-// Chart metrics from the chart component
 const chartMetrics = ref({
   totalRevenue: formatRupiah(0),
   totalOrders: '0',
   avgOrderValue: formatRupiah(0)
 });
 
-// Computed user for template
+
 const currentUser = computed(() => user.value);
 
-// Stock statistics
+
 const stockStats = computed(() => {
   const totalLicenses = products.value.reduce((sum, p) => {
     const licenses = parseInt(p.total_licenses) || 0;
@@ -259,7 +243,7 @@ const stockStats = computed(() => {
   return { totalLicenses, lowStock, outOfStock };
 });
 
-// Low stock products for attention
+
 const lowStockProducts = computed(() => {
   return products.value.filter(p => {
     const stock = p.stock || p.available_stock || 0;
@@ -267,11 +251,11 @@ const lowStockProducts = computed(() => {
   }).slice(0, 10); // Show max 10
 });
 
-// License distribution chart data - using actual stock instead of total licenses
+
 const licenseChartData = computed(() => {
   if (!products.value.length) return [];
   
-  // Get products with actual stock data (same logic as Products Requiring Attention)
+
   const productsWithStock = products.value
     .map(p => {
       const stock = p.stock || p.available_stock || 0;
@@ -285,7 +269,7 @@ const licenseChartData = computed(() => {
   
   if (!productsWithStock.length) return [];
   
-  // Calculate percentages based on max stock
+
   const maxStock = Math.max(...productsWithStock.map(p => p.total), 1); // Ensure at least 1 for percentage calculation
   
   return productsWithStock
@@ -297,7 +281,7 @@ const licenseChartData = computed(() => {
     }));
 });
 
-// Transaction statistics
+
 const transactionStats = computed(() => {
   const totalRevenue = transactions.value
     .filter(t => t.status === 'completed')
@@ -314,7 +298,7 @@ const transactionStats = computed(() => {
 });
 
 
-// Safe computed properties for templates
+
 const safeChartData = computed(() => {
   if (!licenseChartData.value || !Array.isArray(licenseChartData.value)) {
     return [];
@@ -342,9 +326,6 @@ const safeStockProducts = computed(() => {
 });
 
 
-
-
-// Filtered table data based on search
 const filteredData = computed(() => {
   let data = [];
   
@@ -363,19 +344,19 @@ const filteredData = computed(() => {
   return data;
 });
 
-// Paginated data for display
+
 const paginatedData = computed(() => {
   const startIndex = (currentPage.value - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   return filteredData.value.slice(startIndex, endIndex);
 });
 
-// Total pages for pagination
+
 const totalPages = computed(() => {
   return Math.ceil(filteredData.value.length / itemsPerPage);
 });
 
-// Pagination info
+
 const paginationInfo = computed(() => {
   const startItem = (currentPage.value - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage.value * itemsPerPage, filteredData.value.length);
@@ -386,7 +367,7 @@ const paginationInfo = computed(() => {
   };
 });
 
-// Load products data
+
 const loadProducts = async () => {
   try {
     const response = await adminFetch('/api/admin/tables/products');
@@ -398,7 +379,7 @@ const loadProducts = async () => {
     products.value = [];
   }
 };
-// Load transactions data (from orders table) - for table display
+
 const loadOrders = async () => {
   try {
     const response = await adminFetch('/api/admin/transactions');
@@ -411,7 +392,7 @@ const loadOrders = async () => {
   }
 };
 
-// Load categories data
+
 const loadCategories = async () => {
   try {
     const response = await adminFetch('/api/admin/tables/categories');
@@ -424,7 +405,7 @@ const loadCategories = async () => {
   }
 };
 
-// Load users data
+
 const loadUsers = async () => {
   try {
     const response = await adminFetch('/api/admin/tables/users');
@@ -437,7 +418,7 @@ const loadUsers = async () => {
   }
 };
 
-// Load specific table data
+
 const loadTableData = async () => {
   if (!selectedTable.value) {
     tableData.value = [];
@@ -464,11 +445,11 @@ const loadTableData = async () => {
     
     tableData.value = data;
     
-    // Extract essential columns based on table type
+
     if (data.length > 0) {
       const allColumns = Object.keys(data[0]);
       
-      // Define essential columns for each table
+
       const essentialColumns = {
         orders: ['order_id', 'user_name', 'user_email', 'product_name', 'total', 'status', 'created_at'],
         users: ['id', 'name', 'email', 'account_type']
@@ -487,12 +468,12 @@ const loadTableData = async () => {
   }
 };
 
-// Format column names for display
+
 const formatColumnName = (column) => {
   return column.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
-// Format cell data for display
+
 const formatCellData = (value, column) => {
   if (value === null || value === undefined) return '-';
   
@@ -511,7 +492,7 @@ const formatCellData = (value, column) => {
     }
   }
   
-  // Truncate long text values
+
   if (typeof value === 'string' && value.length > 50) {
     return value.substring(0, 50) + '...';
   }
@@ -520,10 +501,6 @@ const formatCellData = (value, column) => {
 };
 
 
-
-
-
-// Pagination methods
 const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
@@ -542,12 +519,12 @@ const prevPage = () => {
   }
 };
 
-// Reset pagination when search changes
+
 watch(searchQuery, () => {
   currentPage.value = 1;
 });
 
-// Navigation methods
+
 const navigateToAddProduct = () => {
   router.push('/dashboard/add-product');
 };
@@ -556,7 +533,7 @@ const navigateToAddLicense = () => {
   router.push('/dashboard/add-license');
 };
 
-// Handle metrics update from TransactionChart component
+
 const handleMetricsUpdate = (metrics) => {
   chartMetrics.value = {
     totalRevenue: formatRupiah(metrics.totalRevenue || 0),
@@ -565,7 +542,7 @@ const handleMetricsUpdate = (metrics) => {
   };
 };
 
-// Load all data on mount
+
 const loadAllData = async () => {
   loadingCharts.value = true;
   
@@ -583,7 +560,7 @@ const loadAllData = async () => {
   }
 };
 
-// Ensure admin access on mount
+
 onMounted(async () => {
   await initUser();
   
@@ -592,23 +569,23 @@ onMounted(async () => {
     return;
   }
 
-  // Redirect regular users to home
+
   if (user.value && user.value.account_type === 'user') {
     router.push('/home');
     return;
   }
   
-  // Initialize mobile features
+
   if ($mobileSession) {
     await $mobileSession.initializeMobileFeatures();
   }
   
-  // Load dashboard data
+
   await loadAllData();
 });
 
 
-// Set page title and mobile viewport
+
 useHead({
   title: 'Admin Dashboard',
   meta: [

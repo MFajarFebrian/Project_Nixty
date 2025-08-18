@@ -30,7 +30,7 @@
 import { ref, onMounted } from 'vue';
 import ProductCard from '~/components/ProductCard.vue';
 
-// Set page meta - prevent admin access
+
 definePageMeta({
   middleware: 'user-only'
 });
@@ -39,7 +39,7 @@ const allProducts = ref([]);
 const isLoading = ref(true);
 const error = ref(null);
 
-// Use allProducts directly instead of filtered products
+
 const filteredProducts = allProducts;
 
 const fetchAllProducts = async () => {
@@ -60,7 +60,7 @@ const fetchAllProducts = async () => {
   }
 };
 
-// Set page title
+
 useHead({
   title: 'Products'
 });

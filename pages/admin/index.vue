@@ -68,7 +68,6 @@
       </div>
     </div>
 
-    <!-- Background decorations -->
     <div class="bg-decorations">
       <div class="decoration decoration-1"></div>
       <div class="decoration decoration-2"></div>
@@ -82,19 +81,19 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useToast } from '~/composables/useToast'
 
-// Set page meta
+
 definePageMeta({
   layout: false,
   title: 'Admin Login',
   middleware: 'admin-login'
 })
 
-// Composables
+
 const { user, login, initUser } = useAuth()
 const { success, error } = useToast()
 const router = useRouter()
 
-// Reactive state
+
 const loginForm = ref({
   email: '',
   password: ''
@@ -103,14 +102,14 @@ const showPassword = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
 
-// Computed properties
+
 const isFormValid = computed(() => {
   return loginForm.value.email.trim() !== '' && 
          loginForm.value.password.trim() !== '' &&
          loginForm.value.email.includes('@')
 })
 
-// Methods
+
 const handleLogin = async () => {
   if (!isFormValid.value || isLoading.value) return
   
@@ -121,14 +120,14 @@ const handleLogin = async () => {
     const result = await login(loginForm.value.email, loginForm.value.password)
     
     if (result.success) {
-      // Check if user is admin
+
       if (result.user && result.user.account_type === 'admin') {
         success('Login successful! Redirecting to dashboard...')
-        // Redirect to admin dashboard
+
         await router.push('/dashboard')
       } else {
         errorMessage.value = 'Access denied. Only administrators can access this panel.'
-        // Clear form for security
+
         loginForm.value.password = ''
       }
     } else {
@@ -142,19 +141,19 @@ const handleLogin = async () => {
   }
 }
 
-// Check if user is already logged in as admin
+
 onMounted(async () => {
   await initUser()
   
-  // If user is already logged in as admin, redirect to dashboard
+
   if (user.value && user.value.account_type === 'admin') {
     await router.push('/dashboard')
   }
 })
 
-// Set page title
+
 useHead({
-  title: 'Admin Login - Nixty',
+  title: 'Admin Login',
   meta: [
     {
       name: 'description',

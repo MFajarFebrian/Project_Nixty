@@ -15,10 +15,8 @@ import { useAuth } from '~/composables/useAuth';
 
 const { user, initUser } = useAuth();
 
-// Initialize user data first
 await initUser();
 
-// Check if user is admin and redirect accordingly
 if (user.value && user.value.account_type === 'admin') {
   await navigateTo('/dashboard', { redirectCode: 301 });
 } else {

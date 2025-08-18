@@ -4,12 +4,12 @@ const { Pool } = pkg;
 import { useOnlineDB, useSupabase } from './config.js';
 import dotenv from 'dotenv';
 
-// Load environment variables
+
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
-// MySQL configurations (for local development)
+
 const mysqlConfigs = {
   local: {
     host: process.env.DB_HOST || 'localhost',
@@ -33,40 +33,40 @@ const mysqlConfigs = {
   }
 };
 
-// Enhanced Supabase PostgreSQL configuration with improved SSL handling
+
 const supabaseConfig = {
   connectionString: process.env.DATABASE_URL,
   ssl: { 
     rejectUnauthorized: false 
   },
-  max: 20, // Increased pool size
-  idleTimeoutMillis: 60000, // Increased idle timeout
-  connectionTimeoutMillis: 30000, // Significantly increased timeout
-  acquireTimeoutMillis: 60000, // Added acquire timeout
-  query_timeout: 30000, // Added query timeout
-  statement_timeout: 30000 // Added statement timeout
+  max: 20, 
+  idleTimeoutMillis: 60000, 
+  connectionTimeoutMillis: 30000, 
+  acquireTimeoutMillis: 60000, 
+  query_timeout: 30000, 
+  statement_timeout: 30000
 };
 
 let pool;
 let isPostgreSQL = false;
 
-// Initialize the database connection
+
 function initializeDbConnection() {
   try {
     if (useSupabase) {
       console.log('Using SUPABASE PostgreSQL database');
       console.log(`Using direct connection string: ${supabaseConfig.connectionString ? 'Yes' : 'No'}`);
       
-      // Make sure we have a valid connection string
+
       if (!supabaseConfig.connectionString) {
         console.log('Connection string not found, constructing manually...');
-        // Construct connection string if not provided
+
         const connectionString = `postgresql://${process.env.SUPABASE_DB_USER}:${process.env.SUPABASE_DB_PASSWORD}@${process.env.SUPABASE_DB_HOST}:${process.env.SUPABASE_DB_PORT || 6543}/${process.env.SUPABASE_DB_NAME || 'postgres'}`;
         console.log(`Constructed connection string: ${connectionString.replace(/:[^:]*@/, ':****@')}`);
         supabaseConfig.connectionString = connectionString;
       }
       
-      // Create pool
+
       pool = new Pool(supabaseConfig);
       isPostgreSQL = true;
     } else {
@@ -76,18 +76,18 @@ function initializeDbConnection() {
       isPostgreSQL = false;
     }
     
-    // Add event listeners to handle connection issues
+
     if (isPostgreSQL) {
       pool.on('error', (err) => {
         console.error('Unexpected PostgreSQL pool error:', err);
       });
       
-      // Test the connection with retry logic
+
       pool.query('SELECT 1').then(() => {
         console.log('PostgreSQL connection successful');
       }).catch(err => {
         console.error('PostgreSQL connection test failed:', err);
-        // Attempt to reconnect after a delay
+
         setTimeout(() => {
           console.log('Attempting to reconnect to PostgreSQL...');
           pool = new Pool(supabaseConfig);
@@ -102,20 +102,20 @@ function initializeDbConnection() {
   }
 }
 
-// Initialize the connection
+
 pool = initializeDbConnection();
 
-// Create a unified database interface
+
 const db = {
   async query(sql, params = []) {
     try {
       if (isPostgreSQL) {
-        // Convert MySQL placeholders (?) to PostgreSQL placeholders ($1, $2, etc.)
+
         let pgSql = sql;
         let paramIndex = 1;
         pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
 
-        // PostgreSQL query with enhanced error handling and retry logic
+
         let client;
         let retries = 3;
         
@@ -134,7 +134,7 @@ const db = {
             
             if (retries === 0) {
               console.error('All connection attempts failed');
-              // If we're in development mode, return empty result instead of failing
+
               if (process.env.NODE_ENV === 'development') {
                 console.log('Development mode: returning empty result instead of failing');
                 return [[], []];
@@ -142,7 +142,7 @@ const db = {
               throw connError;
             }
             
-            // Wait before retrying
+
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
@@ -157,7 +157,7 @@ const db = {
           client.release();
         }
       } else {
-        // MySQL query
+
         console.log('Executing MySQL query:', sql);
         console.log('With parameters:', params);
         const [rows, fields] = await pool.execute(sql, params);
@@ -181,7 +181,7 @@ const db = {
     return this.query(sql, params);
   },
 
-  // Supabase-optimized methods
+
   async insert(tableName, data) {
     if (isPostgreSQL) {
       const fields = Object.keys(data);
@@ -247,7 +247,7 @@ const db = {
     return result;
   },
   
-  // Testing connection
+
   async testConnection() {
     try {
       if (isPostgreSQL) {
